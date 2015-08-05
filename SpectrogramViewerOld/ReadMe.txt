@@ -33,9 +33,7 @@ Date:
 
 Introduction
 ============
-  NOTE: This readme is out-of-data, and will beupdated shortly 
-
-  SpectrogramViewer2 is a userspace tool to display spectrogram data recorded with DROS. This is a pre-alpha 
+  SpectrogramViewer is a userspace tool to display spectrogram data recorded with DROS. This is a pre-alpha 
   release of the utility, and may not perform exactly as expected. The known limitations are described in the 
   'Limitations' section. 
   
@@ -49,19 +47,19 @@ Assumptions
 Build instructions
 ==================
   This utility is automatically built and installed by in the process of building and installing the tarball. 
-  To build just this package, the SpectrogramViewer2 executable may be built by untarring, entering the Release 
+  To build just this package, the SpectrogramViewer executable may be built by untarring, entering the Release 
   folder, and issuing make:
     >tar -xvf ./<Tarballl Filename>.tar.gz 
-    >cd build/SpectrogramViewer2/Release/
+    >cd build/SpectrogramViewer/Release/
     >make clean all
     
-  The SpectrogramViewer2 executable may be also be built by untarring, importing the project into Eclipse (Ganymede),
+  The SpectrogramViewer executable may be also be built by untarring, importing the project into Eclipse (Ganymede),
   and choosing "Build Project" from eclipse's menu system. 
 
 	
 Usage
 ================
-    SpectrogramViewer2 <file> <start> <count>
+    SpectrogramViewer <file> <start> <count>
         <file>     the file name of the DROS-produced spectra recording
         <start>    index of the first spectra
         <count>    number of spectra
@@ -91,6 +89,6 @@ ReadMe.txt              This file.
 /Release/sources.mk     file included by makefile during make
 /Release/subdir.mk      file included by makefile during make
 
-SpectrogramViewer2.cpp   The main file, reads spectra, outputs plots
+SpectrogramViewer.cpp   The main file, reads spectra, outputs plots
 gnuplot_i.hpp           The gnuplot c++ interface class, slightly 
                         modified for displaying waterfalls.       

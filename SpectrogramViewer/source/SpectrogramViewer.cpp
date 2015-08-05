@@ -310,7 +310,7 @@ public:
 					(hdr->nFreqs == numFreqs)
 			);
 	}
-	inline void unpack(size_t whichSpectra, DrxSpectraHeader*hdr, float*fdata){
+	inline void unpack(size_t whichSpectra, DrxSpectraHeader*hdr, float*fdata, bool findZeros){
 		assert(whichSpectra < numSpectra);
 		if (!whichSpectra)
 			initialTimeTag = hdr->timeTag0;
@@ -326,6 +326,12 @@ public:
 			for (size_t f=0; f<numFreqs; f++){
 				for (size_t p=0; p<numProducts; p++){
 					double sample = (double) fdata[i];
+					if (findZeros){
+						bool z = (sample==0);
+						if (z){
+							cout << "ZEROFIND: Frame# " << std::dec << whichSpectra << " Tuning# "<< std::dec <<t<<" Channel# " << std::dec << f  << " Product# " << std::dec << p << ":::: [Real-part]" << std::endl;
+						}
+					}
 					if (logScale){
 						if (isnan(fdata[i])){
 							cout << "NaN in input data.\n";
@@ -336,8 +342,9 @@ public:
 						if (isnan(sample)){
 							cout << "NaN in output data.\n";
 						}
-
 					}
+
+
 					*where(whichSpectra,t,f,p) =  sample;
 					*intPtr(t,p,f)             += sample/((double)numSpectra);
 					*powPtr(t,p,whichSpectra)  += sample/((double)numFreqs);
@@ -652,7 +659,7 @@ public:
 					(hdr->nPerFrame == numSamplesPerFrame)
 			);
 	}
-	inline void unpack(size_t whichFrame, DrxSpectraHeader*hdr, float*fdata){
+	inline void unpack(size_t whichFrame, DrxSpectraHeader*hdr, float*fdata, bool findZeros){
 		assert(whichFrame < numFrames);
 
 		if (!whichFrame)
@@ -677,6 +684,13 @@ public:
 				for (size_t p=0; p<numProducts; p++){
 					double re = (double) fdata[i];
 					double im = (double) fdata[i+1];
+					if (findZeros){
+						bool rez = (re==0);
+						bool imz = (im==0);
+						if (rez || imz){
+							cout << "ZEROFIND: Frame# " << std::dec << whichFrame << " Tuning# "<< std::dec <<t<<" Sample# " << std::dec << s  << " Product# " << std::dec << p << "::::" << (rez ? " [Real-part] ": "") << (imz ? " [Imaginary-part] ": "") << std::endl;
+						}
+					}
 					double pow = sqrt(re*re+im*im);
 					double angle = atan2(im,re);
 					if (logScale){
@@ -1003,7 +1017,8 @@ string getProductName(ProductType pt, int p){
 
 class SpecReader{
 public:
-	SpecReader(string filename, size_t startSpectra, size_t _count, bool _logScale){
+	SpecReader(string filename, size_t startSpectra, size_t _count, bool _logScale, bool _findZeros){
+		findZeros = _findZeros;
 		fd = open(filename.c_str(),  O_RDONLY | O_EXCL , S_IROTH | S_IRUSR |  S_IRGRP | S_IWOTH | S_IWUSR |  S_IWGRP );
 		if (fd==-1){
 			cout << "Can't open file: '"<<strerror(errno)<<"'.\n";
@@ -1061,13 +1076,13 @@ public:
 	void readall(){
 		lseek(fd,spectra_size * start,SEEK_SET); // reset position
 		for (size_t i=0; i<numSpectraUsed; i++){
-			cout << "\033[1K" << "Reading frame " << i;
+			if (! findZeros) cout << "Reading frame " << i << std::endl;
 			readHeader();
 			//buf->printSpectraHeader(&temp_header);
 			if (isCorr){
 				if (cbuf->checkCompatible(&temp_header)){
 					readData();
-					cbuf->unpack(i,&temp_header,temp_data);
+					cbuf->unpack(i,&temp_header,temp_data,findZeros);
 				} else {
 					cout << "\n========================================================\n";
 					report();
@@ -1080,7 +1095,7 @@ public:
 			} else {
 				if (sbuf->checkCompatible(&temp_header)){
 					readData();
-					sbuf->unpack(i,&temp_header,temp_data);
+					sbuf->unpack(i,&temp_header,temp_data,findZeros);
 				} else {
 					cout << "\n========================================================\n";
 					report();
@@ -1164,6 +1179,7 @@ public:
 	double           getBandwidth(){return bandwidth;}
 	bool             isCorrelation(){return isCorr;}
 private:
+	bool             findZeros;
 	bool             logScale;
 	int              fd;
 	SpectraBuffer*   sbuf;
@@ -1615,6 +1631,7 @@ int main(int argc, char* argv[])
 	}
 	string options((argc>4)?argv[4]:"sp,tp,is");
 	cout << "Options: " << options << endl;
+	bool findZeros      = ((options.find("findZeros"         )!=string::npos)  || (options.find("fz")!=string::npos));
 	bool showWaterfalls = ((options.find("spectrograms"      )!=string::npos)  || (options.find("sp")!=string::npos));
 	bool showPower      = ((options.find("total-power"       )!=string::npos)  || (options.find("tp")!=string::npos));
 	bool showIntSpec    = ((options.find("integrated-spectra")!=string::npos)  || (options.find("is")!=string::npos));
@@ -1623,11 +1640,15 @@ int main(int argc, char* argv[])
 	bool showErr        = ((options.find("errors"            )!=string::npos)  || (options.find("er")!=string::npos));
 	bool logScale       = ((options.find("log"               )!=string::npos)  || (options.find("lg")!=string::npos));
 	bool showTimeTags   = ((options.find("timetags"          )!=string::npos)  || (options.find("tt")!=string::npos));
-	SpecReader sr(string(argv[1]),strtoul(argv[2],NULL,10),strtol(argv[3],NULL,10), logScale);
+	SpecReader sr(string(argv[1]),strtoul(argv[2],NULL,10),strtol(argv[3],NULL,10), logScale, findZeros);
 	sr.report();
 	cout << flush;
 	sr.readall();
 
+	if (findZeros){
+		cout << "FINDZEROS: done...\n";
+		exit(0);
+	}
 	if (sr.isCorrelation()){
 		string powerAxisLabel = logScale ? "Power (dB)" : "Power (linear)";
 
