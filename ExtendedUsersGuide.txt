@@ -1,0 +1,1037 @@
+
+		=====================================
+		Extended User's guide for MCS-DR/DRSU
+		=====================================
+
+====================================================================================
+Version: DROS-1.5.0-Beta-Release
+Date:    2012-06-22
+Author:  Christopher Wolfe
+====================================================================================
+
+DROS Versions and ICD Version
+=============================
+  The following table outlines the correspondence between different software versions, the 
+  ICD, and what software changes occurred in what versions.
+
+	---------------------------------------------------------------------------------------
+	| DROS Version  | ICD version | Posted As  | Compliance Issues, Comments              |
+	|---------------|-------------|------------|------------------------------------------|
+	| 1.5.0         | 1.7         | MCS0027    |*Added Beam-correlator mode/command.      |
+	|               |             | MCS0025    |*Added saturation count fields to         |
+	|               |             |            |  spectrometer and beam-correlator output.|
+	|               |             |            |*Added ability to select DRSU by barcode  |
+	|               |             |            |*Added DRSU-BARCODE MIB entry.            |
+	|               |             |            |*Added TT-LAG and TT-LAG-INITIAL MIB      |
+	|               |             |            |  entries to measure DP frame latency.    |
+	|               |             |            |*Added CorrelationViewer utility.         |
+	|               |             |            |*Changed FILE-ENTRY-X to accept negative  |
+	|               |             |            |  X values (i.e. enable getting most-     |
+	|               |             |            |  recent file without first getting count.|
+	|               |             |            | Discovered/fixed glitch in spectrometer  |
+	|               |             |            |  mode which might prevent output from    |
+	|               |             |            |  being generated.                        |
+	|               |             |            | Fixed timetag treatment in DROS and      |
+	|               |             |            |  associated utilities.                   |
+	|               |             |            |                                          |
+	|---------------|-------------|------------|------------------------------------------|
+	| 1.4.0         | 1.6         | MCS0027    | Fixed SYN glitch competing for ntp socket|
+	|               |             | MCS0025    | Fixed messaging glitch which truncated   |
+	|               |             |            | messages due to tokenization.            |
+	|               |             |            |                                          |
+	|---------------|-------------|------------|------------------------------------------|
+	| 1.3.3         | 1.6         | MCS0027    | Changed spectrometer storage location to |
+	|               |             | MCS0025    | '/LWADATA/...'. Fixed ntp service glitch |
+	|               |             |            |                                          |
+	|---------------|-------------|------------|------------------------------------------|
+	| 1.3.2         | 1.5         | MCS0027    | Added CONTIGUOUS-STORAGE MIB entry       |
+	|               |             | MCS0025    |                                          |
+	|               |             |            |                                          |
+	|---------------|-------------|------------|------------------------------------------|
+	| 1.3.1         | 1.4         | MCS0027    | Fixed issues:                            |
+	|               |             | MCS0025    |  1) fixed off-by-1 fail to start when    |
+	|               |             |            |     ArraySelect == # DRSUs detected.     |
+	|               |             |            |  2) added STP support for SPC command    |
+	|               |             |            |  3) changed SPC command to allow         |
+	|               |             |            |     unique file names, respond w/        |
+	|               |             |            |     said unique TAG                      |
+	|               |             |            |                                          |
+	|---------------|-------------|------------|------------------------------------------|
+	| 1.3           | 1.3         | MCS0027    | Added SPC command (spectrometer)         |
+	|               |             | MCS0025    | Added DRX mode to DataSource             |
+	|               |             |            |                                          |
+	|---------------|-------------|------------|------------------------------------------|
+	| 1.2.6- 1.2.9  | ---         | NOT        | Experimental branches, unreleased.       |
+	|               |             | POSTED     |  1.2.6: EXT4                             |
+	|               |             |            |  1.2.7: DSP plugins  (labeled v2.0-DSP)  |
+	|               |             |            |  1.2.8: Spectrometry-via-copy (old OpJup)|
+	|               |             |            |  1.2.9: Windowing Spectrometer           |
+	|               |             |            |                                          |
+	|---------------|-------------|------------|------------------------------------------|
+	| 1.2.5         | 1.3         | MCS0027    | Fixed "garbage data at end of recordings"|
+	| ***           |             | MCS0025    | issue. Fixed "Decreasing recording length|
+	|               |             |            | when requested length is short" issue.   |
+	|               |             |            | Changed the number of files supported    |
+	|               |             |            | from 1023 to 8191. Removed compiled data |
+	|               |             |            | formats (i.e. recordings must record     |
+	|               |             |            | payload data in entirety)                |
+	|               |             |            |                                          |
+	|---------------|-------------|------------|------------------------------------------|
+	| 1.2.4         | 1.2         | MCS0027    | Adds capability to record longer than 24 |
+	| ***           |             | MCS0025    | hours (for single DP board LWA1)         |
+	|               |             |            |                                          |
+	|---------------|-------------|------------|------------------------------------------|
+	| 1.2.3         | 1.2         | MCS0027    | This release fixes misreported external  |
+	|               |             | MCS0025    | storage size and DIRECTORY-ENTRY-X MIB   |
+	|               |             |            | entries. Fixes excess bytes appended to  |
+	|               |             |            | CPY / DMP output files. Fixes parameter- |
+	|               |             |            | passing, and removes the need for        |
+	|               |             |            | the 'launch' script previously used.     |
+	|               |             |            | Also fixes a segfault for recording      |
+	|               |             |            | overflow.                                |
+	|               |             |            |                                          |
+	|---------------|-------------|------------|------------------------------------------|
+	| 1.2.2         | 1.2         | **         | This release updates DRSU detection.     |
+	|               |             |            |                                          |
+	|               |             |            |                                          |
+	|---------------|-------------|------------|------------------------------------------|
+	| 1.2.1         | 1.2         | MCS0027    | This release fixes a buge where all      |
+	|               |             | MCS0025    | free space preceeding existing recordings|
+	|               |             |            | would remain unusable by the file system.|
+	|               |             |            |                                          |
+	|---------------|-------------|------------|------------------------------------------|
+	| 1.2           | 1.2         | MCS0027    | This release fixes CPY and DMP command   |
+	|               |             | MCS0025    | interpreting leading-zero-numbers as     |
+	|               |             |            | octal, as well as updating the partition |
+	|               |             |            | identification mechanism from using hard-|
+	|               |             |            | coded system and DRSU block device IDs.  |
+	|               |             |            | Includes minor ICD typo fixes.           |
+	|               |             |            |                                          |
+	|---------------|-------------|------------|------------------------------------------|
+	| 1.1           | 1.1         | MCS0027    | This release fixes a few minor output    |
+	|               |             | MCS0025    | bugs, and updates the ICD to reflect     |
+	|               |             |            | configuration options. Also, response    |
+	|               |             |            | messages are no longer terminated with   |
+	|               |             |            | NULL (ASCII 0) characters. MIB items     |
+	|               |             |            | with variable counts are now 1-based as  |
+	|               |             |            | opposed to previously being 0-based.     |
+	|               |             |            | Also corrected DRUS-preparation portions |
+	|               |             |            | of this guide.                           |
+	|               |             |            |                                          |
+	|---------------|-------------|------------|------------------------------------------|
+	| 1.0           | 1.0         | MCS0027    | This release brings the filesystem reader|
+	|               |             | MCS0025    | to beta stage, and adds support for      |
+	|               |             |            | writing in addition to existing reading  |
+	|               |             |            | capabilities. This release also includes |
+	|               |             |            | MIB branch 1 items, which were not       |
+	|               |             |            | present in previous releases.            |
+	|               |             |            |                                          |
+	|---------------|-------------|------------|------------------------------------------|
+	| 0.9           | 1.0         | MCS0025 +  | This release fixes all of the 0.8 issues |
+	|               |             | MCS0026    | except formatting of interlock-related   |
+	|               |             |            | rejection responses. This version also   |
+	|               |             |            | includes several utilities to aid in     |
+	|               |             |            | testing, development, integration, etc.  |
+	|               |             |            | This version adds support for live       |
+	|               |             |            | buffering and multiple DRSUs.            |
+	|               |             |            |                                          |
+	|---------------|-------------|------------|------------------------------------------|
+	| 0.8.1*        | 0.4         | N/A +      | This is the unpublished release          |
+	|               |             | MCS0020    | version sent to JPL for integration and  |
+	|               |             | (Only JPL  | testing with DP. This version contains   |
+	|               |             | machine    | minor changes to the launch script,      |
+	|               |             | has this   | tar-ball documentation, and removes      |
+	|               |             | build)     | a memory leak.                           |
+	|               |             |            |                                          |
+	|---------------|-------------|------------|------------------------------------------|
+	| 0.8           | 0.4         | MCS0022 +  | This version does not support:           |
+	|               |             | MCS0020    | * MIB: Branches 5-8,10, and 4.2.X        |
+	|               |             |            | * Commands: CPY, DMP, FMT, UP, DWN, DEL, |
+	|               |             |            |   EJT (now removed).                     |
+	|               |             |            | * Several Safety Interlocks              |
+	|               |             |            |                                          |
+	---------------------------------------------------------------------------------------
+
+	 * : Documentation in ver 0.8.1 lists version number as 0.8. The only copy of this version
+            is the tar-ball sent to JPL.
+
+	 **: version 1.2.2 was has not been published, and distribution tarball for 1.2.3 had listed
+            it published as MCS0027+MCS0025
+
+	***: incremental patched version 1.2.3.01 installed on DR1, DR2 (10DEC2010) is officially
+             released as version 1.2.4.
+	
+
+Assumptions
+===========
+  This tutorial assumes the following:
+
+	1) You are working on an MCS-DR PC with x86_64 Ubuntu 9.04 
+	2) the following packages are installed: libgdbm3, libgdbm-dev, libfuse2, 
+           libfuse-dev, lmsensors, smartmontools, mdadm
+	   and, depending on PC model: 
+		XPS 435MT:   coretemp
+		DELL t1500:  f71882fg
+	3) gnu C/C++ compiler (stdlib, pthreads, librt)
+ 	4) You have an assembled DRSU (IAW "LWA Engineering Memo MCS0019")
+        5) all of the appropriate system hardware has been installed (10GbE, VGA, eSATA)
+	6) Drivers for the Myricom 10GbE adapter have been built and installed
+        7) familiarity with Linux. ( build is make all install, no configure currently )
+	8) optional :  another MCS-DR PC or comparable to act as an emulated data source
+           for testing in lieu of DP.
+
+**	9) You must be root for most of the tasks outlined here. The DROS software needs 
+           root permission to work directly with partitions, so 'sudo su' before doing 
+           anything is easiest. Note that building the software can be done in user space, 
+           but installation requires root privileges. Consequently, you will need login 
+           information:
+	   The default username and password for MCS-DR PCs is 
+		mcsdr / mcsdrrdscm
+	   but may be 
+		chwolfe2 / cnw112177.
+           on earlier machines (first PC on-site at LWA1 and PC sent to JPL)
+   
+
+Files and Organization
+======================
+  The top level of this tar-ball contains this file 'QuickStart.txt' and a 'build' 
+  folder.  Each folder under 'build' contains the source and makefile for each of the 
+  binaries included in this tar-ball. Also, the build folder itself contains a makefile
+  for building and installing all of the included components in the tar-ball. This is 
+  the preferred and easiest method of installing everything. More information on each of 
+  the binaries can be found in 'ReadMe' files in each folder under the 'build' folder. 
+
+
+Included Binaries / Source Trees
+================================
+
+  Data Recorder Operating Software (DROS)
+  =======================================
+  'WAVE_Y'     This is DROS. The main DROS executable and provides all of the 
+               ICD-specified functionality (messaging, recording, etc..)
+
+
+  Support and Utilities
+  =====================
+  'Msender'                is a command line utility to send messages to and receive responses from
+                           MCS-DR (or any ICD compliant system), and is intended to operate the
+                           MCS-DR in the absence of MCS. 
+
+  'DataSource'             is a simulated data source which can be used to emulate DP output for 
+                           testing purposes.
+
+  'DataSourceFileVerifier' is a tool used to verify recordings made of simulated data produced by
+                           the DataSource utility (for testing purposes).
+
+  'FUSE-LWAFS-READER'      is an alpha release of a utility to mount a DRSU under Linux
+                           to enable command-line access to recordings. This utility does have some 
+                           stability issues, but can be useful as is. More information on this is available 
+                           in the 'Retrieving recorded data' section in this document, and in the 
+                           readme in the 'FUSE-LWAFS-READER' source tree.
+
+
+Software Installation
+=====================
+  Software installation for the MCS-DR consists of extracting 
+  the tar-ball, building the binaries, and installing them. At the 
+  bash prompt, type:
+	tar -xvf <tar-ball-file-name>
+	cd <tar-ball-file-name-minus-'.tar.gz'>/build
+	make
+	make install
+  The 'install' target must be built with root privileges, and the scripts will
+  install the binaries, scripts, and support files into "/LWA". More information
+  regarding the build process can be found in the "readme.txt" file in the 
+  root of the WAVE_Y folder.
+
+  Note: building the 'install' target will overwrite all files in the /LWA folder,
+  so be sure to backup configuration files before building.
+
+  At the command Line:
+	>make; make install
+
+  This should generate a lot of output ending with:
+
+	################################################################
+	# Notice:
+	# 
+	# MCS-DR software has been installed to:
+	#       /LWA
+	# 
+	# The default configuration files are installed to:
+	#       /LWA/config/
+	# 
+	# You must modify defaults.cfg.example to reflect your network environment.
+	# 
+	# To launch the software, execute:
+	#       /LWA/bin/WAVE_Y
+	# 
+	# To install the software to run on-boot, execute:
+	#       /LWA/scripts/installStartupScript.sh /LWA/scripts/StartDROS.sh
+	# 
+	################################################################
+
+
+
+System Configuration
+====================
+  Before the MCS-DR can be used, configuration files must be edited to 
+  reflect your local network environment. The configuration files are located in 
+  '/LWA/config'. Only 'defaults.cfg.example' and 'formats.cfg.example' should be altered. 
+  Once altered, save the files as 'defaults.cfg' and 'formats.cfg', respectively.
+ 
+  The file 'formats.cfg' specifies 3 data formats which were used in testing 
+  and development. If custom formats are required, see the 'FormatsReadme.txt'
+  
+  In 'defaults.cfg', the 'SelfIP' and 'MessageOutURL' entries correspond to the 
+  MCS-DR's IP address, and the MCS's (or whatever machine the MCS-DR will be 
+  accepting commands from or responding to). 'MessageOutURL' may be localhost 
+  or 127.0.0.1 as long as the message in and out ports are different. 
+  'MyReferenceDesignator' determines the reference designator to which the 
+  MCS-DR will respond. The current default is MD<x> (i.e. MD1, MD2, etc.), 
+  but these have not officially been assigned, and hence this naming scheme 
+  should not be relied upon. The last item that should 
+  be configured is TimeAuthority which specifies the URL or IP of an NTP time 
+  server to use. Currently the MCS-DR does not use ntpd, and syncing is only done 
+  on start-up or at request of the SYN command. 
+
+	Additionally, you must edit /etc/network/interfaces and /etc/resolv.conf
+  to suit your local network environment. Depending on which Model MCS-DR PC you 
+  have, your system's Ethernet adapters may be named differently. The MCS-DR PC 
+  will have 2 Ethernet adapters, one 10 GbE for DP data, and one GbE for messaging.
+  To identify which is which, examine /etc/udev/rules.d/70-persistent-net.rules:
+
+	# This file maintains persistent names for network interfaces.
+	# See udev(7) for syntax.
+	#
+	# Entries are automatically added by the 75-persistent-net-generator.rules
+	# file; however you are also free to add your own entries.
+
+	# PCI device 0x8086:0x10cd (e1000e)
+	SUBSYSTEM=="net", ACTION=="add", DRIVERS=="?*", ATTR{address}=="00:24:e8:17:dc:7e", ATTR{type}=="1", KERNEL=="eth*", NAME="eth0"
+
+	# PCI device 0x14c1:0x0008 (myri10ge)
+	SUBSYSTEM=="net", ACTION=="add", DRIVERS=="?*", ATTR{address}=="00:60:dd:46:d7:79", ATTR{type}=="1", KERNEL=="eth*", NAME="eth1"
+
+  
+  The important part is the module identifier in parenthesis. The myri10ge device is 
+  the 10 GbE adapter, and all else should be GbE. So for this example, eth1 identifies the
+  10 GbE adapter, and eth0 is a GbE for messaging. These should be configured 
+  in accordance with network environment. See Ubuntu documentation for editing
+  /etc/network/interfaces and /etc/resolv.conf.
+
+  More details regarding configuring the DROS software can be found in the WAVE_Y/readme.txt
+
+DRSU preparation
+================
+  Before the MCS-DR can be used, a DRSU storage unit must be assembled, connected 
+  and configured. For assembly instructions, refer to "LWA Engineering Memo MCS0019". Once 
+  the DRSU is assembled and connected, verify that all 5 partitions are visible by typing 
+  'cat /proc/partitions' at the bash prompt. The list of devices should contain the following:
+	/dev/sda	system drive
+	/dev/sda1	root file system
+	/dev/sda2
+	/dev/sda5	swap partition
+	/dev/sdb	DRSU drive # 0
+	/dev/sdc	DRSU drive # 1
+	/dev/sdd	DRSU drive # 2
+	/dev/sde	DRSU drive # 3
+	/dev/sdf	DRSU drive # 4
+
+  Once connectivity is verified, prepare the drive for usage by creating a software raid array. 
+  At the prompt: 
+   	>mdadm --create /dev/md0 -c 256 -l 0 -n 5 /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf
+	mdadm: /dev/md0 has been started with 5 drives.
+
+  If the DRSU has already been previously prepared, then doing the above could damage the data. 
+  If you have previously created an array and don't wish to destroy data:
+  	>mdadm --assemble /dev/md0 /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf
+	mdadm: /dev/md0 has been started with 5 drives.
+ 
+  This will start the array from the specified drives without deleting the contents.
+  However, this configuration of the DRSU will not be preserved at the next boot.
+  To preserve the drive configuration, necessary for normal DROS operation, perform
+  the above, and then do:
+	>cp /etc/mdadm/mdadm.conf /etc/mdadm/mdadm.conf.QS.bak
+  	>mdadm --examine --scan > /etc/mdadm.conf
+  	>cat /etc/mdadm/mdadm.conf
+
+  This should backup the config file, write current array config to the file, and then 
+  list the contents, something like:
+	ARRAY /dev/md0 level=raid0 num-devices=5 UUID=410a299e:4cdd535e:169d3df4:48b7144a
+
+  UUID will be different.
+  On each boot, mdadm will scan for drives. If the DRSUs drives haven't initialized yet,
+  the array might not be started properly. If so, see the trouble shooting section later
+  in this document.
+
+  Also, some excellent documentation on mdadm in general is available at: 
+	http://ubuntuforums.org/showthread.php?t=408461
+	http://linuxdevcenter.com/pub/a/linux/2002/12/05/RAID.html?page=1
+	http://linuxcommand.org/man_pages/mdadm8.html
+
+  Each drive in the DRSU, once configured, will contain a md superblock. In a multi-DRSU
+  environment, you may have to examine the superblocks of a previously created array to 
+  know which drives belong to which DRSU (example here using /dev/sdc1 ex. from above URL). 
+	>mdadm -E /dev/sdc1
+	/dev/sdc1:
+		  Magic : a92b4efc
+		Version : 00.90.00
+***		   UUID : 84788b68:1bb79088:9a73ebcc:2ab430da
+	  Creation Time : Mon Sep 23 16:02:33 2002
+	     Raid Level : raid0
+	    Device Size : 17920384 (17.09 GiB 18.40 GB)
+	   Raid Devices : 4
+	  Total Devices : 4
+	Preferred Minor : 0
+
+	    Update Time : Mon Sep 23 16:14:52 2002
+		  State : clean, no-errors
+	 Active Devices : 4
+	Working Devices : 4
+	 Failed Devices : 0
+	  Spare Devices : 0
+	       Checksum : 8ab5e437 - correct
+		 Events : 0.10
+
+	     Chunk Size : 128K
+
+	      Number   Major   Minor   RaidDevice State
+	this     1       8       33        1      active sync   /dev/sdc1
+	   0     0       8       17        0      active sync   /dev/sdb1
+	   1     1       8       33        1      active sync   /dev/sdc1
+	   2     2       8       49        2      active sync   /dev/sdd1
+	   3     3       8       65        3      active sync   /dev/sde1
+  
+  This example shows /dev/sdc1 as belonging to a RAID 0 array of 5 drives (like DRSUs).
+  The important thing to note is the UUID at top which will be common for all members 
+  of an array, and will also be the UUID specified in the mdadm.conf file we created. I
+  recommend recording this number on a label on the DRSU as this may save time and headaches 
+  later when/if DRSUs are moved around frequently. This UUID will change if the array is 
+  re-created. Note that the device names and order may change between boots, but that as 
+  long as the device's md superblock is not altered, mdadm is "smart-enough" to figure it 
+  out. 
+
+  Currently, the MCS-DR software will search for arrays of the name md0, md1, etc., and 
+  will only use the lowest ordered array. Until multi-DRSU support is complete, it is not 
+  recommended to attach multiple DRSUs.
+  
+
+Readiness Check-list
+===================
+
+	At this point, you should have:
+	1) An MCS-DR PC with x86_64 Ubuntu 9.04 
+	   packages: C++, libgdbm3, libgdbm-dev, libfuse2, libfuse-dev, lmsensors, smartmontools
+	   mdadm, and, depending on PC model: 
+		XPS 435MT:   coretemp
+		DELL t1500:  f71882fg
+  	2) A freshly built version 'DROS-1.5.0-Beta-Release' of the DROS software
+	3) Configuration files modified to suit the local environment
+	4) An assembled DRSU
+	5) A raid 0 array on the DRSU visible as /dev/md0 in /proc/partitions
+
+
+
+First Run : Running the application
+===================================
+	
+  Normally, the DROS binary is launched from a rc.d script, but the first
+  time it is run, I recommend launching it directly. The DROS software is still in the 
+  beta stage, and catching error messages may prove more difficult from within the script.
+  
+  To launch the binary directly, type '/LWA/bin/WAVE_Y', followed by any of the 
+  following flags:
+	-flushData		To delete any/all files on the DRSU 
+	-flushLog		To delete DROS logs
+	-flushSchedule		To delete any scheduled recordings
+	-flushConfig		To delete configuration database and re-parse 'defaults.cfg'
+  On the first run, the '-flushData' option must be specified to create an lwafs file 
+  system on the DRSU raid array. The other flags are optional as DROS will attempt to read
+  configuration files automatically if runtime databases are missing (which is true on 
+  first run). Also note that recording on the first run of the application will require 
+  manually invoking sysctl to modify UDP buffer sizes:
+	'sysctl -e -p /LWA/config/netperformance.sysctl.conf'
+  This is taken care of automatically when using the normal operation mode (described below).
+
+  So, at the command line type:
+	>sysctl -e -p /LWA/config/netperformance.sysctl.conf; /LWA/bin/WAVE_Y -flushData -flushLog -flushSchedule -flushConfig
+
+  The following will be displayed:
+	net.ipv4.tcp_mem = 56371200	75161600	112742400
+	net.ipv4.tcp_wmem = 409600	1638400	419430400
+	net.ipv4.tcp_rmem = 409600	8738000	419430400
+	net.ipv4.udp_mem = 57859200	77145600	115718400
+	net.ipv4.udp_rmem_min = 409600
+	net.ipv4.udp_wmem_min = 409600
+	net.core.wmem_max = 13107100
+	net.core.rmem_max = 13107100
+	net.core.wmem_default = 12492800
+	net.core.rmem_default = 12492800
+	net.core.netdev_max_backlog = 100000
+	net.core.optmem_max = 204800
+	055240-012222981 : [BOOT] Processing option '-flushData'
+	055240-012222981 : [BOOT] Processing option '-flushLog'
+	055240-012222981 : [BOOT] Processing option '-flushSchedule'
+	055240-012222981 : [BOOT] Processing option '-flushConfig'
+	055240-012222981 : [BOOT] Loading system configuration.
+	055240-012222985 : [DATABASE] Database File Created: '/LWA/database/configDb.gdbm'
+	055240-012222985 : [DATABASE] Opening default values file: '/LWA/config/defaults.cfg'
+	055240-012222985 : [DATABASE] Now filling database with default values.
+	055240-012222987 : [DATABASE] Finished initializing database. 	Processed 20 lines 	 Added 7 records
+	055240-012222987 : [DATABASE] Database File Opened: '/LWA/database/configDb.gdbm'
+	055240-012222987 : [DATABASE] DB: 'MessageOutPort' => '5000'
+	055240-012222987 : [DATABASE] DB: 'MyReferenceDesignator' => 'MD1'
+	055240-012222987 : [DATABASE] DB: 'DataInPort' => '6002'
+	055240-012222987 : [DATABASE] DB: 'MessageOutURL' => '192.168.1.20'
+	055240-012222987 : [DATABASE] DB: 'TimeAuthority' => 'ntp.Ubuntu.com'
+	055240-012222987 : [DATABASE] DB: 'MessageInPort' => '5001'
+	055240-012222987 : [DATABASE] DB: 'SelfIP' => '192.168.1.20'
+	ntpd: no process killed
+	055240-012223444 : [BOOT] NTP synchronization result: '12 Feb 22:23:43 ntpdate[9493]: adjust time server 91.189.94.4 offset 0.000221 sec
+	'
+	055240-012223444 : [BOOT] Initializing the system log.
+	055240-012223446 : [DATABASE] Database File Created: '/LWA/database/logDb.gdbm'
+	055240-012223446 : [DATABASE] Database File Opened: '/LWA/database/logDb.gdbm'
+	055240-012223446 : [BOOT] Opened System Log.
+	055240-012223446 : [BOOT] Initializing the system's storage devices.
+*	055240-012223498 : [DISK MANAGER] Disk_IdentifyAll(): Device found: '/dev/loop0' of type 'DRIVETYPE_EXTERNAL_PARTITION'
+*	055240-012223498 : [DISK MANAGER] Disk_IdentifyAll(): Device found: '/dev/loop1' of type 'DRIVETYPE_EXTERNAL_PARTITION'
+*	055240-012223498 : [DISK MANAGER] Disk_IdentifyAll(): Device found: '/dev/loop2' of type 'DRIVETYPE_EXTERNAL_PARTITION'
+*	055240-012223498 : [DISK MANAGER] Disk_IdentifyAll(): Device found: '/dev/loop3' of type 'DRIVETYPE_EXTERNAL_PARTITION'
+*	055240-012223498 : [DISK MANAGER] Disk_IdentifyAll(): Device found: '/dev/loop4' of type 'DRIVETYPE_EXTERNAL_PARTITION'
+	055240-012223498 : [DISK MANAGER] Disk_IdentifyAll(): Device found: '/dev/sda' of type 'DRIVETYPE_SYSTEM_BLOCK_DEVICE'
+	055240-012223498 : [DISK MANAGER] Disk_IdentifyAll(): Device found: '/dev/sda1' of type 'DRIVETYPE_SYSTEM_PARTITION'
+	055240-012223499 : [DISK MANAGER] Disk_IdentifyAll(): Device found: '/dev/sda2' of type 'DRIVETYPE_SYSTEM_PARTITION'
+	055240-012223499 : [DISK MANAGER] Disk_IdentifyAll(): Device found: '/dev/sda5' of type 'DRIVETYPE_SYSTEM_PARTITION'
+	055240-012223499 : [DISK MANAGER] Disk_IdentifyAll(): Device found: '/dev/md0' of type 'DRIVETYPE_INTERNAL_MULTIDISK_DEVICE'
+	055240-012223499 : [BOOT] Initialized system's storage devices.
+	055240-012223499 : [BOOT] Locating internal storage among detected devices.
+	055240-012223499 : [BOOT] Identified internal storage device as '/dev/md0'
+	055240-012223499 : [BOOT] Creating internal storage file system.
+	055240-012223517 : [FILE SYSTEM] WARNING: Creating filesystem on device /dev/md0 !!!!
+	055240-012223517 : [FILE SYSTEM] /dev/md0: 
+		           [FILE SYSTEM] 	Volume name: MCS-DRSU-Storage
+		           [FILE SYSTEM] 	            262144 chunk size
+		           [FILE SYSTEM] 	                 5 drives 
+		           [FILE SYSTEM] 	       53685780480 total bytes 
+		           [FILE SYSTEM] 	              1023 maximum number files
+		           [FILE SYSTEM] 	                 0 current number files
+		           [FILE SYSTEM] 	              1023 maximum filename length
+		           [FILE SYSTEM] 	           4194304 bytes reserved for formatting
+	055240-012223521 : [BOOT] File system created, all data deleted!!!
+	055240-012223521 : [BOOT] Opening internal storage file system.
+	055240-012223521 : [FILE SYSTEM] Detected a filesystem size of 4194304.
+		           [FILE SYSTEM] /dev/md0: 
+		           [FILE SYSTEM] 	Volume name: MCS-DRSU-Storage
+		           [FILE SYSTEM] 	       262144 chunk size
+		           [FILE SYSTEM] 	            5 drives 
+		           [FILE SYSTEM] 	  53685780480 total bytes 
+		           [FILE SYSTEM] 	         1023 maximum number files
+		           [FILE SYSTEM] 	            0 current number files
+		           [FILE SYSTEM] 	         1023 maximum filename length
+		           [FILE SYSTEM] 	      4194304 bytes reserved for formatting
+	055240-012223524 : [FILE SYSTEM] Checking file system integrity...
+	055240-012223524 : [FILE SYSTEM] File check complete.
+	055240-012223526 : [FILE SYSTEM] Registering Active File System 0:<140736579321776>
+	055240-012223526 : [FILE SYSTEM] Directory listing for volume 'MCS-DRSU-Storage'
+	055240-012223526 : [FILE SYSTEM] Summary:
+		           [FILE SYSTEM]	         0 Files
+		           [FILE SYSTEM]	                 0 Bytes used by files
+		           [FILE SYSTEM]	           4194304 Bytes used for filesystem and formatting
+	055240-012223526 : [BOOT] Opened internal storage file system.
+	055240-012223527 : [BOOT] Opening data formats database.
+	055240-012223563 : [DATABASE] Database File Created: '/LWA/database/formatDb.gdbm'
+	055240-012223563 : [DATABASE] Opening default values file: '/LWA/config/formats.cfg'
+	055240-012223563 : [DATABASE] Now filling database with default values.
+	055240-012223567 : [DATABASE] Finished initializing database. 	Processed 20 lines 	 Added 13 records
+	055240-012223567 : [DATABASE] Database File Opened: '/LWA/database/formatDb.gdbm'
+	055240-012223568 : [DATABASE] DB: 'FORMAT-SPEC-1' => 'K1224'
+	055240-012223568 : [DATABASE] DB: 'FORMAT-PAYLOAD-2' => '1024'
+	055240-012223568 : [DATABASE] DB: 'FORMAT-PAYLOAD-1' => '1224'
+	055240-012223569 : [DATABASE] DB: 'FORMAT-RATE-1' => '104857600'
+	055240-012223569 : [DATABASE] DB: 'FORMAT-NAME-2' => 'TEST_TBN'
+	055240-012223569 : [DATABASE] DB: 'FORMAT-RATE-0' => '117440512'
+	055240-012223570 : [DATABASE] DB: 'FORMAT-NAME-1' => 'DEFAULT_TBW'
+	055240-012223570 : [DATABASE] DB: 'FORMAT-PAYLOAD-0' => '1024'
+	055240-012223571 : [DATABASE] DB: 'FORMAT-SPEC-2' => 'K100D100K100D724'
+	055240-012223571 : [DATABASE] DB: 'FORMAT-NAME-0' => 'DEFAULT_TBN'
+	055240-012223571 : [DATABASE] DB: 'FORMAT-RATE-2' => '117440512'
+	055240-012223572 : [DATABASE] DB: 'FORMAT-COUNT' => '3'
+	055240-012223572 : [DATABASE] DB: 'FORMAT-SPEC-0' => 'K1024'
+	055240-012223573 : [BOOT] Read data formats database.
+	055240-012223573 : [BOOT] Creating messaging receive socket.
+	055240-012223574 : [BOOT] Created messaging receive socket.
+	055240-012223574 : [BOOT] Creating messaging send socket.
+	055240-012223574 : [BOOT] Created messaging send socket.
+	055240-012223575 : [BOOT] Opening messaging receive socket.
+	055240-012223575 : [BOOT] Opened messaging receive socket.
+	055240-012223576 : [BOOT] Opening messaging send socket.
+	055240-012223576 : [BOOT] Opened messaging send socket.
+	055240-012223577 : [BOOT] Creating messaging receive queue.
+	055240-012223578 : [BOOT] Created messaging receive queue.
+	055240-012223578 : [BOOT] Creating messaging send queue.
+	055240-012223579 : [BOOT] Created messaging send queue.
+	055240-012223579 : [BOOT] Creating data receive socket.
+	055240-012223580 : [BOOT] Created data receive socket.
+	055240-012223580 : [BOOT] Creating data receive queue.
+	055240-012223996 : [BOOT] Created data receive queue.
+	055240-012223997 : [BOOT] Reading system schedule.
+	055240-012224001 : [DATABASE] Database File Created: '/LWA/database/scheduleDb.gdbm'
+	055240-012224001 : [DATABASE] Database File Opened: '/LWA/database/scheduleDb.gdbm'
+	055240-012224008 : [DATABASE] Database File Opened: '/LWA/database/scheduleDb.gdbm'
+	055240-012224009 : [DATABASE] DB: 'SCHEDULEDATA.count' => '0'
+	055240-012224010 : [DATABASE] DB: 'SCHEDULEENTRY.count' => '0'
+	055240-012224010 : [BOOT] Finished reading system schedule.
+	055240-012224011 : [BOOT] Booting Complete.
+
+  *: In this example, loopback devices are used in lieu of physical drives, so replace
+  /dev/loopX with /dev/sdX on a system with a DRSU attached.
+
+  At this point, the system is up and listening for command messages. 
+  To test messaging, use the included Msender utility. 
+
+  *** In a new terminal ****:
+
+	>/LWA/bin/Msender -v -Source "MCS" -Destination "MD1" -Type "PNG" -ReferenceNumber 0 -DestinationIpAddress localhost -DestinationPort 5001 -ResponseListenPort 5000    
+
+  On the original terminal you should see:
+	[MESSAGING] Received: 'MCS MD1 PNG         0  55240  12609312    0 '
+	[MESSAGING] Sent: 'MD1 MCS PNG         0 055240 012609313 0009 A NORMAL  '
+
+  On the new terminal you should see:
+	[send]Message :
+	[send]	Sender:                     MCS
+	[send]	Destination:                MD1
+	[send]	Type:                       PNG
+	[send]	Reference:                  0
+	[send]	Modified Julian Day:        55240
+	[send]	Milliseconds Past Midnight: 12609312
+	[send]	Data Length:                0
+	[send]	Data:                       No Data Specified
+
+	[recv]Response :
+	[recv]	Sender:                     MD1
+	[recv]	Destination:                MCS
+	[recv]	Type:                       PNG
+	[recv]	Reference:                  0
+	[recv]	Modified Julian Day:        55240
+	[recv]	Milliseconds Past Midnight: 12609313
+	[recv]	Accept/Reject:              Accepted
+	[recv]	General Status:             NORMAL 
+	[recv]	Comment:                    No Comment Specified
+	[recv]	Data Length:                9
+	[recv]	Data: 
+	[recv]		<   0>:   41 4e 4f 52 4d 41 4c 20  0 
+
+ 
+ 
+Normal operation:
+==============================================
+  Once communication has been verified, and nothing looks fishy with output, then 
+  installing the DROS software to run on boot will enable normal operation
+
+  First we need to cause the initial run of DROS to exit. In the new terminal:
+	>/LWA/bin/Msender -v -Source "MCS" -Destination "MD1" -Type "SHT" -ReferenceNumber 0 -DestinationIpAddress localhost -DestinationPort 5001 -ResponseListenPort 5000    
+
+  On the original terminal you should see:
+	[MESSAGING] Received: 'MCS MD1 SHT         0  55240  12847605    0 '
+	[MESSAGING] Sent: 'MD1 MCS SHT         0 055240 012847605 0009 A SHUTDWN '
+	055240-012847605 : [SHUTDOWN] Closing system schedule.
+	055240-012847611 : [SHUTDOWN] Closed system schedule.
+	055240-012847612 : [SHUTDOWN] Destroying data receive queue.
+	055240-012847874 : [SHUTDOWN] Destroyed data receive queue.
+	055240-012847874 : [SHUTDOWN] Destroying data receive socket.
+	055240-012847875 : [SHUTDOWN] Destroyed data receive socket.
+	055240-012847876 : [SHUTDOWN] Destroying messaging send queue.
+	055240-012847876 : [SHUTDOWN] Destroyed messaging send queue.
+	055240-012847877 : [SHUTDOWN] Destroying messaging receive queue.
+	055240-012847878 : [SHUTDOWN] Destroyed messaging receive queue.
+	055240-012847879 : [SHUTDOWN] Closing messaging send socket.
+	055240-012847879 : [SHUTDOWN] Closed messaging send socket.
+	055240-012847880 : [SHUTDOWN] Closing messaging receive socket.
+	055240-012847881 : [SHUTDOWN] Closed messaging receive socket.
+	055240-012847882 : [SHUTDOWN] Destroying messaging send socket.
+	055240-012847882 : [SHUTDOWN] Destroyed messaging send socket.
+	055240-012847883 : [SHUTDOWN] Destroying messaging receive socket.
+	055240-012847884 : [SHUTDOWN] Destroyed messaging receive socket.
+	055240-012847885 : [SHUTDOWN] Closing data formats database.
+	055240-012847890 : [SHUTDOWN] Closed messaging receive socket.
+	055240-012847891 : [SHUTDOWN] Closing internal storage file system.
+	055240-012847892 : [FILE SYSTEM] Closing filesystem.
+	055240-012847895 : [FILE SYSTEM] Unregistering Active File System 0:<140736579321776>
+	055240-012847896 : [SHUTDOWN] Closed internal storage file system.
+	055240-012847897 : [SHUTDOWN] Closing system log.
+	055240-012847941 : [SHUTDOWN] Closing config database. 
+
+  On the new terminal you should see:
+	[send]Message :
+	[send]	Sender:                     MCS
+	[send]	Destination:                MD1
+	[send]	Type:                       SHT
+	[send]	Reference:                  0
+	[send]	Modified Julian Day:        55240
+	[send]	Milliseconds Past Midnight: 12847605
+	[send]	Data Length:                0
+	[send]	Data:                       No Data Specified
+
+	[recv]Response :
+	[recv]	Sender:                     MD1
+	[recv]	Destination:                MCS
+	[recv]	Type:                       SHT
+	[recv]	Reference:                  0
+	[recv]	Modified Julian Day:        55240
+	[recv]	Milliseconds Past Midnight: 12847605
+	[recv]	Accept/Reject:              Accepted
+	[recv]	General Status:             SHUTDWN
+	[recv]	Comment:                    No Comment Specified
+	[recv]	Data Length:                9
+	[recv]	Data: 
+	[recv]		<   0>:   41 53 48 55 54 44 57 4e  0 
+	 
+ 
+  
+  To install the DROS software to start on system boot, execute the following:
+	>cd /LWA/scripts	
+	>./installStartupScript.sh StartDROS.sh
+
+  Terminal output should be as follows:
+	update-rc.d: warning: /etc/init.d/StartDROS.sh missing LSB information
+	update-rc.d: see <http://wiki.debian.org/LSBInitScripts>
+	 Adding system startup for /etc/init.d/StartDROS.sh ...
+	   /etc/rc0.d/K99StartDROS.sh -> ../init.d/StartDROS.sh
+	   /etc/rc1.d/K99StartDROS.sh -> ../init.d/StartDROS.sh
+	   /etc/rc6.d/K99StartDROS.sh -> ../init.d/StartDROS.sh
+	   /etc/rc2.d/S99StartDROS.sh -> ../init.d/StartDROS.sh
+	   /etc/rc3.d/S99StartDROS.sh -> ../init.d/StartDROS.sh
+	   /etc/rc4.d/S99StartDROS.sh -> ../init.d/StartDROS.sh
+	   /etc/rc5.d/S99StartDROS.sh -> ../init.d/StartDROS.sh
+
+   Next, reboot the system, and verify that DROS is communicating, as in the first-time launch above.
+   If DROS is not responding, inspect the files in '/LWA/runtime'. Generally, the following files 
+   should be present:
+	root@MD3:/home/mcsdr# ls -l /LWA/runtime/
+	total 28
+	-rw-r--r-- 1 root root     0 2010-12-06 04:55 BootComplete.temp
+	-rw-r--r-- 1 root root     0 2010-12-06 04:55 BootStart.temp
+	-rw-r--r-- 1 root root   763 2010-12-06 04:55 BootupArrayScan.log
+	-rw-r--r-- 1 root root     5 2010-12-06 04:55 okgo
+	-rw-r--r-- 1 root root 12636 2010-12-06 04:55 runtime.log
+	-rw-r--r-- 1 root root   266 2010-12-06 04:55 start.info
+
+   In order that these files matter:   
+   'start.info' : records execution date of the startup script, and the supplied parameter (start or stop)  
+   'BootupArrayScan.log'   output of script which checks for DRSU presence
+   'okgo'                  textfile indicating that a DRSU was detected 
+   **'runtime.log'           console log of output of the WAVE_Y process. 
+   'BootStart.temp'        indicates that DROS has started   the boot process
+   'BootComplete.temp'     indicates that DROS has completed the boot process
+   'ShutdownStart.temp'    indicates that DROS has started   the shutdown process (typically absent)
+   'ShutdownComplete.temp' indicates that DROS has completed the shutdown process (typically absent)
+   
+   The runtime log is generally the first place to look if something isn't working correctly.
+   This log contains all the colsole output, including accessory information that is not logged 
+   internally to DROS (that is, items accessible through the MIB).
+
+   Once the software is installed and verified, usage is the same as before, although terminal output
+   is directed to the runtime log.  
+ 
+
+
+
+
+Scheduling a recording
+======================
+  Directions to begin a recording  will vary depending on what method of controlling the 
+  MCS-DR is employed, but examples are given here using the Msender utility included in the 
+  tar-ball. Issuing the following:
+	/LWA/bin/Msender -Source MCS -Destination MD1 -Type REC -ReferenceNumber 123456789 
+	-DestinationIpAddress localhost -DestinationPort 5000 -ResponseListenPort 5001 
+	-Data "xxxxxx yyyyyyyyy zzzzzzzzz FFFFFFFFFFFFFF...FFF"
+  will request that a recording of z milliseconds in length be recorded on the day with MJD=x, 
+  at time MPM=y using data format specified by F. The combination of F and z determine how much 
+  storage is required to honor the request, and an error will be generated if the DRSU does not 
+  have enough free space. In order to process the request, it must be received at least 
+  5-10 seconds before the scheduled start time of the recording. Once a recording is 
+  successfully scheduled, the scheduler will de-queue the entry, and wait for the recording to 
+  begin. Just prior to the actual start of the recording (by about 2.5s), the scheduler will 
+  perform any pre-recording operations (open files, seek, etc.), and output to that effect 
+  will be displayed on the DROS's terminal/console window. Once the exact specified MPM arrives,
+  the DROS will start recording, and will periodically display the number of bytes received.
+  The exact frequency varies, but is on the order of a half second or so. 
+  
+  Once the specified end time is reached, the scheduler will close the socket, and write any 
+  buffered data to the file, and perform any clean-up operations / file system syncing.
+  approximately 5 seconds of down time must be included between the end of one operation and 
+  the beginning of the next. 
+  
+  At the command line (remember to substitute appropriate config and time info):
+	>/LWA/bin/Msender -v -Source MCS -Destination MD1 -Type REC -ReferenceNumber 1 \
+	-DestinationIpAddress localhost -DestinationPort 5001 -ResponseListenPort 5000 \
+	-Data "55240 13500000 10000 DEFAULT_TBN"
+
+  In the second terminal, you should see:
+	[send]Message :
+	[send]	Sender:                     MCS
+	[send]	Destination:                MD1
+	[send]	Type:                       REC
+	[send]	Reference:                  1
+	[send]	Modified Julian Day:        55240
+	[send]	Milliseconds Past Midnight: 13276747
+	[send]	Data Length:                32
+	[send]	Data:                       55240 13500000 10000 DEFAULT_TBN
+	[send]		<   0>:   35 35 32 34 30 20 31 33 35 30 30 30 30 30 20 31 
+	[send]		<  10>:   30 30 30 30 20 44 45 46 41 55 4c 54 5f 54 42 4e 
+
+	[recv]Response :
+	[recv]	Sender:                     MD1
+	[recv]	Destination:                MCS
+	[recv]	Type:                       REC
+	[recv]	Reference:                  1
+	[recv]	Modified Julian Day:        55240
+	[recv]	Milliseconds Past Midnight: 13276752
+	[recv]	Accept/Reject:              Accepted
+	[recv]	General Status:             NORMAL 
+	[recv]	Comment:                    055240_000000001
+	[recv]	Data Length:                25
+	[recv]	Data: 
+	[recv]		<   0>:   41 4e 4f 52 4d 41 4c 20 30 35 35 32 34 30 5f 30 
+	[recv]		<  10>:   30 30 30 30 30 30 30 31  0 
+  
+  This notifies us that the command was received and the the file 055240_000000001 will
+  be used to hold the data.	
+
+  In the original terminal, you should immediately see:
+	055240-013276748 : [FILE SYSTEM] Creating file '055240_000000001' of size 1174405120 bytes
+	055240-013276751 : [FILE SYSTEM] File created successfully
+	055240-013276751 : [FILE SYSTEM] Set File Metadata for '055240_000000001'.
+	[MESSAGING] Received: 'MCS MD1 REC         1  55240  13276747   32 55240 13500000 10000 DEFAULT_TBN'
+	[MESSAGING] Sent: 'MD1 MCS REC         1 055240 013276752 0025 A NORMAL  055240_000000001'
+	055240-013276752 : [SCHEDULER] Entered wait phase for operation with reference number 1
+
+  Sometime later you should see:
+	055240-013500000 : [SCHEDULER] Entered start phase for operation with reference number 1
+	[OPERATION RECORD] Opening socket on port 6002
+	[OPERATION RECORD] Bytes Received = 000000000000000; Ring Queue Occupancy=000000000315392; Live Capture PacketsAvailable=000000000000000; Time=02 Apr 2010 15:56:03:000000384
+	[OPERATION RECORD] Bytes Received = 000000000000000; Ring Queue Occupancy=000000000315392; Live Capture PacketsAvailable=000000000000000; Time=02 Apr 2010 15:56:03:000000384
+	[OPERATION RECORD] Bytes Received = 000000000000000; Ring Queue Occupancy=000000000315392; Live Capture PacketsAvailable=000000000000000; Time=02 Apr 2010 15:56:03:000000384
+	[OPERATION RECORD] Bytes Received = 000000000000000; Ring Queue Occupancy=000000000315392; Live Capture PacketsAvailable=000000000000000; Time=02 Apr 2010 15:56:03:000000384
+		...
+
+	055240-013510000 : [SCHEDULER] Entered stop phase for operation with reference number 1
+	055240-013510001 : [FILE SYSTEM] Set Complete Flag for '055240_000000001'.
+	055240-013512500 : [SCHEDULER] Cooldown ended for operation with reference number 1, goto delete
+	055240-013512501 : [SCHEDULER] Clean-up for operation with reference number 1 
+	055240-013512502 : [SCHEDULER] Deleting operation with reference number 1 from schedule, return to idle
+
+  In this example, the recording was for 10 seconds, but no data source was attached,
+  consequently, Bytes Received is always 0. If a data source is connected and configured 
+  to send to the MCS-DR, these numbers will be non-zero. 
+  
+
+
+  Now, to verify that the recording was made, issue a DIRECTORY-ENTRY-X MIB request:
+	>/LWA/bin/Msender -v -Source MCS -Destination MD1 -Type RPT -ReferenceNumber 1 \
+        -DestinationIpAddress localhost -DestinationPort 5001 -ResponseListenPort 5000 -Data "DIRECTORY-ENTRY-0"
+
+  On the second terminal you should see:
+	[send]Message :
+	[send]	Sender:                     MCS
+	[send]	Destination:                MD1
+	[send]	Type:                       RPT
+	[send]	Reference:                  1
+	[send]	Modified Julian Day:        55240
+	[send]	Milliseconds Past Midnight: 15455362
+	[send]	Data Length:                17
+	[send]	Data:                       DIRECTORY-ENTRY-0
+	[send]		<   0>:   44 49 52 45 43 54 4f 52 59 2d 45 4e 54 52 59 2d 
+	[send]		<  10>:   30 
+	[recv]Response :
+	[recv]	Sender:                     MD1
+	[recv]	Destination:                MCS
+	[recv]	Type:                       RPT
+	[recv]	Reference:                  1
+	[recv]	Modified Julian Day:        55240
+	[recv]	Milliseconds Past Midnight: 15455364
+	[recv]	Accept/Reject:              Accepted
+	[recv]	General Status:             NORMAL 
+	[recv]	Comment:                    055240_000000001 055240 013500000 055240 013510000                      DEFAULT_TBN 000000000000000 000000000004096 YES
+	[recv]	Data Length:                128
+	[recv]	Data: 
+	[recv]		<   0>:   41 4e 4f 52 4d 41 4c 20 30 35 35 32 34 30 5f 30 
+	[recv]		<  10>:   30 30 30 30 30 30 30 31 20 30 35 35 32 34 30 20 
+	[recv]		<  20>:   30 31 33 35 30 30 30 30 30 20 30 35 35 32 34 30 
+	[recv]		<  30>:   20 30 31 33 35 31 30 30 30 30 20 20 20 20 20 20 
+	[recv]		<  40>:   20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 
+	[recv]		<  50>:   44 45 46 41 55 4c 54 5f 54 42 4e 20 30 30 30 30 
+	[recv]		<  60>:   30 30 30 30 30 30 30 30 30 30 30 20 30 30 30 30 
+	[recv]		<  70>:   30 30 30 30 30 30 30 34 30 39 36 20 59 45 53  0 
+
+  On the original terminal you should see:
+	[MESSAGING] Received: 'MCS MD1 RPT         1  55240  15455362   17 DIRECTORY-ENTRY-0'
+	[MESSAGING] Sent: 'MD1 MCS RPT         1 055240 015455364 0128 A NORMAL  055240_000000001 055240 013500000 055240 013510000                      DEFAULT_TBN 000000000000000 000000000004096 YES'
+
+
+Retrieving recorded data
+========================
+  There are 4 methods of retrieving recorded data:
+	1) Use the GET command to retrieve small chunks of data
+	2) Use the CPY command to copy a selection of data to a file on an external drive
+	3) Use the DMP command to copy a selection into a series of files on an external drive
+	4) Use the FUSE-LWAFS-READER to mount the DRSU and use Linux commands to transfer/read data
+  The fourth is in the alpha stage, and not currently recommended. It is available in its present 
+  condition for early evaluation, and because it may also be a useful way to retrieve data.
+  
+  Method 1)
+  The get command takes arguments "<File name> <Start position> <length>", and length must 
+  fit within the the data field of a response message, so about 8000 bytes or less at a a time. 
+  Obviously, retrieving data this way is not going to be as fast as the recording rate. The 
+  following is an example of retrieving data for visual inspection using the Msender utility:
+
+	>/LWA/bin/Msender -v -Source MCS -Destination MD1 -Type GET -ReferenceNumber 123456790 \
+	-DestinationIpAddress localhost -DestinationPort 5001 -ResponseListenPort 5000 -Data \
+	"055240_000000001 000000000 4096"
+
+  This would retrieve the 4096 bytes starting at position 0 from the file 055240_000000001.
+  Note: Recording file names are constructed automatically from the MJD and reference number of 
+  the REC command. The -v flag tells Msender to display both the outgoing message and response. 
+  In our example, no data was recorded, so MCS-DR will respond with an 'Invalid range' because
+  while the file exists, it has a 0 length (length is updated to reflect the actual recorded amount
+  of data when a recording completes). Had there been any recorded data, this would show the
+  message/response session and the data from the recording would be returned in the response's 
+  data field -- and consequently displayed in hex by the Msender utility. 
+ 
+  Method 2,3)
+  The CPY and DMP commands are identical barring the specification of file size for DMP.
+  Arguments are "<Tag> <Start Byte> <Length> <Block Size> <Device ID> <Filename>" for DMP and
+  "<Tag> <Start Byte> <Length> <Device ID> <Filename>" for CPY.
+
+  Assuming you had an external drive attached which showed as /dev/sdk,	
+	>/LWA/bin/Msender -v -Source MCS -Destination MD1 -Type DMP -ReferenceNumber 123456790 \
+	-DestinationIpAddress localhost -DestinationPort 5001 -ResponseListenPort 5000 -Data \
+	"055240_000000001 000000000 000004096 000000016 /dev/sdk MyFirstDataSeries"
+
+  would create a data series in the root folder of /dev/sdk1 named MyFirstDataSeries.000 through
+  MyFirstDataSeries.255. Each would be 16 bytes in size, and altogether would constitute the 
+  first 4096 bytes of the file. The output for both the CPY and DMP commands is similar to the 
+  REC command as it is a scheduled operation. In the second terminal, the Msender will return 
+  a response immediately, but the operation will take some time to complete. Monitor the original
+  terminal or use the 'OP-TYPE' MIB entry to check operation status. 
+
+  Method 4:
+  Again, this is not yet recommended, but can be useful in some circumstances. For specific 
+  instructions, please see the readme in the FUSE-LWAFS-READER folder.
+
+
+Live Wire Test (Recording Real Data)
+====================================
+
+  So far, we have not recorded any real data. To record actual data, you may use the 
+  previous commands to initiate a recording on the MCS-DR, and then use a data source (real 
+  or emulated) to provide data.
+ 
+  Using the included DataSource tool in yet another terminal, or via an SSH session to another 
+  computer with DataSource installed, you would enter the following:
+	>/LWA/bin/DataSource
+  With the following options, all mandatory
+	-DestinationIpAddress aaa.bbb.ccc.ddd (URL or IP, limit 15 chars)
+  	-DestinationPort      12345           (port number)
+	-DataSize             1234            (in bytes per packet)
+	-Rate                 123456789012345 (in bytes/second)
+	-Duration             1234567890      (in milliseconds)
+  following our previous example with the default TBN format:
+	>/LWA/bin/DataSource -DestinationIpAddress localhost -DestinationPort 6001 \
+        -DataSize 1024 -Rate 117440512 -Duration 30000
+        
+  This would create an emulated TBN source on the same machine as the DROS is running.
+
+  Note that you will have to schedule a recording as before, and that synchronizing the recording
+  with the data source can be a pain, so it is better to set the data source to start well before 
+  and stop well after the recording. 
+
+  The output in the DROS terminal will be as before, except that the number of bytes received
+  will be non-zero if the MCS-DR is receiving data.
+
+
+  The procedure for performing a test with another data source is the same, except that 
+  the data source must be controlled by whatever method is appropriate.
+
+  Also, retrieving data from a recording  (as in previous section) is possible once 
+  a recording captures real data. 
+  
+  
+	
+
+Troubleshooting
+===============
+  0) The first thing do if things aren't right is to check the DROS's terminal window to see 
+  what if any error messages are displayed. If the MCS-DR is responding to messages,
+  using Msender to read the MIB can also be helpful.
+
+  1) If the DROS software is not exited/shut down properly, it is possible that messages
+  may persist in message queues, causing the software to enter an endless loop on start-up.
+  If this happens, specifying -flushSchedule, -flushConfig, and -flushLog should clear the 
+  problem up. (To terminate the loop, kill the process using CTRL+C, etc. )
+  
+  2) If the initial run terminates, generally it will be because some configuration hasn't been done.
+  The output in the original terminal will indicate the point at which an error occurred.
+  Typically, this will contain the word 'Error' followed by or slightly preceded by the 
+  an error message indicating the component that couldn't be started.
+  By and large, this will be due to an issue with internal storage or drive detection. Be 
+  sure to carefully follow the instructions on creating storage arrays on DRSUs.
+
+  3) <<< No longer relevant >>>
+
+  4) Method 4 for data retrieval is in the alpha stage. The probability of it crashing increases 
+  with use. Very little help can be offerred at this point, but if you do decide to use method 4
+  and require assistance, please email me, Christopher Wolfe, at chwolfe2@vt.edu.  
+
+  5) in a deployment environment, DRSUs will likely be added and removed frequently. This poses 
+  a challenge in maintaining consistent configuration in a constantly changing environment. 
+  mdadm, the Linux software-raid utility will misbehave if left to its own devices. 
+  If the 'md' kernel module is installed, or mdadm is set to scan automatically,
+  DRSUs will likely be scanned before all of the DRSU's drives have been initialized. This will 
+  result in a partially started array with only one or a couple drives present, and in a naming 
+  convention not supported by the DROS. Typically, this will be named /dev/md_d0, /dev/md_d1, ...
+    To see what the system thinks is the case, 
+  	>cat /proc/mdstat
+  	Personalities : [linear] [multipath] [raid0] [raid1] [raid6] [raid5] [raid4] [raid10] 
+  	md0 : active raid0 loop4[4] loop3[3] loop2[2] loop1[1] loop0[0]
+  	      52427520 blocks 256k chunks
+  	unused devices: <none>
+  
+    In this output (above), md0 is an array I created with /dev/loop0 through /dev/loop4, and this 
+    is the correct output. If something is wacky, it'll probably look similar to
+  	Personalities : [linear] [multipath] [raid0] [raid1] [raid6] [raid5] [raid4] [raid10] 
+  	md_d0 : inactive loop0[0](S) loop1[1](S)
+  	      20971008 blocks
+  	unused devices: <none>
+  
+    In this case, you will need to stop the array before creating a new one using the devices.
+  	>mdadm --stop /dev/md_d0
+  	mdadm: stopped /dev/md_d0
+  
+    And then reassemble the drive:
+  	>mdadm --assemble /dev/md0 /dev/loop0 /dev/loop1 /dev/loop2 /dev/loop3 /dev/loop4
+  	mdadm: /dev/md0 has been started with 5 drives.
+
+  6) Please direct questions regarding usage or any discovered bugs to Christopher Wolfe 
+  (chwolfe2@vt.edu), and I will be happy to assist.
+
+Advanced utility: ICD-Compliance-Test.sh
+========================================
+  If all goes as planned, and you have an MCS-DR with DROS up and running, a DRSU at /dev/md0,
+  an external drive at /dev/sdg with an ext2 partition at /dev/sdg1, you may be able to use the 
+  script 'ICD-Compliance-Test.sh' installed to /LWA/scripts/ folder. This is a development tool, 
+  and not meant for general use, but if you're comfortable with bash shell scripts, then have a 
+  look, and feel free to use and modify. I use this script to test DROS in the lab for ICD
+  compliance. Likely to be of use are the functions which I created that use Msender and DataSource
+  to script interaction with the MCS-DR and perform recording and other command tests.
+  In particular, it's a good way to grab the whole MIB (take what you need, leave the rest). 
+  If you have questions about this script, or any of the binaries, please email me 
+  (chwolfe2@vt.edu)
+  
+
+
+
+
