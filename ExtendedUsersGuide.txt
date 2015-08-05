@@ -4,8 +4,8 @@
 		=====================================
 
 ====================================================================================
-Version: DROS-2.0-Devel-31614
-Date:    2012-11-27
+Version: DROS-2.3.0.1-RELEASE
+Date:    2013-06-23
 Author:  Christopher Wolfe
 ====================================================================================
 
@@ -475,7 +475,7 @@ Readiness Check-list
 	   mdadm, and, depending on PC model: 
 		XPS 435MT:   coretemp
 		DELL t1500:  f71882fg
-  	2) A freshly built version 'DROS-2.0-Devel-31614' of the DROSv2 software
+  	2) A freshly built version 'DROS-2.3.0.1-RELEASE' of the DROSv2 software
 	3) Configuration files modified to suit the local environment
 	4) An assembled DRSU
 	5) A raid 0 array on the DRSU visible as /dev/md0 in /proc/partitions

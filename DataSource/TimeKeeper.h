@@ -24,8 +24,6 @@
 #include <sys/time.h>
 #include <time.h>
 #include <string>
-#include <stdint.h>
-
 using namespace std;
 
 class TimeKeeper{
@@ -35,10 +33,10 @@ private:
 	static bool		initialized;
 	TimeKeeper(); // only use static functions, so don't allow instantiation
 public:
-	static uint64_t getMPM();
-	static uint64_t getMJD();
-	static uint64_t getTT();
-	static bool   isFuture(uint64_t MJD, uint64_t MPM);
+	static size_t getMPM();
+	static size_t getMJD();
+	static size_t getTT();
+	static bool   isFuture(size_t MJD, size_t MPM);
 	static double getRuntime();
 	static void   resetRuntime();
 	static string DottedDate();

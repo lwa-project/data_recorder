@@ -26,16 +26,25 @@
 #include <list>
 #include <string.h>
 #include <stdio.h>
-#include <cstdlib>
-#include "Signals/Complex.h"
-#include "Lwa/DrxFrameGenerator.hpp"
-#include "Lwa/TbnFrameGenerator.h"
-#include "Lwa/TbwFrameGenerator.h"
-#include "Signals/TestPatternGenerator.h"
+
+#include "Complex.h"
+#include "DrxFrameGenerator.hpp"
 
 using namespace std;
-#include "Lwa/LWA.h"
+/*
+int8_t floatToFourBit(float val){
+	int i=(int) val;
+	if (i>)
+}
 
+PackedSample pack(UnpackedSample u){
+	RealType i = u.i;
+	RealType q = u.q;
+	PackedSample p;
+	p.i = floatToFourBit(i);
+	p.q = floatToFourBit(q);
+}
+*/
 void usage(string errorMsg){
 
 	cout << "[Error]  " << errorMsg << endl;
@@ -43,27 +52,19 @@ void usage(string errorMsg){
 	"Usage: " << endl <<
 	"\tDataSource " << endl <<
 	"\t                                                                         \n"
-	"\tParameter  Format           Description                 Unit      DRX/TBN/TBW Default      RAW Mode Default\n"
+	"\tParameter  Format           Description                 Unit      DRX Mode Default         Legacy Mode Default\n"
 	"\t=========  ===============  ==========================  ========  =======================  =======================\n"
 	"\n"
-	"\t-DRX       n/a (flag)       Generate DRX data streams        N/A                                                  \n"
-	"\t-TBN       n/a (flag)       Generate TBN data streams        N/A                                                  \n"
-	"\t-TBW       n/a (flag)       Generate TBW data streams        N/A                                                  \n"
-	"\t-RAW       n/a (flag)       Generate RAW data streams        N/A                                                  \n"
-	"\t-po        n/a (flag)       fill packets with binary         N/A                                                  \n"
-	"\t                              pattern. (No sine waves)                                                            \n"
-	"\t-ro        integer (+)      Rate override                bytes/s  <optional>               <optional> \n"
 	"\t-i         aaa.bbb.ccc.ddd  Destination IP address           N/A  <required>               <required> \n"
 	"\t-p         integer (+)      Destination port                 N/A  <required>               <required> \n"
 	"\t-s         integer (+)      Packet size                    bytes  ignored, 4128            <required> \n"
 	"\t-r         integer (+)      Data Rate                    bytes/s  ignored, by filt. code   <required> \n"
 	"\t-d         integer (0,+)    Duration                          ms  0, forever               0, forever \n"
 	"\t-k         integer (+)      Key                              N/A  <ignored>                0xFEEDDEADBEEF2DAD\n"
-	"\t-fc        integer (+)      DRX/TBN filter code             #1-7  7                        <ignored>\n"
+	"\t-fc        integer (+)      DRX filter code                 #1-7  7                        <ignored>\n"
 	"\t                              Determines data rate, \n"
 	"\t                              decimation factor, etc.\n"
-	"\t                              DRX/TBN mode.\n"
-
+	"\t                              DRX mode.\n"
 	"\t-f0        float            Sine wave 0 frequency             Hz                           <ignored>\n"
 	"\t-m0        float            Sine wave 0 amplitude           arb.  6.0                      <ignored>\n"
 	"\t-f1        float            Sine wave 1 frequency             Hz                           <ignored>\n"
@@ -141,83 +142,28 @@ char * humanReadable(uint64_t timetag, uint64_t Fs = 196000000){
 	sprintf(buf,"%02.0f:%02.0f:%05.3f",H,M,S);
 	return buf;
 }
+#define DP_BASE_FREQ_HZ         196e6
+#define DRX_SAMPLES_PER_FRAME   4096
+#define FREQ_CODE_FACTOR        (DP_BASE_FREQ_HZ / (double)0x100000000)
+#define FREQ_CODE(f)            ((f*1e6*(double)0x100000000)/(DP_BASE_FREQ_HZ))
 
-
-#define SECONDS_TO_COVER      4l
-#define DEFAULT_DRX_DECFACTOR 10ll
-#define DEFAULT_N             (SAMPLES_PER_SECOND * DRX_POLARIZATIONS * SECONDS_TO_COVER /  (DRX_SAMPLES_PER_FRAME * DEFAULT_DRX_DECFACTOR)) & (~0x0000000000000003l)
-
-
-#define TEST_OPT_STRING(op_long, op_short, min_length, max_length, var, flag)                        \
-	if (!strcmp(argv[i],"-" #op_long) || !strcmp(argv[i],"-" #op_short)){                            \
-		if (i<p){                                                                                    \
-			if ((strlen(argv[i+1])>=min_length) && (strlen(argv[i+1]) <= max_length)){               \
-				var=string(argv[i+1]);                                                               \
-				flag = true;                                                                		 \
-				i+=2;                                                                                \
-			} else {                                                                                 \
-				usage("Invalid parameter '" #op_long "'. Must be between " #min_length " and " #max_length " characters");\
-			}                                                                                        \
-		} else {                                                                                     \
-			usage("Missing parameter value '" #op_long "'.");                                        \
-		}                                                                                            \
-		continue;                                                                                    \
-	}
-
-#define TEST_OPT_DOUBLE(op_long, op_short, var, flag)                                                \
-	if (!strcmp(argv[i],"-" #op_long) || !strcmp(argv[i],"-" #op_short)){                            \
-		if (i<p){                                                                                    \
-			var=atof(argv[i+1]);                                                                     \
-			flag = true;                                                                        	 \
-			i+=2;                                                                                    \
-		} else {                                                                                     \
-			usage("Missing parameter value '" #op_long "'.");                                        \
-		}                                                                                            \
-		continue;                                                                                    \
-	}
-
-#define TEST_OPT_SIZE_T(op_long, op_short, var, flag)                                                \
-	if (!strcmp(argv[i],"-" #op_long) || !strcmp(argv[i],"-" #op_short)){                            \
-		if (i<p){                                                                                    \
-			var=strtoul(argv[i+1],NULL,10);                                                          \
-			flag = true;                                                                    		 \
-			i+=2;                                                                                    \
-		} else {                                                                                     \
-			usage("Missing parameter value '" #op_long "'.");                                        \
-		}                                                                                            \
-		continue;                                                                                    \
-	}
-#define TEST_OPT_USHORT(op_long, op_short, var, flag)                                                \
-	if (!strcmp(argv[i],"-" #op_long) || !strcmp(argv[i],"-" #op_short)){                            \
-		if (i<p){                                                                                    \
-			var=(unsigned short)atoi(argv[i+1]);                                                     \
-			flag = true;                                                                    		 \
-			i+=2;                                                                                    \
-		} else {                                                                                     \
-			usage("Missing parameter value '" #op_long "'.");                                        \
-		}                                                                                            \
-		continue;                                                                                    \
-	}
-
-#define TEST_OPT_SETTABLE(op_long, op_short, var, val, flag)                                         \
-	if (!strcmp(argv[i],"-" #op_long) || !strcmp(argv[i],"-" #op_short)){                            \
-		var=val;                                                                                     \
-		flag = true;                                                                        		 \
-		i++;                                                                                        \
-		continue;                                                                                    \
-	}
-
-
-
+#define SAMPLES_PER_SECOND 196000000l
+#define DECFACTOR          10l
+#define STREAMS            4l
+#define SECONDS_TO_COVER   4l
+#define SAMPLES_PER_FRAME  ((uint64_t) DRX_SAMPLES_PER_FRAME)
+//#define fs 32
 
 int main(int argc, char * argv[]){
+/*
+	bzero((void*) &f, sizeof(DrxFrame));
+	for(int i=0; i< 5; i++){
+		fg.next(1,0,1,i*DRX_SAMPLES_PER_FRAME,i,&f);
+		printFrame(&f,true,true);
+	}
+	return 0;
 
-	cout << "TBN: " << sizeof(TbnFrame) << endl;
-	cout << "TBW: " << sizeof(TbwFrame) << endl;
-	cout << "DRX: " << sizeof(DrxFrame) << endl;
-
-
-	try{
+*/
 	size_t totalSent=0;
 
 
@@ -226,300 +172,220 @@ int main(int argc, char * argv[]){
 	size_t DataSize=0;
 	size_t Duration=0;
 	size_t Rate=0;
-	size_t RateOverride=0;
 	size_t Key=0;
 	bool DestinationIpAddressSpecified=false;
 	bool DestinationPortSpecified=false;
 	bool DataSizeSpecified=false;
 	bool DurationSpecified=false;
 	bool RateSpecified=false;
-	bool RateOverrideSpecified=false;
 	bool KeySpecified=false;
 	bool fcSpecified=false;
-	Mode mode = RAW;
-
+	bool DrxMode=false;
 	double rptTime=0.5;
+	uint64_t N           = (SAMPLES_PER_SECOND * STREAMS * SECONDS_TO_COVER /  (SAMPLES_PER_FRAME * DECFACTOR)) & (~0x0000000000000003l);
+	double   fs          = 32;
+	uint16_t decFactor   = 10;
+	uint32_t fc0         = FREQ_CODE(20);
+	uint32_t fc1		 = FREQ_CODE(20);
+	uint32_t statusFlags = 0;
+	uint8_t  beam        = 1;
+	uint16_t timeOffset  = 0;
+	uint16_t filterCode  = 7;
+
+	cout << "debug: fc0=" << dec << fc0 << "; fc1=" << dec << fc1 << endl;
 
 
+	float f0 = -fs/2;
+	float f1 = fs/4;
+	float f2 = fs/2;
+	float m0 = 6.0;
+	float m1 = m0-2.0;
+	float m2 = m1-2.0;
+	float sig = 1.0;
+	float scale = 8.0;
 
-	//common to multiple formats
-	uint16_t filterCode      = 7;         // used by TBN, DRX
-	uint64_t N               = DEFAULT_N; // used by TBN, TBW, DRX
-	bool     useComplex      = false;     // used by TBN, TBW, DRX
-	bool     correlatorTest  = false;     // used by TBN, TBW, DRX
-	bool     bitPattern      = false;     // used by ALL
-	uint16_t decFactor       = 10;        // used by TBN, DRX
-
-	// set up a pattern that will be visible in spectrograms
-	double   baseBandWidth   = 32.0;
-	double   baseFreq        = 0.0;
-	double   sineWaveFreq[3] = {-5.0, 5.0, 14.0};
-	double   sineWaveMag[3]  = {2.0, 4.0, 6.0};
-	double   noiseSpread     = 1.0;
-	double   noiseScale      = 8.0;
-
-	double   chirpGamma      = 1.0;
-	double   chirpMag        = 4.0;
-	double   chirpLowFreq    = -baseBandWidth / 2;
-	double   chirpHighFreq   = baseBandWidth / 2;
-	double   chirpSlewFreq   = 1e-6;   // 1/slew rate
-	bool     chirpSinusoidal = true; // false=>sawtooth
+	float cf0  = -fs/2;
+	float cf1  = fs/2;
+	float cf2  = fs * 1e-6 ;
+	float cm   = 4.0;
+	float cg   = 1.0;
+	bool  csin = true;
+	//bool  to_stdio = false;
+	bool useComplex=false;
+	bool correlatorTest=false;
+	//bool  looptest = false;
 
 
-	// tuning settings for each DRX tuning
-	uint32_t freqCode[DRX_TUNINGS];       // what's the center freq's freq code
-	double   tuningFreq[DRX_TUNINGS];     // where's it centered
-	double   tuningBw[DRX_TUNINGS];       // what's the width from min to max
-	__attribute__((unused)) double   tuningMinFreq[DRX_TUNINGS];  // what's the minimum frequency observable
-	__attribute__((unused)) double   tuningMaxFreq[DRX_TUNINGS];  // what's the maximum frequency observable
-
-	// tune the pattern iaw with above tuning settings
-	double   adj_sineWaveFreq[DRX_TUNINGS][3];
-	double   adj_chirpLowFreq[DRX_TUNINGS];
-	double   adj_chirpHighFreq[DRX_TUNINGS];
-	double   adj_chirpSlewFreq[DRX_TUNINGS];   // 1/slew rate
-
-	// set defaults
-	freqCode[0]            = FREQ_CODE(20);
-	freqCode[1]            = FREQ_CODE(40);
-	tuningBw[0]            = 10e6; // 10MHz
-	tuningBw[0]            = 20e6; // 20MHz
-
-	bool useAbsFreq = false;
 
 
 	int i=1;
 	int p=argc-1;
-	__attribute__((unused)) bool ignoredFlag = false;
 	while (i<argc){
-		TEST_OPT_STRING(   DestinationIpAddress, i,   1, 15, DestinationIpAddress,  DestinationIpAddressSpecified);
-		TEST_OPT_USHORT(   DestinationPort,      p,          DestinationPort,       DestinationPortSpecified);
-		TEST_OPT_SIZE_T(   DataSize,             s,          DataSize,              DataSizeSpecified);
-		TEST_OPT_SIZE_T(   Duration,             d,          Duration,              DurationSpecified);
-		TEST_OPT_SIZE_T(   Rate,                 r,          Rate,                  RateSpecified);
-		TEST_OPT_SIZE_T(   RateOverride,         ro,         RateOverride,          RateOverrideSpecified);
-		TEST_OPT_SIZE_T(   Key,                  k,          Key,                   KeySpecified);
-		TEST_OPT_SIZE_T(   filter_code,          fc,         filterCode,            fcSpecified);
-		TEST_OPT_SETTABLE( DRX,                  DRX,        mode,DRX,              ignoredFlag);
-		TEST_OPT_SETTABLE( TBN,                  TBN,        mode,TBN,              ignoredFlag);
-		TEST_OPT_SETTABLE( TBW,                  TBW,        mode,TBW,              ignoredFlag);
-		TEST_OPT_SETTABLE( RAW,                  RAW,        mode,RAW,              ignoredFlag);
-		TEST_OPT_SETTABLE( XCP,                  XCP,        correlatorTest,true,   ignoredFlag);
-		TEST_OPT_SETTABLE( pattern-only,         po,         bitPattern,true,       ignoredFlag);
-		TEST_OPT_DOUBLE(   sineWaveFreq0,        f0,         sineWaveFreq[0],       ignoredFlag);
-		TEST_OPT_DOUBLE(   sineWaveFreq1,        f1,         sineWaveFreq[1],       ignoredFlag);
-		TEST_OPT_DOUBLE(   sineWaveFreq2,        f2,         sineWaveFreq[2],       ignoredFlag);
-		TEST_OPT_DOUBLE(   sineWaveMag0,         m0,         sineWaveMag[0],        ignoredFlag);
-		TEST_OPT_DOUBLE(   sineWaveMag1,         m1,         sineWaveMag[1],        ignoredFlag);
-		TEST_OPT_DOUBLE(   sineWaveMag2,         m2,         sineWaveMag[2],        ignoredFlag);
-		TEST_OPT_DOUBLE(   noiseScale,           sc,         noiseScale,            ignoredFlag);
-		TEST_OPT_DOUBLE(   noiseSpread,          sig,        noiseSpread,           ignoredFlag);
-		TEST_OPT_DOUBLE(   chirpLowFreq,         cf0,        chirpLowFreq,          ignoredFlag);
-		TEST_OPT_DOUBLE(   chirpHighFreq,        cf1,        chirpHighFreq,         ignoredFlag);
-		TEST_OPT_DOUBLE(   chirpSlewFreq,        cf2,        chirpSlewFreq,         ignoredFlag);
-		TEST_OPT_DOUBLE(   chirpMag,             cm,         chirpMag,              ignoredFlag);
-		TEST_OPT_DOUBLE(   chirpGamma,           cg,         chirpGamma,            ignoredFlag);
-		TEST_OPT_SETTABLE( SAW,                  SAW,        chirpSinusoidal,false, ignoredFlag);
-		TEST_OPT_SETTABLE( SIN,                  SIN,        chirpSinusoidal,true,  ignoredFlag);
-		TEST_OPT_USHORT(   useComplex,           uc,         useComplex,            ignoredFlag);
-		TEST_OPT_SIZE_T(   N,                    N,          N,                     ignoredFlag);
-		TEST_OPT_DOUBLE(   baseBandWidth,        bb,         baseBandWidth,         ignoredFlag);
-		TEST_OPT_DOUBLE(   baseBandWidth,        fs,         baseBandWidth,         ignoredFlag);
-		TEST_OPT_DOUBLE(   baseFreq,             bf,         baseBandWidth,         ignoredFlag);
-		TEST_OPT_SIZE_T(   freqCode0,            fc0,        freqCode[0],           ignoredFlag);
-		TEST_OPT_SIZE_T(   freqCode1,            fc1,        freqCode[1],           ignoredFlag);
-		TEST_OPT_USHORT(   decFactor,            df,         decFactor,             ignoredFlag);
-		TEST_OPT_SETTABLE( useAbsFreq,           uaf,        useAbsFreq,true,       ignoredFlag);
-
-		if (strcmp(argv[i],"-f")==0){
-			if (i<p) sineWaveFreq[0]=atof(argv[++i]); else  usage("Missing operand: f0");
-			if (i<p) sineWaveFreq[1]=atof(argv[++i]); else  usage("Missing operand: f1");
-			if (i<p) sineWaveFreq[2]=atof(argv[++i]); else  usage("Missing operand: f2");
-			i++; continue;
+		if ((strcmp(argv[i],"-DestinationIpAddress")==0) || (strcmp(argv[i],"-i"))==0){
+			if (i<p){	if (strlen(argv[i+1])<=15){		DestinationIpAddress=string(argv[i+1]);		DestinationIpAddressSpecified=true;			i++;
+			} else { usage("Invalid Source length. Must not be more than 15 characters"); }		} else { usage("Missing operand: Source"); }
+		}else if ((strcmp(argv[i],"-DestinationPort")==0) || (strcmp(argv[i],"-p")==0)){
+			if (i<p){	if (strlen(argv[i+1])<=5){		DestinationPort=(unsigned short)atoi(argv[i+1]);		DestinationPortSpecified=true;			i++;
+			} else { usage("Invalid DestinationPort length. Must not be more than 5 characters"); }		} else { usage("Missing operand: DestinationPort"); }
+		}else if ((strcmp(argv[i],"-DataSize")==0)||(strcmp(argv[i],"-s")==0)){
+			if (i<p){	if (strlen(argv[i+1])<=4){		DataSize=strtoul(argv[i+1],NULL,10);		DataSizeSpecified=true;			i++;
+			} else { usage("Invalid DataSize length. Must not be more than 4 characters"); }		} else { usage("Missing operand: DataSize"); }
+		}else if ((strcmp(argv[i],"-Duration")==0)||(strcmp(argv[i],"-d")==0)){
+			if (i<p){	if (strlen(argv[i+1])<=10){		Duration=strtoul(argv[i+1],NULL,10);		DurationSpecified=true;			i++;
+			} else { usage("Invalid Duration length. Must not be more than 10 characters"); }		} else { usage("Missing operand: Duration"); }
+		}else if ((strcmp(argv[i],"-Rate")==0)||(strcmp(argv[i],"-r")==0)){
+			if (i<p){	if (strlen(argv[i+1])<=15){		Rate=strtoul(argv[i+1],NULL,10);		RateSpecified=true;			i++;
+			} else { usage("Invalid Rate Length. Must not be more than 15 characters"); }		} else { usage("Missing operand: Rate"); }
+		}else if ((strcmp(argv[i],"-Key")==0) || (strcmp(argv[i],"-k")==0)){
+			if (i<p){	if (strlen(argv[i+1])<=15){		Key=strtoul(argv[i+1],NULL,10);		KeySpecified=true;			i++;
+			} else { usage("Invalid Key length. Must not be more than 15 characters"); }		} else { usage("Missing operand: Key"); }
+/*		}else if ((strcmp(argv[i],"-filter_code")==0) || (strcmp(argv[i],"-fc")==0)){
+			if (i<p){	if (strlen(argv[i+1])==1){		filterCode=(uint16_t) strtoul(argv[i+1],NULL,10);		fcSpecified=true;			i++;
+			} else { usage("Invalid filter code length. Must not be more than 1 character"); }		} else { usage("Missing operand: filter code"); }
+*/		}else if (strcmp(argv[i],"-DRX")==0){
+			DrxMode = true;
+		}else if (strcmp(argv[i],"-XCP")==0){
+			correlatorTest = true;
+			DrxMode = true; //implied
+		}else if (strcmp(argv[i],"-f")==0){
+			if (i<p) f0=atof(argv[++i]); else  usage("Missing operand: f0");
+			if (i<p) f1=atof(argv[++i]); else  usage("Missing operand: f1");
+			if (i<p) f2=atof(argv[++i]); else  usage("Missing operand: f2");
 		}else if (strcmp(argv[i],"-m")==0){
-			if (i<p) sineWaveMag[0]=atof(argv[++i]); else  usage("Missing operand: m0");
-			if (i<p) sineWaveMag[1]=atof(argv[++i]); else  usage("Missing operand: m1");
-			if (i<p) sineWaveMag[2]=atof(argv[++i]); else  usage("Missing operand: m2");
-			i++; continue;
+			if (i<p) m0=atof(argv[++i]); else  usage("Missing operand: m0");
+			if (i<p) m1=atof(argv[++i]); else  usage("Missing operand: m1");
+			if (i<p) m2=atof(argv[++i]); else  usage("Missing operand: m2");
+
+		}else if (strcmp(argv[i],"-f0")==0){if (i<p) f0=atof(argv[++i]); else  usage("Missing operand: f0");
+		}else if (strcmp(argv[i],"-f1")==0){if (i<p) f1=atof(argv[++i]); else  usage("Missing operand: f1");
+		}else if (strcmp(argv[i],"-f2")==0){if (i<p) f2=atof(argv[++i]); else  usage("Missing operand: f2");
+		}else if (strcmp(argv[i],"-m0")==0){if (i<p) m0=atof(argv[++i]); else  usage("Missing operand: m0");
+		}else if (strcmp(argv[i],"-m1")==0){if (i<p) m1=atof(argv[++i]); else  usage("Missing operand: m1");
+		}else if (strcmp(argv[i],"-m2")==0){if (i<p) m2=atof(argv[++i]); else  usage("Missing operand: m2");
+		}else if (strcmp(argv[i],"-sig")==0){if (i<p) sig=atof(argv[++i]); else  usage("Missing operand: sigma");
+		}else if (strcmp(argv[i],"-sc")==0){if (i<p) scale=atof(argv[++i]); else  usage("Missing operand: scale");
+		}else if (strcmp(argv[i],"-cf0")==0){if (i<p) cf0=atof(argv[++i]); else  usage("Missing operand: cf0");
+		}else if (strcmp(argv[i],"-cf1")==0){if (i<p) cf1=atof(argv[++i]); else  usage("Missing operand: cf1");
+		}else if (strcmp(argv[i],"-cf2")==0){if (i<p) cf2=atof(argv[++i]); else  usage("Missing operand: cf2");
+		}else if (strcmp(argv[i],"-cm")==0){if (i<p) cm=atof(argv[++i]); else  usage("Missing operand: cm");
+		}else if (strcmp(argv[i],"-cg")==0){if (i<p) cg=atof(argv[++i]); else  usage("Missing operand: cg");
+		}else if (strcmp(argv[i],"-SAW")==0){csin=false;
+		}else if (strcmp(argv[i],"-SIN")==0){csin=false;
+		}else if (strcmp(argv[i],"-useComplex")==0){
+			if (i<p) useComplex=(strtoul(argv[++i],NULL,10)!=0); else  usage("Missing operand: useComplex");
+		/*}else if (strcmp(argv[i],"-X")==0){
+			to_stdio=true;
+		}else if (strcmp(argv[i],"-LT")==0){
+			looptest=true;*/
+		}else if (strcmp(argv[i],"-N")==0){
+			if (i<p) N=strtoul(argv[++i],NULL,10)& (~0x0000000000000003l); else  usage("Missing operand: N");
+		}else if (strcmp(argv[i],"-fs")==0){
+			if (i<p) fs=strtoul(argv[++i],NULL,10); else  usage("Missing operand: fs");
+		}else if (strcmp(argv[i],"-df")==0){
+			if (i<p) decFactor=(uint16_t)strtoul(argv[++i],NULL,10); else  usage("Missing operand: df");
+
+		}else if (strcmp(argv[i],"-fc0")==0){
+			if (i<p) fc0=(uint32_t)strtoul(argv[++i],NULL,10); else  usage("Missing operand: fc0");
+		}else if (strcmp(argv[i],"-fc1")==0){
+			if (i<p) fc1=(uint32_t)strtoul(argv[++i],NULL,10); else  usage("Missing operand: fc1");
+		}else {
+			usage(string("Unknown commandline option:")+argv[i]);
 		}
-		usage(string("Unknown commandline option:")+argv[i]);
+		i++;
+	}
+	/*
+	if (looptest){
+		DestinationIpAddress = "127.0.0.1";
+	}*/
+
+	if (DrxMode || !DrxMode){
+		if (! DurationSpecified){
+			cout << "Warning: No duration specified, will run until terminated. (Press CTRL + C to exit)\n";
+			Duration = 0;
+		}
+
+		if (!DestinationIpAddressSpecified || !DestinationPortSpecified){
+			usage("You must specify destination IP address and port number");
+		}
 	}
 
-	if (!DestinationIpAddressSpecified || !DestinationPortSpecified){
-		usage("You must specify destination IP address and port number");
-	}
-	if (! DurationSpecified){
-		cout << "Warning: No duration specified, will run until terminated. (Press CTRL + C to exit)\n";
-		Duration = 0;
-	}
-
-	switch(mode){
-	case DRX:
+	if (DrxMode){
 		if (!fcSpecified){
 			cout << "Warning: No filter code specified, will default to 7.\n";
 			filterCode = 7;
-		} else {
-			if (filterCode > 7){
-				cout << "Warning: Filter code exceeds maximum value, will default to 7.\n";
-				filterCode = 7;
-			}
-			if (filterCode < 1){
-				cout << "Warning: Filter code exceeds minimum value, will default to 1.\n";
-				filterCode = 1;
-			}
 		}
-		Rate=DrxDataRates[filterCode-1];
-		decFactor = DrxDecFactors[filterCode-1];
+		if (filterCode > 7){
+			cout << "Warning: Filter code exceeds maximum value, will default to 7.\n";
+			filterCode = 7;
+		}
+		if (filterCode < 1){
+			cout << "Warning: Filter code exceeds minimum value, will default to 1.\n";
+			filterCode = 1;
+		}
 		if (DataSizeSpecified || RateSpecified){
 			cout << "Warning: Rate and DataSize options are ignored in DRX mode.\n";
 		}
 		if (KeySpecified){
 			cout << "Warning: Key value is ignored in DRX mode.\n";
 		}
-		break;
-	case TBN:
-		if (!fcSpecified){
-			cout << "Warning: No filter code specified, will default to 7.\n";
-			filterCode = 7;
-		} else {
-			if (filterCode > 7){
-				cout << "Warning: Filter code exceeds maximum value, will default to 7.\n";
-				filterCode = 7;
-			}
-			if (filterCode < 1){
-				cout << "Warning: Filter code exceeds minimum value, will default to 1.\n";
-				filterCode = 1;
-			}
-		}
-		Rate=TbnDataRates[filterCode-1];
-		decFactor = TbnDecFactors[filterCode-1];
-		if (DataSizeSpecified || RateSpecified){
-			cout << "Warning: Rate and DataSize options are ignored in DRX mode.\n";
-		}
-		if (KeySpecified){
-			cout << "Warning: Key value is ignored in DRX mode.\n";
-		}
-		break;
-	case TBW:
-		Rate=104857600.0;
-		break;
-	case RAW:
+
+	}
+	if (!DrxMode) {
 		if (!DataSizeSpecified || !RateSpecified){
-			usage("You must specify data size and rate when not in DRX, TBN, or TBW modes");
+			usage("You must specify data size and rate when not in DRX mode");
 		}
 		if (! KeySpecified){
 			cout << "Warning: No key specified, will default to 0xFEED.DEAD.BEEF.2.DAD.\n";
 		}
-		break;
-	default:
-		cout << "Unknown mode: " << mode << endl;
-		exit(-1);
-	}
-
-	if (RateOverrideSpecified){
-		cout << "Warning: Rate being overridden to "<<RateOverride<<endl;
-		Rate=RateOverride;
-	}
-
-	// compute the adjusted frequencies for DRX tunings
-	if (!useAbsFreq){
-		for (int j=0; j<DRX_TUNINGS; j++){
-			tuningFreq[j]          = FREQ_FROM_FREQ_CODE(freqCode[j]);
-			tuningMinFreq[j]       = tuningFreq[j] - (tuningBw[j] / 2.0);
-			tuningMaxFreq[j]       = tuningFreq[j] + (tuningBw[j] / 2.0);
-			for (int i=0; i< 3; i++){
-				adj_sineWaveFreq[j][i] = (((sineWaveFreq[i] - baseFreq) / baseBandWidth) * tuningBw[j]) +  (tuningFreq[j]);
-			}
-			adj_chirpLowFreq[j]  = (((chirpLowFreq  - baseFreq) / baseBandWidth) * tuningBw[j]) +  (tuningFreq[j]);
-			adj_chirpHighFreq[j] = (((chirpHighFreq - baseFreq) / baseBandWidth) * tuningBw[j]) +  (tuningFreq[j]);
-			adj_chirpSlewFreq[j] = (chirpSlewFreq - baseFreq  +  tuningFreq[j]);
-		}
-	} else {
-		for (int j=0; j<DRX_TUNINGS; j++){
-			tuningFreq[j]          = FREQ_FROM_FREQ_CODE(freqCode[j]);
-			tuningMinFreq[j]       = tuningFreq[j] - (tuningBw[j] / 2.0);
-			tuningMaxFreq[j]       = tuningFreq[j] + (tuningBw[j] / 2.0);
-			for (int i=0; i< 3; i++){
-				adj_sineWaveFreq[j][i] = sineWaveFreq[i];
-			}
-			adj_chirpLowFreq[j]  = chirpLowFreq;
-			adj_chirpHighFreq[j] = chirpHighFreq;
-			adj_chirpSlewFreq[j] = chirpSlewFreq;
-		}
 	}
 
 
 
+	/*
+	DrxFrameGenerator(
+			bool	 useComplex,
+			uint64_t numFrames,
+			RealType fs,
+			uint16_t decFactor,
+			uint8_t beam,
+			uint16_t timeOffset,
+			uint32_t statusFlags,
+			uint32_t freqCode0,
+			uint32_t freqCode1,
+
+			RealType f0, RealType m0,
+			RealType f1, RealType m1,
+			RealType f2, RealType m2,
+			RealType cf0,
+			RealType cf1,
+			RealType cf2,
+			RealType cm,
+			RealType cg,
+			bool     csin,
+			RealType scale,
+			RealType max
+	);
 
 
+	*/
 
 
+	DrxFrameGenerator fg(
+			correlatorTest,
+			useComplex,
+			N,
+			fs, decFactor,
+			beam, timeOffset, statusFlags, fc0, fc1, f0,m0,f1,m1,f2,m2,cf0,cf1,cf2,cm,cg,csin,sig,scale);
+	DrxFrame* f;
 
-	TestPatternGenerator* tp[DRX_TUNINGS];
 
-	for (int j=0; j<DRX_TUNINGS; j++){
-		if ((!bitPattern) && (mode!=RAW)){
-			tp[j] = new TestPatternGenerator(
-					useComplex,
-					adj_sineWaveFreq[j][0], sineWaveMag[0],
-					adj_sineWaveFreq[j][1], sineWaveMag[1],
-					adj_sineWaveFreq[j][2], sineWaveMag[2],
-					adj_chirpLowFreq[j], adj_chirpHighFreq[j], adj_chirpSlewFreq[j],
-					chirpMag, chirpGamma, chirpSinusoidal,
-					noiseSpread, noiseScale
-			);
-		} else {
-			tp[j] = NULL;
-		}
+	char * ptr = new char [DataSize] ;
+	for(unsigned int i=0;i<DataSize;i++){
+		ptr[i]=(char)(i&0xff);
 	}
-
-	void*   fg  = NULL;
-	char*   ptr = NULL;
-	size_t* ts  = NULL;
-	size_t* sid = NULL;
-	size_t* key = NULL;
-	DrxFrame* f_drx;
-	TbnFrame* f_tbn;
-	TbwFrame* f_tbw;
-
-	switch(mode){
-		case DRX:
-			fg = (void*) new DrxFrameGenerator(bitPattern, correlatorTest, useComplex, N, decFactor, 0, 0, 0, freqCode[0], freqCode[1], tp[0], tp[1]);
-			if (!fg){
-				cout << "Error: failed to allocate Drx Frame Generator.\n";
-			}
-			break;
-		case TBN:
-			fg = (void*) new TbnFrameGenerator(bitPattern, correlatorTest, useComplex, N, decFactor, tp[0]);
-			if (!fg){
-				cout << "Error: failed to allocate Tbn Frame Generator.\n";
-			}
-			break;
-		case TBW:
-			fg = (void*) new TbwFrameGenerator(bitPattern, correlatorTest, useComplex, N, tp[0]);
-			if (!fg){
-				cout << "Error: failed to allocate Tbw Frame Generator.\n";
-			}
-			break;
-		case RAW:
-			ptr = new char [DataSize] ;
-			if (!ptr){
-				cout << "Error: failed to allocate raw packet.\n";
-			}
-			for(unsigned int i=0;i<DataSize;i++){
-				ptr[i]=(char)(i&0xff);
-			}
-			ts  =&(((size_t *)ptr)[0]);
-			sid =&(((size_t *)ptr)[1]);
-			key =&(((size_t *)ptr)[2]);
-			*sid = 0;
-			*key = Key;
-
-			break;
-		default:
-			cout << "Unknown mode: " << mode << endl;
-			exit(-1);
-		}
+	size_t * ts  =&(((size_t *)ptr)[0]);
+	size_t * sid =&(((size_t *)ptr)[1]);
+	size_t * key =&(((size_t *)ptr)[2]);
 
 
 	Socket mySocket;
@@ -530,29 +396,24 @@ int main(int argc, char * argv[]){
 		cout << "Could not open send socket to "<< DestinationIpAddress << " on port " << DestinationPort << endl;
 		exit (EXIT_FAILURE);
 	}
-
+	/*
+	if (looptest){
+		mySocket.openInbound(DestinationPort);
+		if (mySocket.inboundConnectionIsOpen()){
+			cout << "Receive socket opened Successfully." << endl;
+		} else {
+			cout << "Could not open receive socket on port " << DestinationPort << endl;
+			exit (EXIT_FAILURE);
+		}
+	}
+*/
 	TimeKeeper::resetRuntime();
+	*sid = 0;
+	*key = Key;
 	uint64_t lastTimeTag=0;
 	//uint64_t fcount=0;
-	uint64_t bs = 0;
-
-	switch(mode){
-			case TBN:
-				((TbnFrameGenerator*)fg)->resetTimeTag(TimeKeeper::getTT());
-				break;
-			case TBW:
-				((TbwFrameGenerator*)fg)->resetTimeTag(TimeKeeper::getTT());
-				break;
-			case DRX:
-				((DrxFrameGenerator*)fg)->resetTimeTag(TimeKeeper::getTT());
-				break;
-			case RAW:
-				break;
-			default:
-				cout << "Unknown mode: " << mode << endl;
-				exit(-1);
-			}
-
+	size_t bs = 0;
+	fg.resetTimeTag(TimeKeeper::getTT());
 	while (
 			((Duration!=0) && (TimeKeeper::getRuntime()<((double)Duration)/1000.0)) ||
 			(Duration == 0)
@@ -563,59 +424,46 @@ int main(int argc, char * argv[]){
 			rptTime += 0.5;
 			double curRate =(((double)totalSent) /TimeKeeper::getRuntime());
 			cout << "Status: sent "<< totalSent<<" bytes so far. (" << (uint64_t) curRate << " b/s) ";
-			if(mode == RAW){
+			if(!DrxMode){
 				cout << endl;
 			}else{
 				cout << "(timetag = " << humanReadable(lastTimeTag) << " ["<<lastTimeTag<<"] )" << endl;
 			}
 		}
-		switch(mode){
-		case TBN:
-			f_tbn = ((TbnFrameGenerator*)fg)->next();
-			lastTimeTag = __builtin_bswap64(f_tbn->header.timeTag);
-			bs = mySocket.send((char*)f_tbn,sizeof(TbnFrame));
-			if (bs!=sizeof(TbnFrame)){
-				cout << "Error in send.\n";
-				return -1;
-			}
-			totalSent+=bs;
-			break;
-		case TBW:
-			f_tbw = ((TbwFrameGenerator*)fg)->next();
-			lastTimeTag = __builtin_bswap64(f_tbw->header.timeTag);
-			bs = mySocket.send((char*)f_tbw,sizeof(TbwFrame));
-			if (bs!=sizeof(TbwFrame)){
-				cout << "Error in send.\n";
-				return -1;
-			}
-			totalSent+=bs;
-			break;
-		case DRX:
-			f_drx = ((DrxFrameGenerator*)fg)->next();
-			lastTimeTag = __builtin_bswap64(f_drx->header.timeTag);
-			bs = mySocket.send((char*)f_drx,sizeof(DrxFrame));
+		if(!DrxMode){
+			*ts=TimeKeeper::getMPM();
+			totalSent+=mySocket.send(ptr,DataSize);
+			(*sid)++;
+		} else {
+			f = fg.next();
+			//cout <<"freq code: " << dec << f->header.freqCode << endl;
+			//checkIsCVframe(f);
+			lastTimeTag = __builtin_bswap64(f->header.timeTag);
+			bs = mySocket.send((char*)f,sizeof(DrxFrame));
 			if (bs!=sizeof(DrxFrame)){
 				cout << "Error in send.\n";
 				return -1;
 			}
 			totalSent+=bs;
-			break;
-		case RAW:
-			*ts=TimeKeeper::getMPM();
-			totalSent+=mySocket.send(ptr,DataSize);
-			(*sid)++;
-			break;
-		default:
-			cout << "Unknown mode: " << mode << endl;
-			exit(-1);
+			/*
+			if (looptest){
+				bs = mySocket.receive((char*)&f_check,sizeof(DrxFrame));
+				if (bs!=sizeof(DrxFrame)){
+					cout << "Error in receive.\n";
+					return -1;
+				} else {
+					if (memcmp((void*)f,(void*)&f_check,sizeof(DrxFrame))){
+						cout << "Transmission error in loopback. frames not identical.\n";
+						return -1;
+					}
+				}
+			}*/
+
+
 		}
-		// govern rate
 		while ((((double)totalSent) /TimeKeeper::getRuntime()) > (double)Rate ){
 			//wait
 		}
 	}
-	} catch(std::exception& e){
-			cout << "Exception caught: '" << e.what() << "'\n";
-			exit(-1);
-		}
+
 }

@@ -20,7 +20,7 @@
 
 Software: MCS-DR Operating Software utility: DataSource (DP datastream emulator)
 Author:    C.N. Wolfe
-Version:  DROS-2.0-Devel-31614
+Version:  DROS-2.3.0.1-RELEASE
 Date:     
 
 Introduction

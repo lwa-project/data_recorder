@@ -125,6 +125,7 @@ size_t	Socket::send(char* data, size_t length){
 				rError=errno;
 				switch (rError){
 					case EWOULDBLOCK:	break; // do nothing, send until we get an error or message is sent
+					case EPERM      :   cout << "Permission denied or blocked by firewall.\n";bytesSent=length; break;
 					case EBADF		:	cout << "not valid file descriptor.\n"; break;
 					case ECONNRESET	:	cout << "connection closed by peer.\n"; break;
 					case EINTR		:	cout << "receive interrupted.\n"; break;
@@ -143,7 +144,7 @@ size_t	Socket::send(char* data, size_t length){
 					case EISCONN	:	cout << "socket in use.\n"; break;
 					case ENETDOWN	:	cout << "network interface unavailable.\n"; break;
 					case ENETUNREACH:	cout << "network unreachable.\n"; break;
-					default 		:	cout << "unknown error code.\n"; break;
+					default 		:	cout << "unknown error code. ("<<errno<<",'"<<strerror(errno)<<"')\n"; break;
 				};
 			case  0 :
 				attemptCount++;				break;

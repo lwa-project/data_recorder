@@ -29,15 +29,15 @@ TimeKeeper::TimeKeeper(){
 
 TimeKeeper::~TimeKeeper(){
 }
-uint64_t TimeKeeper::getMPM(){
+size_t TimeKeeper::getMPM(){
 	timeval dt;
 	gettimeofday(&dt, NULL);
 	tm timeStruct;
 	gmtime_r(&dt.tv_sec, &timeStruct);
-	uint64_t hour        = timeStruct.tm_hour;
-	uint64_t minute      = timeStruct.tm_min;
-	uint64_t second      = timeStruct.tm_sec;
-	uint64_t millisecond = dt.tv_usec / 1000;
+	size_t hour        = timeStruct.tm_hour;
+	size_t minute      = timeStruct.tm_min;
+	size_t second      = timeStruct.tm_sec;
+	size_t millisecond = dt.tv_usec / 1000;
 	// compute MPM
     return (hour*3600 + minute*60 + second)*1000 + millisecond; 
 }
@@ -46,42 +46,42 @@ string TimeKeeper::DottedDate(){
 	gettimeofday(&dt, NULL);
 	tm timeStruct;
 	gmtime_r(&dt.tv_sec, &timeStruct);
-	uint64_t year        = timeStruct.tm_year +1900;
-	uint64_t month       = timeStruct.tm_mon +1;
-	uint64_t day         = timeStruct.tm_mday;
+	size_t year        = timeStruct.tm_year +1900;
+	size_t month       = timeStruct.tm_mon +1;
+	size_t day         = timeStruct.tm_mday;
 	stringstream ss;
 	ss << year << "."<< month << "."<< day ;
 	return ss.str();
 }
-uint64_t TimeKeeper::getMJD(){
+size_t TimeKeeper::getMJD(){
 	timeval dt;
 	gettimeofday(&dt, NULL);
 	tm timeStruct;
 	gmtime_r(&dt.tv_sec, &timeStruct);
-	uint64_t year        = timeStruct.tm_year +1900;
-	uint64_t month       = timeStruct.tm_mon +1;
-	uint64_t day         = timeStruct.tm_mday;
+	size_t year        = timeStruct.tm_year +1900;
+	size_t month       = timeStruct.tm_mon +1;
+	size_t day         = timeStruct.tm_mday;
 	// compute MJD
     // adapted from http://paste.lisp.org/display/73536
     // can check result using http://www.csgnetwork.com/julianmodifdateconv.html
-    uint64_t a = (14 - month) / 12;
-    uint64_t y = year + 4800 - a;
-    uint64_t m = month + (12 * a) - 3;
-    uint64_t p = day + (((153 * m) + 2) / 5) + (365 * y);
-    uint64_t q = (y / 4) - (y / 100) + (y / 400) - 32045;
+    size_t a = (14 - month) / 12;
+    size_t y = year + 4800 - a;
+    size_t m = month + (12 * a) - 3;
+    size_t p = day + (((153 * m) + 2) / 5) + (365 * y);
+    size_t q = (y / 4) - (y / 100) + (y / 400) - 32045;
     return ( (p+q) - 2400000.5);
     
 }
-uint64_t TimeKeeper::getTT(){
+size_t TimeKeeper::getTT(){
 	timeval dt;
 	gettimeofday(&dt, NULL);
-	uint64_t rv = (dt.tv_sec * 196000000l) + (dt.tv_usec * 196l);
+	size_t rv = (dt.tv_sec * 196000000l) + (dt.tv_usec * 196l);
 	return rv;
 }
 
-bool TimeKeeper::isFuture(uint64_t MJD, uint64_t MPM){
-	uint64_t nowMPM=getMPM();
-	uint64_t nowMJD=getMJD();
+bool TimeKeeper::isFuture(size_t MJD, size_t MPM){
+	size_t nowMPM=getMPM();
+	size_t nowMJD=getMJD();
 	if (MJD > nowMJD) 
 		return true;
 	if (MJD == nowMJD) 

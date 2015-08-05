@@ -4,14 +4,14 @@
 		========================================
 
 ====================================================================================
-Version: DROS-2.0-Devel-31614
-Date:    2012-11-27
+Version: DROS-2.3.0.1-RELEASE
+Date:    2013-06-23
 Author:  Christopher Wolfe
 ====================================================================================
 
 DROS Versions and ICD Version
 =============================
-  This quick start applies to DROS-2.0-Devel-31614. For additional information about versions and 
+  This quick start applies to DROS-2.3.0.1-RELEASE. For additional information about versions and 
   features, please refer to the extended user's guide 'ExtendedUsersGuide.txt'.
 
 Prerequisites
