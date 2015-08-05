@@ -82,7 +82,7 @@ public:
 	// regular expressions for commands
 	static const string
 		re_ini, re_sht, re_ext, re_png, re_del, re_stp, re_get, re_cpy, re_dmp, re_fmt, re_up,
-		re_dwn, re_sel, re_svn, re_buf, re_syn, re_spc, re_xco, re_rec_n, re_rec_s, re_rec, re_rpt, re_ech, re_tst, re_srp;
+		re_dwn, re_sel, re_svn, re_buf, re_syn, re_spc, re_xcp, re_rec_n, re_rec_s, re_rec, re_rpt, re_ech, re_tst, re_srp;
 	static StringList commandNames;
 
 	static bool       isCommand(string type);

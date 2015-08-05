@@ -73,10 +73,23 @@ typedef struct __DrxSpectraHeader{
 	uint32_t			fills[4];
 	uint8_t				errors[4];
 	uint8_t 			beam;
-	uint8_t             stokes_format;
+	union{
+		uint8_t         stokes_format;
+		uint8_t         xcp_format;
+	};
 	uint8_t             spec_version;
-	uint8_t             reserved;
-	uint32_t 			nFreqs;
+	union{
+		struct {
+			uint8_t     flag_xcp:1;
+			uint8_t     flag_reserved:5;
+			uint8_t     flag_k:2; // kurtosis
+		};
+		uint8_t         reserved;
+	};
+	union{
+		uint32_t 			nFreqs;
+		uint32_t 			nPerFrame;
+	};
 	uint32_t 			nInts;
 	uint32_t 			satCount[4];
 	uint32_t			MAGIC2;     // must always equal 0xED0CED0C
@@ -169,7 +182,7 @@ typedef struct __SpectrometerCounters{
 class DrxSpectrometer: public Plugin {
 public:
 
-	DrxSpectrometer(unsigned K, unsigned L, unsigned Nb, StokesProduct _OutT, TicketBuffer*& _source );
+	DrxSpectrometer(unsigned K, unsigned L, unsigned Nb, ProductType _OutT, TicketBuffer*& _source );
 	virtual ~DrxSpectrometer();
 
 	// external interface
@@ -204,6 +217,7 @@ public:
 	bool canRemove(ObjectBuffer<DrxBlockSetup*>* from);
 	bool canInsert(ObjectBuffer<DrxBlockSetup*>* to);
 
+	string getObjName();
 
 	// reporting, runtime, stats, and debugging
 	SpectrometerCounters* getCounters();
@@ -211,7 +225,7 @@ public:
 	void   printBlockSetup(DrxBlockSetup* bs);
 	void   printFrameSetup(DrxFrame* f, DrxBlockSetup* bs=NULL);
 	string specReport();
-	void   generateTestPattern(float* specdata);
+	//void   generateTestPattern(float* specdata);
 	void   doPeriodicReport();
 
 
@@ -257,10 +271,10 @@ private:
 
 	Spectrometer*                spc;                           // our spectrometer buffer/obj
 	TicketBuffer*                source;                        // out input buffer (mainly used through plugin interface)
-	unsigned                     freqCount;                     // number of frequency channels
+	unsigned                     freqCount_or_samp_per_frame;   // number of frequency channels
 	unsigned                     intCount;                      // number of integrations
 	unsigned                     blockCount;                    // number of blocks (both block info and spectrometer obj (linked))
-	StokesProduct                OutT;                          // output format
+	ProductType                  OutT;                          // output format
 	volatile bool                _is_shutdown;                  // flag indicating we're shutdown (so don't free any more resources)
 	SpectrometerCounters         counters;                      // statictics
 
@@ -281,7 +295,7 @@ private:
 // Static interface                                                //
 /////////////////////////////////////////////////////////////////////
 public:
-	static TB_Geometry getDrxBufferSize(unsigned K, StokesProduct OutT);
+	static TB_Geometry getDrxBufferSize(unsigned K, ProductType OutT);
 private:
 	static unsigned char SatLUT[256]; // 1 for all 8-bit indices whose packed interpretation represents a saturated sample
 	static bool          LUT_initialized;

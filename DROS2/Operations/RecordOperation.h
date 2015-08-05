@@ -85,7 +85,7 @@ public:
 
 	// scheduler interface
 	virtual bool doCancel(){
-		doExecutionStop();
+		__doExecutionStop(true);
 		done();
 		return true;
 	}
@@ -97,6 +97,9 @@ public:
 	}
 	virtual void doExecutionStart(){}
 	virtual void doExecutionStop(){
+		__doExecutionStop(false);
+	}
+	virtual void __doExecutionStop(bool cancelled){
 		LOGC(L_INFO, "[RECORD] Waiting on recorder cleanup", ACTOR_COLORS);
 		if (writer.getState() != FWS_DONE){
 			writer.stopRecording();
@@ -106,13 +109,9 @@ public:
 			}
 		}
 		writer.stop();
+		tagFileMeta(!cancelled);
 		LOGC(L_INFO, "[RECORD] Recorder cleanup complete", ACTOR_COLORS);
-		tagfile->setAttribute("opTag",       getOpTag());
-		tagfile->setAttribute("opType",      getOpType());
-		tagfile->setAttribute("opRefernece", getOpReference());
-		tagfile->setAttribute("opStart",     getOpStart());
-		tagfile->setAttribute("opStop",      getOpStop());
-		tagfile->setAttribute("opFormat",    getOpFormat());
+
 	}
 	virtual void doWindowStop(){
 		done();
@@ -132,14 +131,17 @@ public:
 	}
 	virtual void onFWThreadStop(FileWriter*who){
 		LOGC(L_INFO, "[RECORD] FileWriter thread finished", ACTOR_COLORS);
+		tagFileMeta(false);
+	}
+	virtual void tagFileMeta(bool complete){
 		tagfile->setAttribute("opTag",       getOpTag());
 		tagfile->setAttribute("opType",      getOpType());
 		tagfile->setAttribute("opRefernece", getOpReference());
 		tagfile->setAttribute("opStart",     getOpStart());
 		tagfile->setAttribute("opStop",      getOpStop());
 		tagfile->setAttribute("opFormat",    getOpFormat());
+		tagfile->setAttribute("opComplete",  (complete ? "YES" : "NO "));
 	}
-
 private:
 	FileWriter     writer;
 	DataFormat     opFormat;

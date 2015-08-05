@@ -83,61 +83,22 @@ StokesProduct nameToStokes(string name){
 	return INVALID_STOKES;
 }
 
-void* __FftWrapper(ThreadInfo* td){
-	//LOG(L_DEBUG, "__FftWrapper " + LXS(td->bIdx));
+string corrName(CorrProduct c){
+	switch(c){
+		case cXY: return "XY";
+		default:  return "Unknown correlator mode";
+	}
+}
+
+CorrProduct   nameToCorr(string name){
+	if (!strcmp(name.c_str(),"XY"))        return cXY;
+	if (!strcmp(name.c_str(),"XY*"))       return cXY;
+	return cINVALID;
+}
+
+void* __ThreadWrapper(ThreadInfo* td){
+	//LOG(L_DEBUG, "__ThreadWrapper " + LXS(td->bIdx));
 	//LOGC(L_FATAL, "FFT THREAD STARTED #"+LXS(td->threadIdx), bold, black, green );
 	td->spec->doFft(td->bIdx,td->threadIdx);
 	return NULL;
 }
-
-inline void cplx_mult(complex_pair* a, complex_pair* b, complex_pair* res){
-	complex_pair neg_imag;
-	((float*)&neg_imag)[0] =  1.0;
-	((float*)&neg_imag)[1] = -1.0;
-	((float*)&neg_imag)[2] =  1.0;
-	((float*)&neg_imag)[3] = -1.0;
-
-	// real part
-	complex_pair tmp1  = __builtin_ia32_mulps( *a,*b);                      //(re*re,im*im)
-	             tmp1  = __builtin_ia32_mulps( tmp1,neg_imag);              //(re*re,-im*im)
-
-	// imag part
-    complex_pair tmp_s = __builtin_ia32_shufps(*b,*b,_MM_SHUFFLE(1,0,3,2)); // swap real/imag
-    complex_pair tmp2  = __builtin_ia32_mulps( tmp_s,*a);                   // (re*im, re*im)
-
-	*res = __builtin_ia32_haddps(tmp1, tmp2);
-
-}
-inline void cplx_mag_pre(complex_pair* a, complex_pair* b, complex_pair* res){
-	// a    = [x0r,x0i,x1r,x1i]; i.e. [X0,X1]
-	// b    = [y0r,y0i,y1r,y1i]; i.e. [Y0,Y1]
-	// tmp1 = [x0r^2, x0i^2, x1r^2, x1i^2];
-	// tmp2 = [y0r^2, y0i^2, y1r^2, y1i^2]];
-	// *res = [x0r^2 + x0i^2 , x1r^2 + x1i^2     ,     y0r^2 + y0i^2,  y1r^2 + y1i^2 ];
-	//   i.e. --> [|X0|, |X1|, |Y0|, |Y1|];
-	complex_pair tmp1  = __builtin_ia32_mulps( *a,*a);
-	complex_pair tmp2  = __builtin_ia32_mulps( *b,*b);
-	*res               = __builtin_ia32_haddps(tmp1, tmp2);
-}
-
-inline void cplx_mag_sum(complex_pair* mag_pre, float* out1, float* out2){
-	*out1 = ((float*)mag_pre)[0]+((float*)mag_pre)[2];
-	*out2 = ((float*)mag_pre)[1]+((float*)mag_pre)[3];
-}
-
-inline void cplx_mag_dif(complex_pair* mag_pre, float* out1, float* out2){
-	*out1 = ((float*)mag_pre)[0]-((float*)mag_pre)[2];
-	*out2 = ((float*)mag_pre)[1]-((float*)mag_pre)[3];
-}
-
-
-inline void cplx_conj(complex_pair* in, complex_pair* out){
-	complex_pair neg_imag;
-	((float*)&neg_imag)[0] =  1.0;
-	((float*)&neg_imag)[0] = -1.0;
-	((float*)&neg_imag)[0] =  1.0;
-	((float*)&neg_imag)[0] = -1.0;
-	*out = __builtin_ia32_mulps( *in,neg_imag);
-}
-
-

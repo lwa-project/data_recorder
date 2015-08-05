@@ -89,7 +89,6 @@ bool System::handleException(std::exception* e){
 	fprintf(stderr, "[System] Exception occurred '%s'", string(e->what()).c_str());
 	fflush(stdout);
 	System::get()->notifyFatalError("System","Exception Caught");
-	System::get()->__shutdown();
 	Log::createDump();
 	return true;
 }

@@ -58,7 +58,7 @@
 #include <sys/stat.h>
 #include <sys/syscall.h>
 #include <boost/thread/mutex.hpp>
-
+#include <sys/prctl.h>
 class AbstractThread;
 class ThreadManager{
 	//singleton
@@ -115,6 +115,11 @@ public:
 		if (tid>=0){
 			names[tid] = myName;
 		}
+		string n="DROS-" + myName;
+		if (n.size() > 16)
+			n=n.substr(0,16);
+		prctl(PR_SET_NAME,(unsigned long)n.c_str());
+
 	}
 	void reset(){
 		SERIALIZE_ACCESS();

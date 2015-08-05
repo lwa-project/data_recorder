@@ -60,7 +60,8 @@ bool                    Log::isLogInitialized = false;
 ofstream*               Log::logfile          = NULL;
 size_t                  Log::logopen_MJD      = 0;
 int						Log::loglevel         = L_DEBUG;
-boost::recursive_mutex  Log::rmtx;
+
 deque<string>           Log::loglines         = deque<string>();
 pid_t                   Log::ses_pid          = 0;
 INIT_ACCESS_MUTEX_ST(Log, lastlog);
+INIT_ACCESS_MUTEX_ST(Log, log);

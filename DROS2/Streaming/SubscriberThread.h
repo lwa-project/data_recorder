@@ -96,24 +96,27 @@ public:
 			if (buf){
 				buf->subscribe(this);
 				if (onConnected()){
-					while(!isInterrupted()){
+					bool done = false;
+					while(!isInterrupted() && !done){
 						if (onReceiveLoopStart(size, framesize, framesPerTicket)){
 							SERIALIZE_ACCESS();
 							TicketBuffer::Ticket* t = getNext();
 							if (t){
-								if (!onTicketReceived(t)){break;}
+								done = !onTicketReceived(t);
 							}else{
 								RELEASE_ACCESS_LOCK();
-								if (!onTicketBufferEmpty()){break;}
+								done = !onTicketBufferEmpty();
 							}
 						} else {
-							break;
+							done = true;
 						}
 					}
+					onReset();
 					buf->unsubscribe(this);
 					onDisonnected();
-					onReset();
+					onReset(); // make sure
 				} else {
+					onReset();
 					buf->unsubscribe(this);
 					onReset();
 				}

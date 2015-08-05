@@ -71,8 +71,17 @@
 
 
 #define QUOTE(x) #x
-#define LOG_START_SESSION(level){boost::recursive_mutex::scoped_lock log_lock(Log::rmtx); Log::startSession(  string(__FILE__) +  ":"  + LXS(__LINE__) , level );
-#define LOG_END_SESSION() 	Log::endSession();}
+#define LOG_START_SESSION(level)\
+	{																\
+		SERIALIZE_ACCESS_ST2(Log,log);								\
+		Log::startSession(  										\
+				string(__FILE__) +  ":"  + LXS(__LINE__) , 			\
+				level												\
+		);
+
+#define LOG_END_SESSION()											\
+		Log::endSession();											\
+	}
 
 #define MESSAGING_COLORS       basic,     green,    black
 #define MESSAGING_ERROR_COLORS bold,      green,    yellow
@@ -92,16 +101,18 @@
 #define STORAGE_COLORS         underline, magenta,  white
 #define OPERATION_COLORS       underline, blue,     white
 #define OPERATION_ERROR_COLORS blink,     blue,     white
-#define LOG(lv, msg)         LOG_START_SESSION(lv) cout << msg; LOG_END_SESSION()
-#define LOGC(lv, msg, ...)  LOG_START_SESSION(lv) cout << ANSI::hl(msg, __VA_ARGS__ ); LOG_END_SESSION()
 
-#define LOG_UNLOCKED(lv, msg)  \
-	{Log::startSession(  string(__FILE__) +  ":"  + LXS(__LINE__) , lv, true );\
-	cout << ANSI::hl(msg, FATAL_COLORS );\
+#define LOG(lv, msg)         			\
+	LOG_START_SESSION(lv) 				\
+	cout << msg; 						\
 	LOG_END_SESSION()
 
+#define LOGC(lv, msg, ...)  			\
+	LOG_START_SESSION(lv) 				\
+	cout << ANSI::hl(msg, __VA_ARGS__ );\
+	LOG_END_SESSION()
 
-#define TRACING
+//#define TRACING
 
 #ifdef TRACING
 	#define TRACE(XXX)           {if (XXX){ LOGC(L_DEBUG, string(__FUNCTION__) + string("():") + LXS(__LINE__), TRACE_COLORS); }}
@@ -138,6 +149,7 @@ public:
 			isLogInitialized=true;
 		}
 	}
+
 	static void reinitialize(){
 		if (isLogInitialized){
 			closeLogFile();
@@ -146,25 +158,18 @@ public:
 		openLogFile();
 		isLogInitialized=true;
 	}
+
 	static void setLogLevel(int level){
 		level=max(0,level);
 		level=min(L_FATAL,level);
 		loglevel=level;
 	}
-	static void startSession(string where, int level=L_DEBUG, bool forceUnlock=false){
+
+	static void startSession(string where, int level=L_DEBUG){
 		if (!isLogInitialized){
 			initializeLog();
 		}
-
-		if (current_depth == 0 || forceUnlock){
-			if (forceUnlock){
-				current_depth=0;
-			}
-			/*
-			if (logopen_MJD != Time::now().MJD){
-				rotate(true);
-			}
-			*/
+		if (current_depth == 0){
 			ses_start = Time::humanReadable(Time::now());
 			ses_level = level;
 			ses_where = where;
@@ -173,6 +178,7 @@ public:
 		}
 		current_depth++;
 	}
+
 	static void endSession(){
 		if (!isLogInitialized){
 			initializeLog();
@@ -182,6 +188,7 @@ public:
 			release_cout();
 		}
 	}
+
 	static void finalizeLog(){
 		if (isLogInitialized){
 			closeLogFile();
@@ -194,14 +201,17 @@ public:
 			rotate(false, true);
 		}
 	}
+
 	static int logCount(){
 		SERIALIZE_ACCESS_ST(lastlog);
 		return loglines.size();
 	}
+
 	static string lastLog(){
 		SERIALIZE_ACCESS_ST(lastlog);
 		return (ANSI::strip(loglines[loglines.size()-1]));
 	}
+
 	static string logEntry(int i){
 		SERIALIZE_ACCESS_ST(lastlog);
 		unsigned c  = loglines.size();
@@ -214,38 +224,39 @@ public:
 		}
 	}
 
-	static boost::recursive_mutex rmtx;
+public:
+	DECLARE_ACCESS_MUTEX_ST(log);
+
 private:
 
 	static void rotate(bool isBecauseDayChange=false, bool createDump=false){
 		string fn;
 		string fn_next;
-		boost::recursive_mutex::scoped_lock log_lock(Log::rmtx);
 
 		if (isLogInitialized){
 			closeLogFile();
 		}
 		for (int i=(MAX_LOG_FILES-1); i>=0; i--){
-			fn      = LOGFILE + string(".") + LXS(i) + string(".tgz");
-			fn_next = LOGFILE + string(".") + LXS(i+1) + string(".tgz");
+			fn      = LOGFILE + string(".") + LXS(i);
+			fn_next = LOGFILE + string(".") + LXS(i+1);
 			if (fs::exists(fn)){
-				fs::rename(fn,fn_next);
+				::rename(fn.c_str(),fn_next.c_str());
 			}
 		}
-		fn = LOGFILE + string(".") + LXS(MAX_LOG_FILES) + string(".tgz");
+		fn = LOGFILE + string(".") + LXS(MAX_LOG_FILES);
 		if (fs::exists(fn)){
-			fs::remove_all(fn);
+			::remove(fn.c_str());
 		}
 		fn      = LOGFILE;
-		fn_next = LOGFILE + string(".") + LXS(0) + string(".tgz");
+		fn_next = LOGFILE + string(".") + LXS(0);
 		if (fs::exists(fn)){
 			if (createDump){
 				string dateStr = Time::filenameSuitable(Time::now());
-				string fn_dump = "DROS_crash_log_" + dateStr + ".tgz";
-				Shell::run("x=`pwd`; cd /LWA/runtime/; tar -cvf " + fn_dump + " ./runtime.log; cd $x");
+				string fn_dump = "DROS_crash_log_" + dateStr;
+				Shell::run("cp " + fn + " " + fn_dump);
 			}
-			Shell::run("x=`pwd`; cd /LWA/runtime/; tar -cvf " + fn_next + " ./runtime.log; cd $x");
-			fs::remove_all(fn);
+			::rename(fn.c_str(),fn_next.c_str());
+			::remove(fn.c_str());
 		}
 		if (isBecauseDayChange)
 			cout << ANSI::hl("Logfile rotated due to midnight crossing.",bold,white, blue) << endl;
@@ -271,6 +282,7 @@ private:
 				delete logfile;
 				logfile = NULL;
 			} else {
+				(*logfile) << (Time::humanReadable(Time::now())) << ANSI::hl("========================== Logfile opened ==========================",bold,white, blue) << endl;
 				cout << ANSI::hl("========================== Logfile opened ==========================",bold,white, blue) << endl;
 				logopen_MJD = Time::now().MJD;
 			}
@@ -282,6 +294,7 @@ private:
 			return;
 		} else {
 			if (logfile->good()){
+				(*logfile) << Time::humanReadable(Time::now()) << ANSI::hl("========================== Logfile closed ==========================",bold,white, blue) << endl;
 				logfile->flush();
 				logfile->close();
 				cout << ANSI::hl("========================== Logfile closed ==========================",bold,white, blue) << endl;
@@ -390,6 +403,7 @@ private:
 	static deque<string> loglines;
 	static pid_t		 ses_pid;
 	DECLARE_ACCESS_MUTEX_ST(lastlog);
+
 	Log(){}
 	virtual ~Log(){}
 };

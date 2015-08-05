@@ -66,6 +66,7 @@
 #include "DumpOperation.h"
 #include "RecordOperation.h"
 #include "SpectrometerOperation.h"
+#include "CorrelatorOperation.h"
 
 // pseudo-operation
 #include "OpIdle.h"

@@ -74,16 +74,14 @@ void DrxSpectrometer::initLookUpTables(){
 	LUT_initialized=true;
 }
 
-TB_Geometry DrxSpectrometer::getDrxBufferSize(unsigned K, StokesProduct OutT){
+TB_Geometry DrxSpectrometer::getDrxBufferSize(unsigned K, ProductType OutT){
 	TB_Geometry rv;
-	rv.size            = 32ll * 1048576ll; /* 32 MiB */
-	rv.framesize       = (StokesSize(OutT) * K * DRX_TUNINGS * sizeof(float)) + sizeof(DrxSpectraHeader);
-	size_t ni          = rv.size/ rv.framesize;
-	size_t nsqrt       = __builtin_floor(__builtin_sqrt(ni));
-	if (nsqrt < 16)
-		nsqrt = 16;
-	rv.size            = nsqrt * nsqrt * rv.framesize;
-	rv.framesPerTicket = nsqrt;
+	rv.size                 = 32ll * 1048576ll; /* 32 MiB */
+	size_t ideal_block_size = 256ll * 1024ll; /*256 KiB */
+	rv.framesize            = (OutT.numberOutputProducts() * (OutT.outputProductsComplex() ? 2 : 1) * K * DRX_TUNINGS * sizeof(float)) + sizeof(DrxSpectraHeader);
+	rv.framesPerTicket      = ideal_block_size/ rv.framesize;
+	size_t tsize            = rv.framesize * rv.framesPerTicket;
+	rv.size                 = (((rv.size / tsize)+1)*tsize)-tsize;
 	return rv;
 }
 
@@ -91,10 +89,10 @@ DrxSpectrometer::DrxSpectrometer(
 		unsigned K,
 		unsigned L,
 		unsigned Nb,
-		StokesProduct _OutT,
+		ProductType _OutT,
 		TicketBuffer*& _source
 		):
-			Plugin("DrxSpectrometer",_source, getDrxBufferSize(K,_OutT)),
+			Plugin((OutT.isCorr) ? "DrxCorrelator" : "DrxSpectrometer",_source, getDrxBufferSize(K,_OutT)),
 			valid(false),
 			doneReceiving(false),
 			doneProducing(false),
@@ -111,14 +109,14 @@ DrxSpectrometer::DrxSpectrometer(
 			lastFilledBlockSetupGood(false),
 			spc(NULL),
 			source(_source),
-			freqCount(K),
+			freqCount_or_samp_per_frame(K),
 			intCount(L),
 			blockCount(Nb),
 			OutT(_OutT),
 			minTimeTag(0),
 			rptTimer(DRX_SPECTROMETER_REPORT_INTERVAL),
 			outputHeaderSize(sizeof(DrxSpectraHeader)),
-			outputDataSize(K * StokesSize(_OutT) * DRX_TUNINGS * sizeof(float)),
+			outputDataSize(OutT.numberOutputProducts() * (OutT.outputProductsComplex() ? 2 : 1) * K * DRX_TUNINGS * sizeof(float)),
 			outputBlockSize(outputHeaderSize+outputDataSize),
 
 			inputFramesPerCell((K * L) / DRX_SAMPLES_PER_FRAME),
@@ -129,31 +127,31 @@ DrxSpectrometer::DrxSpectrometer(
 	initLookUpTables();
 
 	if (!blocks_free.isValid()){
-		LOGC(L_ERROR, "[DrxSpectrometer]: can't initialize blocks_free", ACTOR_ERROR_COLORS);
+		LOGC(L_ERROR, "["+getObjName()+"]: can't initialize blocks_free", ACTOR_ERROR_COLORS);
 		return;
 	}
 	if (!blocks_startable.isValid()){
-		LOGC(L_ERROR, "[DrxSpectrometer]: can't initialize blocks_startable ", ACTOR_ERROR_COLORS);
+		LOGC(L_ERROR, "["+getObjName()+"]: can't initialize blocks_startable ", ACTOR_ERROR_COLORS);
 		return;
 	}
 	if (!blocks_dropped.isValid()){
-		LOGC(L_ERROR, "[DrxSpectrometer]: can't initialize blocks_dropped ", ACTOR_ERROR_COLORS);
+		LOGC(L_ERROR, "["+getObjName()+"]: can't initialize blocks_dropped ", ACTOR_ERROR_COLORS);
 		return;
 	}
 	if (!blocks_computing.isValid()){
-		LOGC(L_ERROR, "[DrxSpectrometer]: can't initialize blocks_computing ", ACTOR_ERROR_COLORS);
+		LOGC(L_ERROR, "["+getObjName()+"]: can't initialize blocks_computing ", ACTOR_ERROR_COLORS);
 		return;
 	}
 
 	blocks = (DrxBlockSetup*) malloc(Nb * sizeof(DrxBlockSetup));
 	if (!blocks){
-		LOGC(L_ERROR, "[DrxSpectrometer]: can't initialize blocks buffer", ACTOR_ERROR_COLORS);
+		LOGC(L_ERROR, "["+getObjName()+"]: can't initialize blocks buffer", ACTOR_ERROR_COLORS);
 	}
 
 	spc = new (nothrow) Spectrometer(K,L,2,Nb,XandY,Noninterleaved,OutT);
 	if (!spc){
 		free(blocks); blocks = NULL;
-		LOGC(L_ERROR, "[DrxSpectrometer]: can't allocate spectrometer", ACTOR_ERROR_COLORS);
+		LOGC(L_ERROR, "["+getObjName()+"]: can't allocate spectrometer", ACTOR_ERROR_COLORS);
 		return;
 	}
 
@@ -164,7 +162,7 @@ DrxSpectrometer::DrxSpectrometer(
 		spc->resetBlock(b);
 		DrxBlockSetup** freeptr = blocks_free.nextIn();
 		if (!freeptr){
-			LOGC(L_ERROR, "[DrxSpectrometer]: can't fill blocks_free", ACTOR_ERROR_COLORS);
+			LOGC(L_ERROR, "["+getObjName()+"]: can't fill blocks_free", ACTOR_ERROR_COLORS);
 			delete(spc); spc=NULL; free(blocks); blocks = NULL;
 			return;
 		}
@@ -173,7 +171,7 @@ DrxSpectrometer::DrxSpectrometer(
 	}
 
 	if (!spc->isValid()){
-		LOGC(L_ERROR, "[DrxSpectrometer]: can't initialize spectrometer : " + spc->getReason(), ACTOR_ERROR_COLORS);
+		LOGC(L_ERROR, "["+getObjName()+"]: can't initialize spectrometer : " + spc->getReason(), ACTOR_ERROR_COLORS);
 		delete(spc); spc=NULL; free(blocks); blocks = NULL;
 		return;
 	}
@@ -210,7 +208,7 @@ bool DrxSpectrometer::isValid(){
 
 
 void DrxSpectrometer::run_master(){
-	LOGC(L_INFO, "[DrxSpectrometer] Master thread started", ACTOR_COLORS);
+	LOGC(L_INFO, "["+getObjName()+"] Master thread started", ACTOR_COLORS);
 	DrxFrame* curFrame = NULL;
 	while (!isInterrupted() && (spc != NULL) && (blocks != NULL)){
 		if (curFrame == NULL && !doneReceiving){
@@ -241,12 +239,12 @@ void DrxSpectrometer::run_master(){
 
 	}
 	master_stopped = true;
-	LOGC(L_INFO, "[DrxSpectrometer] Master thread finished", ACTOR_COLORS);
+	LOGC(L_INFO, "["+getObjName()+"] Master thread finished", ACTOR_COLORS);
 }
 
 
 void DrxSpectrometer::run_slave(){
-	LOGC(L_INFO, "[DrxSpectrometer] Slave thread started", ACTOR_COLORS);
+	LOGC(L_INFO, "["+getObjName()+"] Slave thread started", ACTOR_COLORS);
 
 	while (
 			((spc != NULL) && (blocks != NULL)) &&        // mandatory data structures
@@ -316,7 +314,7 @@ void DrxSpectrometer::run_slave(){
 		}
 	}
 	slave_stopped = true;
-	LOGC(L_INFO, "[DrxSpectrometer] Slave thread stopped", ACTOR_COLORS);
+	LOGC(L_INFO, "["+getObjName()+"] Slave thread stopped", ACTOR_COLORS);
 }
 
 void DrxSpectrometer::resetBlockSetup(DrxBlockSetup* bs){
@@ -377,7 +375,6 @@ void DrxSpectrometer::initSpectraHeader(DrxBlockSetup* bs, DrxSpectraHeader* dsh
 	dsh->fills[3]      = *spc->getCellFills(cell0index+3);
 	dsh->freqCode[0]   = bs->freqCode[0];
 	dsh->freqCode[1]   = bs->freqCode[1];
-	dsh->nFreqs        = freqCount;
 	dsh->nInts         = intCount;
 	dsh->reserved      = 0;
 	dsh->satCount[0]   = *spc->getCellSatCounts(cell0index+0);
@@ -385,7 +382,15 @@ void DrxSpectrometer::initSpectraHeader(DrxBlockSetup* bs, DrxSpectraHeader* dsh
 	dsh->satCount[2]   = *spc->getCellSatCounts(cell0index+2);
 	dsh->satCount[3]   = *spc->getCellSatCounts(cell0index+3);
 	dsh->spec_version  = 0x02;
-	dsh->stokes_format = (uint8_t) OutT;
+	if (OutT.isCorr){
+		dsh->flag_xcp      = 1;
+		dsh->xcp_format    = (uint8_t) OutT.toCorr();
+		dsh->nPerFrame     = freqCount_or_samp_per_frame;
+	} else {
+		dsh->flag_xcp      = 0;
+		dsh->stokes_format = (uint8_t) OutT.toStokes();
+		dsh->nFreqs        = freqCount_or_samp_per_frame;
+	}
 	dsh->timeOffset    = bs->timeOffset;
 	dsh->timeTag0      = bs->timeTag0;
 }
@@ -394,7 +399,7 @@ uint64_t DrxSpectrometer::nextTimeTagAfterBlock(DrxBlockSetup* bs){
 	assert(spc!=NULL);
 	assert(blocks!=NULL);
 	assert(bs!=NULL);
-	return bs->timeTagN + ((bs->decFactor * freqCount * intCount) / DRX_SAMPLES_PER_FRAME);
+	return bs->timeTagN + ((bs->decFactor * freqCount_or_samp_per_frame * intCount) / DRX_SAMPLES_PER_FRAME);
 }
 
 void DrxSpectrometer::initBlockSetup(DrxBlockSetup* toPrepare, DrxFrame* f, DrxBlockSetup* predecessor){
@@ -419,7 +424,7 @@ void DrxSpectrometer::initBlockSetup(DrxBlockSetup* toPrepare, DrxFrame* f, DrxB
 		toPrepare->timeOffset   	= f->header.timeOffset;
 		toPrepare->timeTagStep  	= f->header.decFactor*DRX_SAMPLES_PER_FRAME;
 		toPrepare->timeTag0			= f->header.timeTag;
-		toPrepare->timeTagN			= f->header.timeTag + (toPrepare->timeTagStep * (((freqCount * intCount) / DRX_SAMPLES_PER_FRAME)-1));
+		toPrepare->timeTagN			= f->header.timeTag + (toPrepare->timeTagStep * (((freqCount_or_samp_per_frame * intCount) / DRX_SAMPLES_PER_FRAME)-1));
 		toPrepare->freqCode[0]  	= (f->header.drx_tuning == DRX_TUN_0) ? f->header.freqCode : FREQ_CODE_UNINITIALIZED;
 		toPrepare->freqCode[1]  	= (f->header.drx_tuning != DRX_TUN_0) ? f->header.freqCode : FREQ_CODE_UNINITIALIZED;
 		toPrepare->stepPhase    	= (((uint64_t)f->header.timeTag) % (((uint64_t) f->header.decFactor) * ((uint64_t) DRX_SAMPLES_PER_FRAME)));
@@ -643,7 +648,7 @@ bool DrxSpectrometer::unpack(DrxFrame* f, DrxBlockSetup* bs){
 	}
 
 	// update fillcount
-	*fills += (DRX_SAMPLES_PER_FRAME / freqCount);
+	*fills += (DRX_SAMPLES_PER_FRAME / freqCount_or_samp_per_frame);
 
 	// unpack, counting saturation counts along the way
 	for (size_t i=0; i<DRX_SAMPLES_PER_FRAME; i++){
@@ -696,7 +701,9 @@ bool DrxSpectrometer::canRemove(ObjectBuffer<DrxBlockSetup*>* from){
 bool DrxSpectrometer::canInsert(ObjectBuffer<DrxBlockSetup*>* to){
 	return to->nextIn() != NULL;
 }
-
+string DrxSpectrometer::getObjName(){
+	return (OutT.isCorr) ? "DrxCorrelator" : "DrxSpectrometer";
+}
 // checks if the head of 'from' is movable to the tail of 'to'
 bool DrxSpectrometer::canMove(ObjectBuffer<DrxBlockSetup*>* from, ObjectBuffer<DrxBlockSetup*>* to){
 	DrxBlockSetup** destptr=to->nextIn();
@@ -713,28 +720,28 @@ void DrxSpectrometer::doMove(ObjectBuffer<DrxBlockSetup*>* from,  ObjectBuffer<D
 	DrxBlockSetup** destptr=to->nextIn();
 	DrxBlockSetup** sourceptr=from->nextOut();
 	if (!destptr || !sourceptr){
-		LOGC(L_ERROR, "[DrxSpectrometer]: Tried to doMove(x,y) but one of them was not a viable pointer", ACTOR_ERROR_COLORS);
+		LOGC(L_ERROR, "["+getObjName()+"]: Tried to doMove(x,y) but one of them was not a viable pointer", ACTOR_ERROR_COLORS);
 	}
 	*destptr = *sourceptr;
 	from->doneOut(sourceptr);
 	to->doneIn(destptr);
 }
 
-
+/*
 void DrxSpectrometer::generateTestPattern(float* specdata){
 	return;
 	static size_t curline = 0;
 	size_t pcount = StokesSize(OutT);
 	for (size_t t=0; t<2; t++){
 		for (size_t p=0; p<pcount; p++){
-			for (size_t f=0; f<freqCount; f++){
-				specdata[(t*freqCount*pcount) + (f*pcount) + p] = getTestPattern(p,f,curline);
+			for (size_t f=0; f<freqCount_or_samp_per_frame; f++){
+				specdata[(t*freqCount_or_samp_per_frame*pcount) + (f*pcount) + p] = getTestPattern(p,f,curline);
 			}
 		}
 	}
 	curline++;
 }
-
+*/
 
 SpectrometerCounters* DrxSpectrometer::getCounters(){
 	return &counters;
@@ -742,7 +749,7 @@ SpectrometerCounters* DrxSpectrometer::getCounters(){
 
 void DrxSpectrometer::printSpecSetup(){
 	cout << "======================= Spec Setup ============================" << endl;
-	cout << "Freq Count:          " <<        freqCount << endl;
+	cout << "Freq Count:          " <<        freqCount_or_samp_per_frame << endl;
 	cout << "Int Count:           " <<        intCount << endl;
 	cout << "outputHeaderSize:    " <<        outputHeaderSize << endl;
 	cout << "outputDataSize:      " <<        outputDataSize << endl;
@@ -779,7 +786,7 @@ void DrxSpectrometer::printFrameSetup(DrxFrame* f, DrxBlockSetup* bs){
 	size_t tts = f->header.decFactor*DRX_SAMPLES_PER_FRAME;
 	cout << "timeTagStep: (der'd) " << 		tts << endl;
 	cout << "timeTag:             " << 		f->header.timeTag << " ("<<Time::humanReadable(f->header.timeTag)<<")"<< endl;
-	cout << "TimeTagN     (der'd) " << f->header.timeTag + (tts * freqCount * intCount / DRX_SAMPLES_PER_FRAME) << endl;
+	cout << "TimeTagN     (der'd) " << f->header.timeTag + (tts * freqCount_or_samp_per_frame * intCount / DRX_SAMPLES_PER_FRAME) << endl;
 
 	if (bs != NULL){
 		cout << "n:   (derived)       " << ((f->header.timeTag - bs->timeTag0) / bs->timeTagStep) << endl;
@@ -802,8 +809,13 @@ string DrxSpectrometer::specReport(){
 
 
 	ss << "==========================================================================================" << endl;
-	ss << "== Spectrometer Report:       Frequency Ch. "<<setw(6)<<freqCount<<"   Integration count "<<setw(8)<<intCount<<"         ==" << endl;
-	ss << "==                                                                                      ==" << endl;
+	if (OutT.isCorr){
+		ss << "== Correlator Report:                                                                   ==" << endl;
+		ss << "==  Mode:  "<<setw(10)<<OutT.name()<<"         Samples/frame "<<setw(6)<<freqCount_or_samp_per_frame<<"   Integration count "<<setw(8)<<intCount<<"         ==" << endl;
+	}else{
+		ss << "== Spectrometer Report:                                                                 ==" << endl;
+		ss << "==  Mode:  "<<setw(10)<<OutT.name()<<"         Frequency Ch. "<<setw(6)<<freqCount_or_samp_per_frame<<"   Integration count "<<setw(8)<<intCount<<"         ==" << endl;
+	}
 	ss << "==  Frames                                                                              ==" << endl;
 	ss << "==    "<<setw(9)<<counters.framesReceived<<"                                       (received)                        ==" << endl;
 	ss << "==    "<<setw(9)<<counters.framesInserted<<" / "<<setw(9)<<counters.framesInsertedNew<<" / "<<setw(9)<<counters.framesInsertedExisting<<"               (inserted / init / join)          ==" << endl;

@@ -47,8 +47,8 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef SPECTROMETEROPERATION_H_
-#define SPECTROMETEROPERATION_H_
+#ifndef CORRELATOROPERATION_H_
+#define CORRELATOROPERATION_H_
 
 #include "ScheduledOperation.h"
 #include "../Data/DataFormat.h"
@@ -56,27 +56,27 @@
 #include "../Spectrometer/DrxSpectrometer.h"
 #include "../Spectrometer/Spectrometer.h"
 
-class SpectrometerOperation: public ScheduledOperation,
+class CorrelatorOperation: public ScheduledOperation,
 		public FileWriter::EventListener {
 public:
-	SpectrometerOperation(
+	CorrelatorOperation(
 			const size_t& _reference,
 			const TimeSlot& _ts,
 			TicketBuffer* _buf,
 			DataFormat _opFormat,
 			File* _tagfile,
 			size_t _size_limit,
-			StokesProduct _type,
+			CorrProduct _type,
 			unsigned _nFreqs,
 			unsigned _nInts
 		):
-		ScheduledOperation("Spectrometr", _reference, _ts),
+		ScheduledOperation("BeamCorrl8r", _reference, _ts),
 		reference(_reference),
 		ts(_ts),
 		opFormat(_opFormat),
 		size_limit(_size_limit),
 		type(_type),
-		nFreqs(_nFreqs),
+		samplesPerFrame(_nFreqs),
 		nInts(_nInts),
 		tagfile(_tagfile),
 		writer(NULL),
@@ -85,7 +85,7 @@ public:
 
 	}
 
-	virtual ~SpectrometerOperation(){
+	virtual ~CorrelatorOperation(){
 		if (up){
 			if(writer){
 				delete(writer);
@@ -118,37 +118,37 @@ public:
 	}
 	virtual void doWindowStart(){
 		tagFileMeta(false);
-		unsigned  nBlocks = (1024*6144*2)/(nFreqs*nInts);
+		unsigned  nBlocks = (1024*6144*2)/(samplesPerFrame*nInts);
 		if (nBlocks < 8) nBlocks = 8;
 		if (nBlocks > 32) nBlocks = 32;
 
-		spc    = new (nothrow) DrxSpectrometer(nFreqs, nInts, nBlocks,type, buf);
+		spc    = new (nothrow) DrxSpectrometer(samplesPerFrame, nInts, nBlocks,type, buf);
 		if (!spc){
-			LOGC(L_ERROR, "[SpectrometerOperation] Failed to allocate the spectrometer plugin", ACTOR_ERROR_COLORS);
+			LOGC(L_ERROR, "[CorrelatorOperation] Failed to allocate the spectrometer plugin", ACTOR_ERROR_COLORS);
 			started(); done(); return;
 		}else {
-			LOGC(L_INFO, "[SpectrometerOperation] spectrometer object allocated", ACTOR_COLORS);
+			LOGC(L_INFO, "[CorrelatorOperation] spectrometer object allocated", ACTOR_COLORS);
 		}
 		if (!spc->isValid()){
-			LOGC(L_ERROR, "[SpectrometerOperation] The spectrometer plugin was not valid; halting operation", ACTOR_ERROR_COLORS);
+			LOGC(L_ERROR, "[CorrelatorOperation] The spectrometer plugin was not valid; halting operation", ACTOR_ERROR_COLORS);
 			delete(spc); spc=NULL; started(); done(); return;
 		}else {
-			LOGC(L_INFO, "[SpectrometerOperation] spectrometer plugin created!!!", ACTOR_COLORS);
+			LOGC(L_INFO, "[CorrelatorOperation] spectrometer plugin created!!!", ACTOR_COLORS);
 		}
 
 		writer = new (nothrow) FileWriter(this, spc, tagfile, ts, size_limit, false);
 		if (!writer){
-			LOGC(L_ERROR, "[SpectrometerOperation] Failed to allocate the file writer", ACTOR_ERROR_COLORS);
+			LOGC(L_ERROR, "[CorrelatorOperation] Failed to allocate the file writer", ACTOR_ERROR_COLORS);
 			delete(spc); spc=NULL; started(); done(); return;
 		} else {
-			LOGC(L_INFO, "[SpectrometerOperation] file writer allocated", ACTOR_COLORS);
+			LOGC(L_INFO, "[CorrelatorOperation] file writer allocated", ACTOR_COLORS);
 		}
 
-		LOGC(L_INFO, "[SpectrometerOperation] Starting plugin", ACTOR_COLORS);
+		LOGC(L_INFO, "[CorrelatorOperation] Starting plugin", ACTOR_COLORS);
 		spc->start();
-		LOGC(L_INFO, "[SpectrometerOperation] Starting file writer", ACTOR_COLORS);
+		LOGC(L_INFO, "[CorrelatorOperation] Starting file writer", ACTOR_COLORS);
 		writer->start();
-		LOGC(L_INFO, "[SpectrometerOperation] Operation started", ACTOR_COLORS);
+		LOGC(L_INFO, "[CorrelatorOperation] Operation started", ACTOR_COLORS);
 		started();
 
 		up = true;
@@ -166,73 +166,73 @@ public:
 
 	// FileWriter callbacks
 	virtual void onFWThreadStart(FileWriter*who){
-		LOGC(L_INFO, "[SpectrometerOperation] FileWriter thread started", ACTOR_COLORS);
+		LOGC(L_INFO, "[CorrelatorOperation] FileWriter thread started", ACTOR_COLORS);
 	}
 	virtual void onFWRecordStart(FileWriter*who){
-		LOGC(L_INFO, "[SpectrometerOperation] FileWriter record started", ACTOR_COLORS);
+		LOGC(L_INFO, "[CorrelatorOperation] FileWriter record started", ACTOR_COLORS);
 	}
 	virtual void onFWError(FileWriter*who){
-		LOGC(L_ERROR, "[SpectrometerOperation] FileWriter error", ACTOR_ERROR_COLORS);
+		LOGC(L_ERROR, "[CorrelatorOperation] FileWriter error", ACTOR_ERROR_COLORS);
 	}
 	virtual void onFWRecordStop(FileWriter*who){
-		LOGC(L_INFO, "[SpectrometerOperation] FileWriter record finished", ACTOR_COLORS);
+		LOGC(L_INFO, "[CorrelatorOperation] FileWriter record finished", ACTOR_COLORS);
 	}
 	virtual void onFWThreadStop(FileWriter*who){
-		LOGC(L_INFO, "[SpectrometerOperation] FileWriter thread finished", ACTOR_COLORS);
+		LOGC(L_INFO, "[CorrelatorOperation] FileWriter thread finished", ACTOR_COLORS);
 	}
 
 
 	void doShutdown(bool completed){
 		SERIALIZE_ACCESS();
 		if (isShutdown) return;
-		LOGC(L_INFO, "[SpectrometerOperation] Starting shutdown procedure", ACTOR_COLORS);
+		LOGC(L_INFO, "[CorrelatorOperation] Starting shutdown procedure", ACTOR_COLORS);
 		if (!up) {
-			LOGC(L_INFO, "[SpectrometerOperation] Not up, tagging files and leaving", ACTOR_COLORS);
+			LOGC(L_INFO, "[CorrelatorOperation] Not up, tagging files and leaving", ACTOR_COLORS);
 			tagFileMeta(false);
 			isShutdown = true;
 			return;
 		}
-		LOGC(L_INFO, "[SpectrometerOperation] Shutting down recorder", ACTOR_COLORS);
+		LOGC(L_INFO, "[CorrelatorOperation] Shutting down recorder", ACTOR_COLORS);
 		writer->stopRecording();
 		usleep(500000);
 
 		if (writer->getState() != FWS_DONE){
-			LOGC(L_INFO, "[SpectrometerOperation] Recorder did not stop automatically, aborting writer thread", ACTOR_COLORS);
+			LOGC(L_INFO, "[CorrelatorOperation] Recorder did not stop automatically, aborting writer thread", ACTOR_COLORS);
 			writer->doAbort();
 		}
 		writer->stop();
-		LOGC(L_INFO, "[SpectrometerOperation] Writer thread successfully joined", ACTOR_COLORS);
+		LOGC(L_INFO, "[CorrelatorOperation] Writer thread successfully joined", ACTOR_COLORS);
 
 
-		LOGC(L_INFO, "[SpectrometerOperation] Shutting down spectrometer plugin", ACTOR_COLORS);
+		LOGC(L_INFO, "[CorrelatorOperation] Shutting down spectrometer plugin", ACTOR_COLORS);
 		spc->stopReceiving();
 		usleep(500000);
 		spc->stopProducing();
 		usleep(500000);
 		if (!spc->isShutDown()){
-			LOGC(L_INFO, "[SpectrometerOperation] Spectrometer plugin did not stop automatically, aborting plugin thread", ACTOR_COLORS);
+			LOGC(L_INFO, "[CorrelatorOperation] Spectrometer plugin did not stop automatically, aborting plugin thread", ACTOR_COLORS);
 			spc->doAbort();
 		}
 		spc->stop();
 		spc->onReset();
-		LOGC(L_INFO, "[SpectrometerOperation] Spectrometer thread successfully joined", ACTOR_COLORS);
+		LOGC(L_INFO, "[CorrelatorOperation] Spectrometer thread successfully joined", ACTOR_COLORS);
 
 		tagFileMeta(completed);
-		LOGC(L_INFO, "[SpectrometerOperation] Spectrometer shutdown complete", ACTOR_COLORS);
+		LOGC(L_INFO, "[CorrelatorOperation] Spectrometer shutdown complete", ACTOR_COLORS);
 
 		isShutdown = true;
 	}
 	void tagFileMeta(bool completed){
-		LOGC(L_INFO, "[SpectrometerOperation] Setting file metadata", ACTOR_COLORS);
-		tagfile->setAttribute("opTag",       getOpTag());
-		tagfile->setAttribute("opType",      getOpType());
-		tagfile->setAttribute("opRefernece", getOpReference());
-		tagfile->setAttribute("opStart",     getOpStart());
-		tagfile->setAttribute("opStop",      getOpStop());
-		tagfile->setAttribute("opFormat",    getOpFormat());
-		tagfile->setAttribute("opFftStokes", stokesName(type));
-		tagfile->setAttribute("opFftLength", LXS(nFreqs));
-		tagfile->setAttribute("opIntCount",  LXS(nInts));
+		LOGC(L_INFO, "[CorrelatorOperation] Setting file metadata", ACTOR_COLORS);
+		tagfile->setAttribute("opTag",        getOpTag());
+		tagfile->setAttribute("opType",       getOpType());
+		tagfile->setAttribute("opRefernece",  getOpReference());
+		tagfile->setAttribute("opStart",      getOpStart());
+		tagfile->setAttribute("opStop",       getOpStop());
+		tagfile->setAttribute("opFormat",     getOpFormat());
+		tagfile->setAttribute("opCorrType",   corrName(type));
+		tagfile->setAttribute("opSampPerFrm", LXS(samplesPerFrame));
+		tagfile->setAttribute("opIntCount",   LXS(nInts));
 		tagfile->setAttribute("opComplete",  (completed) ? "YES" : "NO ");
 
 		if (spc && spc->isValid()){
@@ -248,8 +248,8 @@ private:
 	TimeSlot       ts;
 	DataFormat     opFormat;
 	size_t         size_limit;
-	StokesProduct  type;
-	unsigned       nFreqs;
+	CorrProduct    type;
+	unsigned       samplesPerFrame;
 	unsigned       nInts;
 	File*             tagfile;
 	FileWriter*       writer;
@@ -259,4 +259,4 @@ private:
 	volatile bool     up;
 };
 
-#endif /* SPECTROMETEROPERATION_H_ */
+#endif /* CORRELATOROPERATION_H_ */

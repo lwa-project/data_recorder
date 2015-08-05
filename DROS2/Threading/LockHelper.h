@@ -68,6 +68,7 @@
 	#define DECLARE_ACCESS_MUTEX(l) mutable boost::recursive_mutex BOOST_PP_CAT(BOOST_PP_CAT(mtx_,l),_)
 
 	#define SERIALIZE_ACCESS_ST(l) boost::recursive_mutex::scoped_lock BOOST_PP_CAT(BOOST_PP_CAT(lock_,l),_)(BOOST_PP_CAT(BOOST_PP_CAT(st_mtx_,l),_))
+	#define SERIALIZE_ACCESS_ST2(C,l) boost::recursive_mutex::scoped_lock BOOST_PP_CAT(BOOST_PP_CAT(lock_,l),_)(C::BOOST_PP_CAT(BOOST_PP_CAT(st_mtx_,l),_))
 	#define RELEASE_ACCESS_LOCK_ST(l) BOOST_PP_CAT(BOOST_PP_CAT(lock_,l),_).unlock()
 	#define DECLARE_ACCESS_MUTEX_ST(l) static boost::recursive_mutex BOOST_PP_CAT(BOOST_PP_CAT(st_mtx_,l),_)
 	#define INIT_ACCESS_MUTEX_ST(C,...)   boost::recursive_mutex C::BOOST_PP_CAT(BOOST_PP_CAT(st_mtx_,__VA_ARGS__),_)

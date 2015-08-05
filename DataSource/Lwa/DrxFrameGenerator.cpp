@@ -110,9 +110,9 @@ void DrxFrameGenerator::generate(){
 	for (int tuning=0; tuning<DRX_TUNINGS; tuning++){
 		for(size_t frm = 0; frm <numFrames; frm++){
 			uint8_t  pol =     (uint8_t) (frm & 0x01lu);
-			if (frm > rptcnt){
+			if ( (frm + (tuning*numFrames)) > rptcnt){
 				rptcnt += numFrames / 20;
-				cout << (double) frm * 100.0f / (double) numFrames << "% complete. \n";
+				cout << (double) (frm + (tuning*numFrames)) * 50.0f / (double) numFrames << "% complete. \n";
 			}
 			if (bitPattern){
 				for(size_t j=0; j<DRX_SAMPLES_PER_FRAME; j++){

@@ -72,61 +72,71 @@
 #include "../System/Log.h"
 
 enum Pol{POL_X=0,POL_Y=1};
+
 enum PolType{ X=0x01, Y=0x02, XandY=0x03};
+#define PolSize(p) (__builtin_popcount(p))
+
 enum SamplePolOrganization{ Interleaved, Noninterleaved};
+
 enum StokesProduct {
 	INVALID_STOKES = 0x00,
 	XX   = 0x01, XY       = 0x02, YX = 0x04, YY   = 0x08,
 	I    = 0x10, Q        = 0x20, U  = 0x40, V    = 0x80,
 	XXYY = 0x09, XXXYYXYY = 0x0F, IV = 0x90, IQUV = 0xF0
 }; // thanks Jake :)
-
+#define StokesSize(s) (__builtin_popcount(s))
 string stokesName(StokesProduct s);
 StokesProduct nameToStokes(string name);
-#define PolSize(p) (__builtin_popcount(p))
-#define StokesSize(s) (__builtin_popcount(s))
-
 #define StokesSupported(s)\
 	((s==XXYY)||\
 	 (s==IQUV)||\
 	 (s==IV)\
 	 /* more here as supported */\
 	)
-
 #define StokesTypeLegalOnInputType(s,p)\
 	(\
 		(s==XX && (p!=Y)) ||\
 		(s==YY && (p!=X)) ||\
 		(p==XandY)\
 	)
-//#define canAccInFft(s,p) (StokesSize(s) == PolSize(p))
-#define needsBarrierSync(s) \
-	(                          \
-		(s != XX)        &&    \
-		(s != YY)        &&    \
-		(s != XXYY)            \
+
+
+
+enum CorrProduct{
+	cINVALID = 0x00,
+	cXY      = 0x02
+};
+#define CorrSize(c) (__builtin_popcount(c))
+string corrName(CorrProduct c);
+CorrProduct   nameToCorr(string name);
+#define CorrSupported(c)\
+	((c==cXY)\
+	 /* more here as supported */\
+	)
+#define CorrTypeLegalOnInputType(c,p)\
+	(\
+		((c==cXY)&&(p==XandY))\
 	)
 
-// parameters:
-// Nk	 fft length
-// Nl	 integration count
-// Ns	 Number of streams (not including pols) i.e. 2 for DRX
-// Nb	 Number of blocks (Ns x Npols)
-// InT   polarization type of input
-// OutT  stokes product type of output
 
-
-typedef __v4sf complex_pair;
-typedef __v4sf real_quad;
-
-
-void cplx_mult(complex_pair* a, complex_pair* b, complex_pair* res);
-void cplx_conj(complex_pair* in, complex_pair* out);
-void cplx_mag_pre(complex_pair* a, complex_pair* b, complex_pair* res);
-
-void cplx_mag_sum(complex_pair* mag_pre, float* out1, float* out2);
-void cplx_mag_dif(complex_pair* mag_pre, float* out1, float* out2);
-
+typedef struct __ProductType{
+	__ProductType(StokesProduct s):stokes(s),isCorr(false){};
+	__ProductType(CorrProduct c):corr(c),isCorr(true){};
+	StokesProduct toStokes(){             return isCorr ? INVALID_STOKES : stokes;}
+	CorrProduct   toCorr(){               return isCorr ? corr           : cINVALID;}
+	bool legalForInputType(PolType pin){  return isCorr ? (CorrTypeLegalOnInputType(corr, pin)) : (StokesTypeLegalOnInputType(stokes,pin));}
+	bool isSupported(){                   return isCorr ? (CorrSupported(corr))                 : (StokesSupported(stokes));}
+	size_t numberOutputProducts(){        return isCorr ? CorrSize(corr)                        : StokesSize(stokes);}
+	bool   outputProductsComplex(){       return isCorr;}
+	string name(){                        return isCorr ? corrName(corr) : stokesName(stokes);}
+	union{
+		StokesProduct stokes;
+		CorrProduct corr;
+		uint8_t byte;
+	};
+	bool isCorr;
+}ProductType;
+#define ProductSize(p) (__builtin_popcount(p.byte))
 
 
 
@@ -149,15 +159,75 @@ typedef struct __ThreadInfo{
 
 
 
-void* __FftWrapper(ThreadInfo* td);
+void* __ThreadWrapper(ThreadInfo* td);
 
 typedef void*(*threadFunc)(void*);
+
+
+#ifdef VERIFY_VECTOR_OPS
+	#define ASSERT_BUILTIN_V_OP(a, b, c, op)\
+		{\
+			float* __c = (float*)&(c);\
+			float* __a = (float*)&(a);\
+			float* __b = (float*)&(b);\
+			for (int qq = 0; qq<4; qq++){\
+				assert(__c[qq] == (__a[qq] op __b[qq]));\
+			}\
+		}
+	#define ASSERT_BUILTIN_V_H_OP(a, b, c, op)\
+			{\
+				float* __c = (float*)&(c);\
+				float* __a = (float*)&(a);\
+				float* __b = (float*)&(b);\
+				for (int qq = 0; qq<2; qq++){\
+					assert(__c[qq] == (__a[qq*2] op __a[(qq*2)+1]));\
+				}\
+				for (int qq = 2; qq<4; qq++){\
+					assert(__c[qq] == (__b[(qq-2)*2] op __b[((qq-2)*2)+1]));\
+				}\
+			}
+
+	#define ASSERT_BUILTIN_MULPS(a,b,c)  ASSERT_BUILTIN_V_OP(a, b, c, *)
+	#define ASSERT_BUILTIN_ADDPS(a,b,c)  ASSERT_BUILTIN_V_OP(a, b, c, +)
+	#define ASSERT_BUILTIN_SUBPS(a,b,c)  ASSERT_BUILTIN_V_OP(a, b, c, -)
+	#define ASSERT_BUILTIN_HADDPS(a,b,c) ASSERT_BUILTIN_V_H_OP(a, b, c, +)
+	#define ASSERT_BUILTIN_HSUBPS(a,b,c) ASSERT_BUILTIN_V_H_OP(a, b, c, -)
+	#define ASSERT_SHUFFLE(a,b,c,i0,i1,i2,i3)\
+		{\
+			float* __c = (float*)&(c);\
+			float* __a = (float*)&(a);\
+			float* __b = (float*)&(b);\
+			LOG_START_SESSION(L_DEBUG);\
+			for (int qq=0; qq<4; qq++){\
+				cout << setw(12) << __a[qq] << setw(12) << __b[qq] << setw(12) << "..." << __c[qq] << endl;\
+			}\
+			LOG_END_SESSION();\
+			assert(__c[0] == __a[i3]);\
+			assert(__c[1] == __a[i2]);\
+			assert(__c[2] == __b[i1]);\
+			assert(__c[3] == __b[i0]);\
+		}
+#else
+	#define ASSERT_BUILTIN_V_OP(a, b, c, op)
+	#define ASSERT_BUILTIN_V_H_OP(a, b, c, op)
+	#define ASSERT_BUILTIN_MULPS(a,b,c)  ASSERT_BUILTIN_V_OP(a, b, c, *)
+	#define ASSERT_BUILTIN_ADDPS(a,b,c)  ASSERT_BUILTIN_V_OP(a, b, c, +)
+	#define ASSERT_BUILTIN_SUBPS(a,b,c)  ASSERT_BUILTIN_V_OP(a, b, c, -)
+	#define ASSERT_BUILTIN_HADDPS(a,b,c) ASSERT_BUILTIN_V_H_OP(a, b, c, +)
+	#define ASSERT_BUILTIN_HSUBPS(a,b,c) ASSERT_BUILTIN_V_H_OP(a, b, c, -)
+	#define ASSERT_SHUFFLE(a,b,c,i0,i1,i2,i3)
+#endif
+
+
+
+
+
 
 class Spectrometer {
 public:
 
 
-	Spectrometer(unsigned K, unsigned L, unsigned Ns, unsigned Nb, PolType InT, SamplePolOrganization InO, StokesProduct OutT):
+	Spectrometer(unsigned K, unsigned L, unsigned Ns, unsigned Nb, PolType InT, SamplePolOrganization InO, ProductType OutT):
 	valid(false),
 	XY_interlaced(InO == Interleaved),
 	//barrierSyncRequired(needsBarrierSync(OutT)),
@@ -165,7 +235,7 @@ public:
 	k((int)K),
 	l((int)L),
 	// general geometry
-	number_products(StokesSize(OutT)),
+	number_products(OutT.numberOutputProducts()),
 	number_cells(PolSize(InT)),
 	number_streams(Ns),
 	number_blocks(Nb),
@@ -201,12 +271,12 @@ public:
 
 	{
 
-		if (!StokesSupported(OutT)){
+		if (!OutT.isSupported()){
 			reason="Unsupported output type";
 			return;
 		}
 
-		if (!StokesTypeLegalOnInputType(OutT,InT)){
+		if (!OutT.legalForInputType(InT)){
 			reason="Illegal combination of input and output formats";
 			return;
 		}
@@ -216,7 +286,7 @@ public:
 			return;
 		}
 
-		reason = "Can't initialize threead attributes.\n";
+		reason = "Can't initialize thread attributes.\n";
 		// set our launch attributes
 		if (pthread_attr_init(&attr)){
 			return ;
@@ -317,12 +387,14 @@ public:
 				for (size_t c=0; c<number_cells; c++){
 					size_t c_linear     = cellIndex(b,s,c);
 					size_t c_data_index = c_linear * samples_per_cell;
-					plans[c_linear] = fftwf_plan_many_dft(
-							1, &k, l,
-							&idata[c_data_index], NULL, 1, k,
-							&odata[c_data_index], NULL, 1, k,
-							FFTW_FORWARD, FFTW_ESTIMATE
-					);
+					if (!outputType.isCorr){
+						plans[c_linear] = fftwf_plan_many_dft(
+								1, &k, l,
+								&idata[c_data_index], NULL, 1, k,
+								&odata[c_data_index], NULL, 1, k,
+								FFTW_FORWARD, FFTW_ESTIMATE
+						);
+					}
 					clearCellInput(c_linear);
 					clearCellOutput(c_linear);
 					clearCellCounters(c_linear);
@@ -354,7 +426,9 @@ public:
 				for (size_t s=0; s<number_streams; s++){
 					for (size_t c=0; c<number_cells; c++){
 						size_t c_linear     = cellIndex(b,s,c);
-						fftwf_destroy_plan(plans[c_linear]);
+						if (!outputType.isCorr){
+							fftwf_destroy_plan(plans[c_linear]);
+						}
 					}
 				}
 			}
@@ -383,7 +457,7 @@ public:
 		bInfo[bIdx].error      = false;
 		adata[bIdx]            = adataPtr;		for (unsigned i=0; i<number_threads; i++){
 			unsigned t_linear = (bIdx*number_threads)+i;
-			if (pthread_create(&tInfo[t_linear].thread,&attr, (threadFunc)__FftWrapper, &tInfo[t_linear]) != 0 ){
+			if (pthread_create(&tInfo[t_linear].thread,&attr, (threadFunc)__ThreadWrapper, &tInfo[t_linear]) != 0 ){
 				do {
 					pthread_cancel(tInfo[t_linear].thread);
 					cout << "cancel\n";
@@ -430,13 +504,15 @@ public:
 		unsigned pIdx = threadIndex % number_cells;
 		unsigned cIdx = cellIndex(bIdx, sIdx, pIdx);
 		assert(cIdx < total_cells);
-		fftwf_execute(plans[cIdx]);
-		//clearCellInput(cIdx);
-		//clearCellOutput(cIdx);
-		//genTestXXYY(cIdx);
-		//if (barrierSyncRequired)
-		if(bInfo[bIdx].fftBarrier->wait()){
-			// nada
+		if (!outputType.isCorr){
+			fftwf_execute(plans[cIdx]);
+			//clearCellInput(cIdx);
+			//clearCellOutput(cIdx);
+			//genTestXXYY(cIdx);
+			//if (barrierSyncRequired)
+			if(bInfo[bIdx].fftBarrier->wait()){
+				// nada
+			}
 		}
 		//bInfo[bIdx].fftBarrier->wait();
 		doAcc(bIdx, threadIndex);
@@ -444,7 +520,7 @@ public:
 			bInfo[bIdx].done = true;
 		}
 	}
-
+/*
 	void genTestXXYY(unsigned cIdx){
 
 		fftwf_complex* d = getCellOdata(cIdx);
@@ -465,10 +541,10 @@ public:
 				}
 			}
 	}
-
-#define UNSUPPORTED_STOKES(s) \
+*/
+#define UNSUPPORTED_MODE() \
 	{\
-		LOGC(L_WARNING, "Unsupported stokes mode spectrometer is executing.", FATAL2_COLORS);\
+		LOGC(L_WARNING, "Program error: Spectrometer executing unsupported mode.", FATAL2_COLORS);\
 		bInfo[bIdx].done=true;\
 		return;\
 	}
@@ -476,29 +552,35 @@ public:
 	// accumulate results for the given block, assuming the cells have been calculated
 	void doAcc(unsigned bIdx,unsigned threadIndex){
 		assert(bIdx < number_blocks);
-
-		switch (outputType){
-			case XXYY:	    doAcc_XXYY(bIdx,threadIndex); break;
-			case IQUV:      doAcc_IQUV(bIdx,threadIndex); break;
-			case IV:		doAcc_IV(bIdx,threadIndex); break;
-			case XX: 		doAcc_XX(bIdx,threadIndex); break;
-			case XY: 		doAcc_XY(bIdx,threadIndex); break;
-			case YX: 		doAcc_YX(bIdx,threadIndex); break;
-			case YY: 		doAcc_YY(bIdx,threadIndex); break;
-			case XXXYYXYY:	doAcc_XXXYYXYY(bIdx,threadIndex); break;
-			case I:			doAcc_I(bIdx,threadIndex); break;
-			case Q:			doAcc_Q(bIdx,threadIndex); break;
-			case U:			doAcc_U(bIdx,threadIndex); break;
-			case V:			doAcc_V(bIdx,threadIndex); break;
-			default:		UNSUPPORTED_STOKES(outputType); break;
+		if (outputType.isCorr){
+			switch (outputType.toCorr()){
+				case cXY:		doAcc_c_XY(bIdx,threadIndex); break;
+				default:		UNSUPPORTED_MODE(); break;
+			}
+		} else {
+			switch (outputType.stokes){
+				case XXYY:	    doAcc_XXYY(bIdx,threadIndex); break;
+				case IQUV:      doAcc_IQUV(bIdx,threadIndex); break;
+				case IV:		doAcc_IV(bIdx,threadIndex); break;
+				case XX: 		doAcc_XX(bIdx,threadIndex); break;
+				case XY: 		doAcc_XY(bIdx,threadIndex); break;
+				case YX: 		doAcc_YX(bIdx,threadIndex); break;
+				case YY: 		doAcc_YY(bIdx,threadIndex); break;
+				case XXXYYXYY:	doAcc_XXXYYXYY(bIdx,threadIndex); break;
+				case I:			doAcc_I(bIdx,threadIndex); break;
+				case Q:			doAcc_Q(bIdx,threadIndex); break;
+				case U:			doAcc_U(bIdx,threadIndex); break;
+				case V:			doAcc_V(bIdx,threadIndex); break;
+				default:		UNSUPPORTED_MODE(); break;
+			}
 		}
 
 	}
 
-	void doAcc_XX(       unsigned bIdx,unsigned threadIndex){ UNSUPPORTED_STOKES(outputType); }
-	void doAcc_XY(       unsigned bIdx,unsigned threadIndex){ UNSUPPORTED_STOKES(outputType); }
-	void doAcc_YX(       unsigned bIdx,unsigned threadIndex){ UNSUPPORTED_STOKES(outputType); }
-	void doAcc_YY(       unsigned bIdx,unsigned threadIndex){ UNSUPPORTED_STOKES(outputType); }
+	void doAcc_XX(       unsigned bIdx,unsigned threadIndex){ UNSUPPORTED_MODE(); }
+	void doAcc_XY(       unsigned bIdx,unsigned threadIndex){ UNSUPPORTED_MODE(); }
+	void doAcc_YX(       unsigned bIdx,unsigned threadIndex){ UNSUPPORTED_MODE(); }
+	void doAcc_YY(       unsigned bIdx,unsigned threadIndex){ UNSUPPORTED_MODE(); }
 	void doAcc_XXYY(     unsigned bIdx,unsigned threadIndex){
 		// input stepping
 		unsigned n_freqs_per_thread = k/number_threads;                  // units of complex
@@ -560,11 +642,11 @@ public:
 		} // loop on stream
 
 	}
-	void doAcc_XXXYYXYY( unsigned bIdx,unsigned threadIndex){ UNSUPPORTED_STOKES(outputType); }
-	void doAcc_I(        unsigned bIdx,unsigned threadIndex){ UNSUPPORTED_STOKES(outputType); }
-	void doAcc_Q(        unsigned bIdx,unsigned threadIndex){ UNSUPPORTED_STOKES(outputType); }
-	void doAcc_U(        unsigned bIdx,unsigned threadIndex){ UNSUPPORTED_STOKES(outputType); }
-	void doAcc_V(        unsigned bIdx,unsigned threadIndex){ UNSUPPORTED_STOKES(outputType); }
+	void doAcc_XXXYYXYY( unsigned bIdx,unsigned threadIndex){ UNSUPPORTED_MODE(); }
+	void doAcc_I(        unsigned bIdx,unsigned threadIndex){ UNSUPPORTED_MODE(); }
+	void doAcc_Q(        unsigned bIdx,unsigned threadIndex){ UNSUPPORTED_MODE(); }
+	void doAcc_U(        unsigned bIdx,unsigned threadIndex){ UNSUPPORTED_MODE(); }
+	void doAcc_V(        unsigned bIdx,unsigned threadIndex){ UNSUPPORTED_MODE(); }
 	void doAcc_IV(       unsigned bIdx,unsigned threadIndex){
 		// each thread computes all output products for
 		//      * (Nfreqs/Nthreads) frequencies,
@@ -621,8 +703,8 @@ public:
 					__v4sf tmpy2 = __builtin_ia32_mulps( y[in_index2], y[in_index2]); // square               [    y2r,     y2i,     y3r,     y3i]
 					__v4sf tmpy3 = __builtin_ia32_haddps(tmpy1, tmpy2);               // add squared comps:   [ |y0|^2,  |X1|^2,  |X2|^2,  |X3|^2]
 					__v4sf _i    = __builtin_ia32_addps(tmpx3,tmpy3);                 // SUM                  [     I0,      I1,      I2,      I3]
-					       tmpx1 = __builtin_ia32_shufps(x[in_index1],x[in_index1],_MM_SHUFFLE(1,0,3,2)); // swap real/imag (do this on x so that we can use hsub and the sign will work out)
-					       tmpx2 = __builtin_ia32_shufps(x[in_index2],x[in_index2],_MM_SHUFFLE(1,0,3,2)); // swap real/imag (do this on x so that we can use hsub and the sign will work out)
+					       tmpx1 = __builtin_ia32_shufps(x[in_index1],x[in_index1],_MM_SHUFFLE(2,3,0,1)); // swap real/imag (do this on x so that we can use hsub and the sign will work out)
+					       tmpx2 = __builtin_ia32_shufps(x[in_index2],x[in_index2],_MM_SHUFFLE(2,3,0,1)); // swap real/imag (do this on x so that we can use hsub and the sign will work out)
 					__v4sf tmpv1 = __builtin_ia32_mulps( tmpx1, y[in_index1]);        // premult1             [ x0iy0r,  x0ry0i,  x1iy1r,  x1ry1i]
 					__v4sf tmpv2 = __builtin_ia32_mulps( tmpx2, y[in_index2]);        // premult2             [ x2iy2r,  x2ry2i,  x3iy3r,  x3ry3i]
 					__v4sf _v    = __builtin_ia32_hsubps(tmpv1, tmpv2);               // diff                 [  XY*0i,   XY*1i,   XY*2i,   XY*3i] <note: XY*_n, not XY * n>
@@ -668,6 +750,7 @@ public:
 		// output stepping
 		unsigned fStep              = number_products;
 
+		assert(number_products == 4);
 
 		for (unsigned cur_str=0; cur_str<number_streams; cur_str++){
 			// where is x starting from?
@@ -688,8 +771,37 @@ public:
 
 			// pre-zero the accumulator
 			bzero((void*) &a_str[(startFreq ^ freq_mask)*fStep], n_freqs_per_thread*number_products*sizeof(float));
+#ifdef DEBUG_STOKES_IQUV
+			LOG_START_SESSION(L_DEBUG);
+			cout << "-----------------------------------------" << endl;
+			cout << "k                  " << k                  << endl;
+			cout << "l                  " << l                  << endl;
+			cout << "number_threads     " << number_threads     << endl;
+			cout << "number_products    " << number_products    << endl;
+			cout << "bIdx               " << bIdx               << endl;
+			cout << "threadIndex        " << threadIndex        << endl;
+			cout << "n_freqs_per_thread " << n_freqs_per_thread << endl;
+			cout << "startFreq          " << startFreq          << endl;
+			cout << "stopFreq           " << stopFreq           << endl;
+			cout << "intStep            " << intStep            << endl;
+			cout << "fStep              " << fStep              << endl;
+			cout << "freq_mask          " << freq_mask          << endl;
 
+			cout << "cur_str        " << cur_str               << endl;
+			cout << "number_streams " << number_streams        << endl;
+			cout << "cIdx_x         " << cIdx_x                << endl;
+			cout << "cIdx_y         " << cIdx_y                << endl;
+			cout << "x_base         0x" << hex<<(size_t)x_base   << dec << endl;
+			cout << "y_base         0x" << hex<<(size_t)y_base   << dec << endl;
+			cout << "x              0x" << hex<<(size_t)x        << dec << endl;
+			cout << "y              0x" << hex<<(size_t)y        << dec << endl;
+			cout << "a_base         0x" << hex<<(size_t)a_base   << dec << endl;
+			cout << "a_str          0x" << hex<<(size_t)a_str    << dec << endl;
+			cout << "" << endl;
+			LOG_END_SESSION();
+#endif
 			for (int cur_int=0; cur_int<l; cur_int++){
+
 				for (unsigned cur_freq = startFreq; cur_freq<stopFreq; cur_freq+=4){ // 4 at a time
 					size_t in_index1  = (((cur_int * intStep) + cur_freq)>>1); // v4s index
 					size_t in_index2  = in_index1 + 1;
@@ -705,21 +817,73 @@ public:
 
 					// first compute |X| and |Y| so we can use the space for in place computation
 					__v4sf tmpx1 = __builtin_ia32_mulps( x[in_index1], x[in_index1]); // square               [    x0r,     x0i,     x1r,     x1i]
+					ASSERT_BUILTIN_MULPS(x[in_index1],x[in_index1],tmpx1);
+
 					__v4sf tmpx2 = __builtin_ia32_mulps( x[in_index2], x[in_index2]); // square               [    x2r,     x2i,     x3r,     x3i]
+					ASSERT_BUILTIN_MULPS(x[in_index2],x[in_index2],tmpx2);
+
 					__v4sf tmpx3 = __builtin_ia32_haddps(tmpx1, tmpx2);               // add squared comps:   [ |X0|^2,  |X1|^2,  |X2|^2,  |X3|^2]
+					ASSERT_BUILTIN_HADDPS(tmpx1, tmpx2, tmpx3);
+
 					__v4sf tmpy1 = __builtin_ia32_mulps( y[in_index1], y[in_index1]); // square               [    y0r,     y0i,     y1r,     y1i]
+					ASSERT_BUILTIN_MULPS(y[in_index1],y[in_index1],tmpy1);
+
 					__v4sf tmpy2 = __builtin_ia32_mulps( y[in_index2], y[in_index2]); // square               [    y2r,     y2i,     y3r,     y3i]
+					ASSERT_BUILTIN_MULPS(y[in_index2],y[in_index2],tmpy2);
+
 					__v4sf tmpy3 = __builtin_ia32_haddps(tmpy1, tmpy2);               // add squared comps:   [ |y0|^2,  |X1|^2,  |X2|^2,  |X3|^2]
+					ASSERT_BUILTIN_HADDPS(tmpy1, tmpy2, tmpy3);
+
 					__v4sf _i    = __builtin_ia32_addps(tmpx3,tmpy3);                 // SUM                  [     I0,      I1,      I2,      I3]
+					ASSERT_BUILTIN_ADDPS(tmpx3,tmpy3,_i);
+
 					__v4sf _q    = __builtin_ia32_subps(tmpx3,tmpy3);                 // DIFF                 [     Q0,      Q1,      Q2,      Q3]
+					ASSERT_BUILTIN_SUBPS(tmpx3,tmpy3,_q);
+
 					__v4sf tmpu1 = __builtin_ia32_mulps( x[in_index1], y[in_index1]); // premult1             [ x0ry0r,  x0iy0i,  x1ry1r,  x1iy1i]
+					ASSERT_BUILTIN_MULPS(x[in_index1],y[in_index1],tmpu1);
+
 					__v4sf tmpu2 = __builtin_ia32_mulps( x[in_index2], y[in_index2]); // premult2             [ x2ry2r,  x2iy2i,  x3ry3r,  x3iy3i]
+					ASSERT_BUILTIN_MULPS(x[in_index2],y[in_index2],tmpu2);
+
 					__v4sf _u    = __builtin_ia32_haddps(tmpu1, tmpu2);               // sum                  [  XY*0r,   XY*1r,   XY*2r,   XY*3r] <note: XY*_n, not XY * n>
-					       tmpx1 = __builtin_ia32_shufps(x[in_index1],x[in_index1],_MM_SHUFFLE(1,0,3,2)); // swap real/imag (do this on x so that we can use hsub and the sign will work out)
-					       tmpx2 = __builtin_ia32_shufps(x[in_index2],x[in_index2],_MM_SHUFFLE(1,0,3,2)); // swap real/imag (do this on x so that we can use hsub and the sign will work out)
+					ASSERT_BUILTIN_HADDPS(tmpu1,tmpu2,_u);
+
+						   tmpx1 = __builtin_ia32_shufps(x[in_index1],x[in_index1],_MM_SHUFFLE(2,3,0,1)); // swap real/imag (do this on x so that we can use hsub and the sign will work out)
+						   ASSERT_SHUFFLE(x[in_index1],x[in_index1],tmpx1,2,3,0,1);
+
+						   tmpx2 = __builtin_ia32_shufps(x[in_index2],x[in_index2],_MM_SHUFFLE(2,3,0,1)); // swap real/imag (do this on x so that we can use hsub and the sign will work out)
+						   ASSERT_SHUFFLE(x[in_index2],x[in_index2],tmpx2,2,3,0,1);
+
 					__v4sf tmpv1 = __builtin_ia32_mulps( tmpx1, y[in_index1]);        // premult1             [ x0iy0r,  x0ry0i,  x1iy1r,  x1ry1i]
+					ASSERT_BUILTIN_MULPS(tmpx1, y[in_index1],tmpv1);
+
 					__v4sf tmpv2 = __builtin_ia32_mulps( tmpx2, y[in_index2]);        // premult2             [ x2iy2r,  x2ry2i,  x3iy3r,  x3ry3i]
+					ASSERT_BUILTIN_MULPS(tmpx2, y[in_index2],tmpv2);
+
 					__v4sf _v    = __builtin_ia32_hsubps(tmpv1, tmpv2);               // diff                 [  XY*0i,   XY*1i,   XY*2i,   XY*3i] <note: XY*_n, not XY * n>
+					ASSERT_BUILTIN_HSUBPS(tmpv1, tmpv2, _v);
+
+					#ifdef DEBUG_STOKES_IQUV
+					if (cur_int == 0){
+						assert(a_str[f_index_1 + i_index] == 0.0);
+						assert(a_str[f_index_1 + q_index] == 0.0);
+						assert(a_str[f_index_1 + u_index] == 0.0);
+						assert(a_str[f_index_1 + v_index] == 0.0);
+						assert(a_str[f_index_2 + i_index] == 0.0);
+						assert(a_str[f_index_2 + q_index] == 0.0);
+						assert(a_str[f_index_2 + u_index] == 0.0);
+						assert(a_str[f_index_2 + v_index] == 0.0);
+						assert(a_str[f_index_3 + i_index] == 0.0);
+						assert(a_str[f_index_3 + q_index] == 0.0);
+						assert(a_str[f_index_3 + u_index] == 0.0);
+						assert(a_str[f_index_3 + v_index] == 0.0);
+						assert(a_str[f_index_4 + i_index] == 0.0);
+						assert(a_str[f_index_4 + q_index] == 0.0);
+						assert(a_str[f_index_4 + u_index] == 0.0);
+						assert(a_str[f_index_4 + v_index] == 0.0);
+					}
+					#endif
 
 					// accumulate bin 1's I, Q, U, and V
 					a_str[f_index_1 + i_index] += ((float*)&_i)[0];
@@ -757,6 +921,90 @@ public:
 		} // loop on stream
 
 	}
+
+
+	void doAcc_c_XY(     unsigned bIdx,unsigned threadIndex){
+
+			// input stepping
+			unsigned n_samps_per_thread = k/number_threads;                  // units of complex
+			unsigned startSamp          = threadIndex * n_samps_per_thread;  // units of complex
+			unsigned stopSamp           = startSamp + n_samps_per_thread;
+			unsigned sampStep           = l;                                 // units of complex
+
+			// output stepping
+			unsigned pStep              = number_products;
+
+			assert(number_products == 1);
+
+			for (unsigned cur_str=0; cur_str<number_streams; cur_str++){
+				// where is x starting from?
+				unsigned cIdx_x       = cellIndex(bIdx, cur_str, POL_X); //assert(cIdx_x < total_cells);
+				fftwf_complex* x_base = getCellOdata(cIdx_x);
+				__v4sf* x             = (__v4sf*) x_base;
+
+				// where is y starting from?
+				unsigned cIdx_y       = cellIndex(bIdx, cur_str, POL_Y); //assert(cIdx_y < total_cells);
+				fftwf_complex* y_base = getCellOdata(cIdx_y);
+				__v4sf* y             = (__v4sf*) y_base;
+
+				// where does data for the block go?
+				fftwf_complex* a_base = (fftwf_complex*) adata[bIdx];
+				fftwf_complex* a_str  = &a_base[k*number_products*cur_str]; // complex data
+
+				__v4sf zero; bzero((void*)&zero, sizeof(__v4sf));
+
+				// pre-zero the accumulator
+				bzero((void*) &a_str[startSamp*pStep], n_samps_per_thread*pStep*sizeof(fftwf_complex));
+
+				for (unsigned cur_samp = startSamp; cur_samp<stopSamp; cur_samp++){
+					for (int cur_int=0; cur_int<l; cur_int+=4){ // 4 at a time
+						size_t in_index1  = (((cur_samp * sampStep) + cur_int)>>1); // v4s index
+						size_t in_index2  = in_index1 + 1;
+
+						size_t out_index  = ((cur_samp * pStep)); // complex index
+
+						//size_t xx_index  = 0;
+						size_t xy_index  = 0;
+						//size_t yx_index  = 2;
+						//size_t yy_index  = 3;
+
+						__v4sf tmpxy_r_1  = __builtin_ia32_mulps( x[in_index1], y[in_index1]); // premult1             [ x0ry0r,  x0iy0i,  x1ry1r,  x1iy1i]
+						__v4sf tmpxy_r_2  = __builtin_ia32_mulps( x[in_index2], y[in_index2]); // premult2             [ x2ry2r,  x2iy2i,  x3ry3r,  x3iy3i]
+						__v4sf tmpxy_r    = __builtin_ia32_haddps(tmpxy_r_1, tmpxy_r_2);       // sum                  [  XY*0r,   XY*1r,   XY*2r,   XY*3r] <note: XY*_n, not XY * n>
+
+						__v4sf tmpxy_i_1  = __builtin_ia32_shufps(x[in_index1],x[in_index1],_MM_SHUFFLE(2,3,0,1)); // swap real/imag (do this on x so that we can use hsub and the sign will work out)
+						__v4sf tmpxy_i_2  = __builtin_ia32_shufps(x[in_index2],x[in_index2],_MM_SHUFFLE(2,3,0,1)); // swap real/imag (do this on x so that we can use hsub and the sign will work out)
+						__v4sf tmpxy_i_3  = __builtin_ia32_mulps( tmpxy_i_1, y[in_index1]);    // premult1             [ x0iy0r,  x0ry0i,  x1iy1r,  x1ry1i]
+						__v4sf tmpxy_i_4  = __builtin_ia32_mulps( tmpxy_i_2, y[in_index2]);    // premult2             [ x2iy2r,  x2ry2i,  x3iy3r,  x3ry3i]
+						__v4sf tmpxy_i    = __builtin_ia32_hsubps(tmpxy_i_3, tmpxy_i_4);       // diff                 [  XY*0i,   XY*1i,   XY*2i,   XY*3i] <note: XY*_n, not XY * n>
+						__v4sf tmpxy_x2   = __builtin_ia32_haddps(tmpxy_r,tmpxy_i);            // add first two        [ XY*01r,  XY*23r, XY*01i,   XY*23i]
+						__v4sf tmpxy_x4   = __builtin_ia32_haddps(tmpxy_x2,zero);              // add first two        [ XY*0123r,  XY*0123i, 0,   0]
+
+						// accumulate real and imaginary parts
+						a_str[out_index + xy_index][0] += ((float*)&tmpxy_x4)[0];
+						a_str[out_index + xy_index][1] += ((float*)&tmpxy_x4)[1];
+						//a_str[out_index + xy_index][0] = (out_index + xy_index);
+						//a_str[out_index + xy_index][1] = -(out_index + xy_index);
+
+
+					} // loop on integration count
+				} // loop on sample number of frame
+				// now we need to fix up magnitude to normalize by integration count
+
+				for (unsigned cur_samp = startSamp; cur_samp<stopSamp; cur_samp++){
+					size_t out_index   = ((cur_samp * pStep)); // complex index
+					size_t xy_index    = 0;
+					a_str[out_index + xy_index][0] /= l;
+					a_str[out_index + xy_index][1] /= l;
+				}
+
+			} // loop on stream
+
+		}
+
+
+
+
 
 	float* getAccAdata(unsigned bIdx){
 		return &adata[bIdx][0];
@@ -826,9 +1074,8 @@ public:
 private:
 	bool   valid;
 	bool   XY_interlaced;     // true for TBW, false otherwise; affects insertion
-	//bool   barrierSyncRequired; // indicates threads need to wait before doing ACC (only relevant when accumulateInFft is true)
-	StokesProduct outputType; // output type XX, YY, IQUV, etc.
-	int k;                    // fft length
+	ProductType outputType;   // output type XX, YY, IQUV, etc.
+	int k;                    // fft length or correlator #samples/frame
 	int l;                    // integration count
 	size_t number_products;   // 1 to 4
 	size_t number_cells;      // 1 or 2
