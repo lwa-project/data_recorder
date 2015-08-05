@@ -1,0 +1,24 @@
+#System reference designator
+MyReferenceDesignator = DR1
+
+#System IP address
+SelfIp = 192.168.1.20
+
+#NTP server
+TimeAuthority = Time.Ubuntu.com
+
+#System Serial Number
+SerialNumber = 0
+
+#Startup DRSU Selection (Barcode or 0-based index)
+ArraySelect = 1
+
+#UDP Port to listen on for MCS messages
+MessageInPort = 5000
+
+#UDP Port to send responses to
+MessageOutPort = 5001
+
+#UDP Port to receive data on
+DataInPort = 16180
+

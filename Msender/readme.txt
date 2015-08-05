@@ -19,8 +19,8 @@
 */
 Software: MCS-DR Operating Software utility: Msender
 Author:    C.N. Wolfe
-Version:  DROS-1.5.0-Beta-Release
-Date:     2012-06-22
+Version:  DROS-2.0-Beta-Release
+Date:     
 
 Introduction / Usage
 ====================

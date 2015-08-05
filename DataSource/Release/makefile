@@ -8,6 +8,7 @@ RM := rm -rf
 
 # All of the sources participating in the build are defined here
 -include sources.mk
+-include Lwa/subdir.mk
 -include subdir.mk
 -include objects.mk
 
@@ -43,7 +44,7 @@ all: DataSource
 DataSource: $(OBJS) $(USER_OBJS)
 	@echo 'Building target: $@'
 	@echo 'Invoking: GCC C++ Linker'
-	g++  -o"DataSource" $(OBJS) $(USER_OBJS) $(LIBS)
+	g++  -o "DataSource" $(OBJS) $(USER_OBJS) $(LIBS)
 	@echo 'Finished building target: $@'
 	@echo ' '
 

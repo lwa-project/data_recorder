@@ -4,8 +4,8 @@
 		=====================================
 
 ====================================================================================
-Version: DROS-1.5.0-Beta-Release
-Date:    2012-06-22
+Version: DROS-2.0-Beta-Release
+Date:    2012-11-13
 Author:  Christopher Wolfe
 ====================================================================================
 
@@ -16,6 +16,24 @@ DROS Versions and ICD Version
 
 	---------------------------------------------------------------------------------------
 	| DROS Version  | ICD version | Posted As  | Compliance Issues, Comments              |
+	|---------------|-------------|------------|------------------------------------------|
+	| 2.0           | 2.0         | MCS0027    | *Added Stokes IV and IQUV modes to       |
+	|               |             | MCS0025    |   spectrometer.                          |
+	|               |             |            | *Added additional time/freq. resolutions |
+	|               |             |            |   to spectrometer                        |
+	|               |             |            | *Deprecated live buffer and correlator   |
+	|               |             |            |   modes                                  |
+	|               |             |            | *Added Metatags to support modifying     |
+	|               |             |            |   command and MIB request behavior       |
+	|               |             |            | *Added support for selecting DRSUs and   |
+	|               |             |            |   external storage by number, device id, |
+	|               |             |            |   mount point, or volume name            |
+	|               |             |            | *Added log auto-rotation and context-    |
+	|               |             |            |   specific coloring                      |
+	|               |             |            | *Added basis for plugin suppport,        |
+	|               |             |            |   triggered/flagged recording, and       |
+	|               |             |            |   restreaming(via UDP)                   |
+	|               |             |            |                                          |
 	|---------------|-------------|------------|------------------------------------------|
 	| 1.5.0         | 1.7         | MCS0027    |*Added Beam-correlator mode/command.      |
 	|               |             | MCS0025    |*Added saturation count fields to         |
@@ -166,9 +184,10 @@ Assumptions
 ===========
   This tutorial assumes the following:
 
-	1) You are working on an MCS-DR PC with x86_64 Ubuntu 9.04 
+	1) You are working on an MCS-DR PC with x86_64 Ubuntu 12.04 
 	2) the following packages are installed: libgdbm3, libgdbm-dev, libfuse2, 
-           libfuse-dev, lmsensors, smartmontools, mdadm
+           libfuse-dev, lmsensors, smartmontools, mdadm, libfftw3-dev, fftw3,
+           libboost-all-dev, gnuplot
 	   and, depending on PC model: 
 		XPS 435MT:   coretemp
 		DELL t1500:  f71882fg
@@ -205,8 +224,8 @@ Files and Organization
 Included Binaries / Source Trees
 ================================
 
-  Data Recorder Operating Software (DROS)
-  =======================================
+  Data Recorder Operating Software versin 2 (DROS_v2)
+  ===================================================
   'WAVE_Y'     This is DROS. The main DROS executable and provides all of the 
                ICD-specified functionality (messaging, recording, etc..)
 
@@ -220,15 +239,11 @@ Included Binaries / Source Trees
   'DataSource'             is a simulated data source which can be used to emulate DP output for 
                            testing purposes.
 
-  'DataSourceFileVerifier' is a tool used to verify recordings made of simulated data produced by
-                           the DataSource utility (for testing purposes).
+  'DataSource2'            is a simulated data source which can be used to emulate DP output for 
+                           testing purposes.
 
-  'FUSE-LWAFS-READER'      is an alpha release of a utility to mount a DRSU under Linux
-                           to enable command-line access to recordings. This utility does have some 
-                           stability issues, but can be useful as is. More information on this is available 
-                           in the 'Retrieving recorded data' section in this document, and in the 
-                           readme in the 'FUSE-LWAFS-READER' source tree.
-
+  SpectrogramViewer	   is a GUI utility to view spectrograms produced by DROSv2
+  SpectrogramViewer2
 
 Software Installation
 =====================
@@ -264,10 +279,10 @@ Software Installation
 	# You must modify defaults.cfg.example to reflect your network environment.
 	# 
 	# To launch the software, execute:
-	#       /LWA/bin/WAVE_Y
+	#       /LWA/bin/DROS
 	# 
 	# To install the software to run on-boot, execute:
-	#       /LWA/scripts/installStartupScript.sh /LWA/scripts/StartDROS.sh
+	#       cd /LWA/scripts; ./installStartupScript.sh /LWA/scripts/StartDROS.sh
 	# 
 	################################################################
 
@@ -288,7 +303,7 @@ System Configuration
   accepting commands from or responding to). 'MessageOutURL' may be localhost 
   or 127.0.0.1 as long as the message in and out ports are different. 
   'MyReferenceDesignator' determines the reference designator to which the 
-  MCS-DR will respond. The current default is MD<x> (i.e. MD1, MD2, etc.), 
+  MCS-DR will respond. The current default is MD<x> (i.e. DR1, MD2, etc.), 
   but these have not officially been assigned, and hence this naming scheme 
   should not be relied upon. The last item that should 
   be configured is TimeAuthority which specifies the URL or IP of an NTP time 
@@ -320,7 +335,7 @@ System Configuration
   in accordance with network environment. See Ubuntu documentation for editing
   /etc/network/interfaces and /etc/resolv.conf.
 
-  More details regarding configuring the DROS software can be found in the WAVE_Y/readme.txt
+  More details regarding configuring the DROSv2 software can be found in the WAVE_Y/readme.txt
 
 DRSU preparation
 ================
@@ -340,7 +355,7 @@ DRSU preparation
 
   Once connectivity is verified, prepare the drive for usage by creating a software raid array. 
   At the prompt: 
-   	>mdadm --create /dev/md0 -c 256 -l 0 -n 5 /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf
+   	>mdadm -C /dev/md0 -c 256 -l 0 -n 5 /dev/sd{b,c,d,e,f}
 	mdadm: /dev/md0 has been started with 5 drives.
 
   If the DRSU has already been previously prepared, then doing the above could damage the data. 
@@ -350,7 +365,7 @@ DRSU preparation
  
   This will start the array from the specified drives without deleting the contents.
   However, this configuration of the DRSU will not be preserved at the next boot.
-  To preserve the drive configuration, necessary for normal DROS operation, perform
+  To preserve the drive configuration, necessary for normal DROSv2 operation, perform
   the above, and then do:
 	>cp /etc/mdadm/mdadm.conf /etc/mdadm/mdadm.conf.QS.bak
   	>mdadm --examine --scan > /etc/mdadm.conf
@@ -412,21 +427,55 @@ DRSU preparation
   long as the device's md superblock is not altered, mdadm is "smart-enough" to figure it 
   out. 
 
-  Currently, the MCS-DR software will search for arrays of the name md0, md1, etc., and 
-  will only use the lowest ordered array. Until multi-DRSU support is complete, it is not 
-  recommended to attach multiple DRSUs.
+  Formatting the DRSU
+  ===================
+  DRSUs are now based on the EXT4 file system with a specific set of options. 
+  To prepare a DROSv2 compliant filesystem on the RAID array, do the following:
+     At the command prompt:
+   	>sudo /LWA/scripts/StorageControl.sh format /dev/md0 MyDrsuBarcode
+
+     You should see something similar to:
+	mke2fs 1.42 (29-Nov-2011)
+	Filesystem label='myDrsuBarcode'
+	OS type: Linux
+	Block size=4096 (log=2)
+	Fragment size=4096 (log=2)
+	Stride=64 blocks, Stripe width=320 blocks
+	1192336 inodes, 2441893120 blocks
+	122094656 blocks (5.00%) reserved for the super user
+	First data block=0
+	Maximum filesystem blocks=4294967296
+	74521 block groups
+	32768 blocks per group, 32768 fragments per group
+	16 inodes per group
+	Superblock backups stored on blocks: 
+		32768, 98304, 163840, 229376, 294912, 819200, 884736, 1605632, 2654208, 
+		4096000, 7962624, 11239424, 20480000, 23887872, 71663616, 78675968, 
+		102400000, 214990848, 512000000, 550731776, 644972544, 1934917632
+
+	Allocating group tables: done                            
+	Writing inode tables: done                            
+	Writing superblocks and filesystem accounting information: 
+	Complete!!!
+	To mount the new DRSU, type 'mount -t ext4 -o defaults,data=writeback,noatime,barrier=0 /dev/md0 <mountpoint>' Or Use this script to enable use with DROS.
+
+  Mounting the DRSU
+  =================
+  This will be done automatically by DROSv2, but if you wish to view the files, you may mount 
+  manually. To mount the new DRSU, type:
+    >sudo mount -t ext4 -o defaults,data=writeback,noatime,barrier=0 /dev/md0 <mountpoint>
   
 
 Readiness Check-list
-===================
+====================
 
 	At this point, you should have:
-	1) An MCS-DR PC with x86_64 Ubuntu 9.04 
+	1) An MCS-DR PC with x86_64 Ubuntu 12.04 
 	   packages: C++, libgdbm3, libgdbm-dev, libfuse2, libfuse-dev, lmsensors, smartmontools
 	   mdadm, and, depending on PC model: 
 		XPS 435MT:   coretemp
 		DELL t1500:  f71882fg
-  	2) A freshly built version 'DROS-1.5.0-Beta-Release' of the DROS software
+  	2) A freshly built version 'DROS-2.0-Beta-Release' of the DROSv2 software
 	3) Configuration files modified to suit the local environment
 	4) An assembled DRSU
 	5) A raid 0 array on the DRSU visible as /dev/md0 in /proc/partitions
@@ -436,187 +485,205 @@ Readiness Check-list
 First Run : Running the application
 ===================================
 	
-  Normally, the DROS binary is launched from a rc.d script, but the first
-  time it is run, I recommend launching it directly. The DROS software is still in the 
+  Normally, the DROSv2 binary is launched from a rc.d script, but the first
+  time it is run, I recommend launching it directly. The DROSv2 software is still in the 
   beta stage, and catching error messages may prove more difficult from within the script.
   
-  To launch the binary directly, type '/LWA/bin/WAVE_Y', followed by any of the 
-  following flags:
-	-flushData		To delete any/all files on the DRSU 
-	-flushLog		To delete DROS logs
-	-flushSchedule		To delete any scheduled recordings
-	-flushConfig		To delete configuration database and re-parse 'defaults.cfg'
-  On the first run, the '-flushData' option must be specified to create an lwafs file 
-  system on the DRSU raid array. The other flags are optional as DROS will attempt to read
-  configuration files automatically if runtime databases are missing (which is true on 
-  first run). Also note that recording on the first run of the application will require 
-  manually invoking sysctl to modify UDP buffer sizes:
-	'sysctl -e -p /LWA/config/netperformance.sysctl.conf'
-  This is taken care of automatically when using the normal operation mode (described below).
-
-  So, at the command line type:
-	>sysctl -e -p /LWA/config/netperformance.sysctl.conf; /LWA/bin/WAVE_Y -flushData -flushLog -flushSchedule -flushConfig
-
+  To launch the binary directly, type '/LWA/bin/DROS2'
+  ====================================================
+  
   The following will be displayed:
-	net.ipv4.tcp_mem = 56371200	75161600	112742400
-	net.ipv4.tcp_wmem = 409600	1638400	419430400
-	net.ipv4.tcp_rmem = 409600	8738000	419430400
-	net.ipv4.udp_mem = 57859200	77145600	115718400
-	net.ipv4.udp_rmem_min = 409600
-	net.ipv4.udp_wmem_min = 409600
-	net.core.wmem_max = 13107100
-	net.core.rmem_max = 13107100
-	net.core.wmem_default = 12492800
-	net.core.rmem_default = 12492800
-	net.core.netdev_max_backlog = 100000
-	net.core.optmem_max = 204800
-	055240-012222981 : [BOOT] Processing option '-flushData'
-	055240-012222981 : [BOOT] Processing option '-flushLog'
-	055240-012222981 : [BOOT] Processing option '-flushSchedule'
-	055240-012222981 : [BOOT] Processing option '-flushConfig'
-	055240-012222981 : [BOOT] Loading system configuration.
-	055240-012222985 : [DATABASE] Database File Created: '/LWA/database/configDb.gdbm'
-	055240-012222985 : [DATABASE] Opening default values file: '/LWA/config/defaults.cfg'
-	055240-012222985 : [DATABASE] Now filling database with default values.
-	055240-012222987 : [DATABASE] Finished initializing database. 	Processed 20 lines 	 Added 7 records
-	055240-012222987 : [DATABASE] Database File Opened: '/LWA/database/configDb.gdbm'
-	055240-012222987 : [DATABASE] DB: 'MessageOutPort' => '5000'
-	055240-012222987 : [DATABASE] DB: 'MyReferenceDesignator' => 'MD1'
-	055240-012222987 : [DATABASE] DB: 'DataInPort' => '6002'
-	055240-012222987 : [DATABASE] DB: 'MessageOutURL' => '192.168.1.20'
-	055240-012222987 : [DATABASE] DB: 'TimeAuthority' => 'ntp.Ubuntu.com'
-	055240-012222987 : [DATABASE] DB: 'MessageInPort' => '5001'
-	055240-012222987 : [DATABASE] DB: 'SelfIP' => '192.168.1.20'
-	ntpd: no process killed
-	055240-012223444 : [BOOT] NTP synchronization result: '12 Feb 22:23:43 ntpdate[9493]: adjust time server 91.189.94.4 offset 0.000221 sec
-	'
-	055240-012223444 : [BOOT] Initializing the system log.
-	055240-012223446 : [DATABASE] Database File Created: '/LWA/database/logDb.gdbm'
-	055240-012223446 : [DATABASE] Database File Opened: '/LWA/database/logDb.gdbm'
-	055240-012223446 : [BOOT] Opened System Log.
-	055240-012223446 : [BOOT] Initializing the system's storage devices.
-*	055240-012223498 : [DISK MANAGER] Disk_IdentifyAll(): Device found: '/dev/loop0' of type 'DRIVETYPE_EXTERNAL_PARTITION'
-*	055240-012223498 : [DISK MANAGER] Disk_IdentifyAll(): Device found: '/dev/loop1' of type 'DRIVETYPE_EXTERNAL_PARTITION'
-*	055240-012223498 : [DISK MANAGER] Disk_IdentifyAll(): Device found: '/dev/loop2' of type 'DRIVETYPE_EXTERNAL_PARTITION'
-*	055240-012223498 : [DISK MANAGER] Disk_IdentifyAll(): Device found: '/dev/loop3' of type 'DRIVETYPE_EXTERNAL_PARTITION'
-*	055240-012223498 : [DISK MANAGER] Disk_IdentifyAll(): Device found: '/dev/loop4' of type 'DRIVETYPE_EXTERNAL_PARTITION'
-	055240-012223498 : [DISK MANAGER] Disk_IdentifyAll(): Device found: '/dev/sda' of type 'DRIVETYPE_SYSTEM_BLOCK_DEVICE'
-	055240-012223498 : [DISK MANAGER] Disk_IdentifyAll(): Device found: '/dev/sda1' of type 'DRIVETYPE_SYSTEM_PARTITION'
-	055240-012223499 : [DISK MANAGER] Disk_IdentifyAll(): Device found: '/dev/sda2' of type 'DRIVETYPE_SYSTEM_PARTITION'
-	055240-012223499 : [DISK MANAGER] Disk_IdentifyAll(): Device found: '/dev/sda5' of type 'DRIVETYPE_SYSTEM_PARTITION'
-	055240-012223499 : [DISK MANAGER] Disk_IdentifyAll(): Device found: '/dev/md0' of type 'DRIVETYPE_INTERNAL_MULTIDISK_DEVICE'
-	055240-012223499 : [BOOT] Initialized system's storage devices.
-	055240-012223499 : [BOOT] Locating internal storage among detected devices.
-	055240-012223499 : [BOOT] Identified internal storage device as '/dev/md0'
-	055240-012223499 : [BOOT] Creating internal storage file system.
-	055240-012223517 : [FILE SYSTEM] WARNING: Creating filesystem on device /dev/md0 !!!!
-	055240-012223517 : [FILE SYSTEM] /dev/md0: 
-		           [FILE SYSTEM] 	Volume name: MCS-DRSU-Storage
-		           [FILE SYSTEM] 	            262144 chunk size
-		           [FILE SYSTEM] 	                 5 drives 
-		           [FILE SYSTEM] 	       53685780480 total bytes 
-		           [FILE SYSTEM] 	              1023 maximum number files
-		           [FILE SYSTEM] 	                 0 current number files
-		           [FILE SYSTEM] 	              1023 maximum filename length
-		           [FILE SYSTEM] 	           4194304 bytes reserved for formatting
-	055240-012223521 : [BOOT] File system created, all data deleted!!!
-	055240-012223521 : [BOOT] Opening internal storage file system.
-	055240-012223521 : [FILE SYSTEM] Detected a filesystem size of 4194304.
-		           [FILE SYSTEM] /dev/md0: 
-		           [FILE SYSTEM] 	Volume name: MCS-DRSU-Storage
-		           [FILE SYSTEM] 	       262144 chunk size
-		           [FILE SYSTEM] 	            5 drives 
-		           [FILE SYSTEM] 	  53685780480 total bytes 
-		           [FILE SYSTEM] 	         1023 maximum number files
-		           [FILE SYSTEM] 	            0 current number files
-		           [FILE SYSTEM] 	         1023 maximum filename length
-		           [FILE SYSTEM] 	      4194304 bytes reserved for formatting
-	055240-012223524 : [FILE SYSTEM] Checking file system integrity...
-	055240-012223524 : [FILE SYSTEM] File check complete.
-	055240-012223526 : [FILE SYSTEM] Registering Active File System 0:<140736579321776>
-	055240-012223526 : [FILE SYSTEM] Directory listing for volume 'MCS-DRSU-Storage'
-	055240-012223526 : [FILE SYSTEM] Summary:
-		           [FILE SYSTEM]	         0 Files
-		           [FILE SYSTEM]	                 0 Bytes used by files
-		           [FILE SYSTEM]	           4194304 Bytes used for filesystem and formatting
-	055240-012223526 : [BOOT] Opened internal storage file system.
-	055240-012223527 : [BOOT] Opening data formats database.
-	055240-012223563 : [DATABASE] Database File Created: '/LWA/database/formatDb.gdbm'
-	055240-012223563 : [DATABASE] Opening default values file: '/LWA/config/formats.cfg'
-	055240-012223563 : [DATABASE] Now filling database with default values.
-	055240-012223567 : [DATABASE] Finished initializing database. 	Processed 20 lines 	 Added 13 records
-	055240-012223567 : [DATABASE] Database File Opened: '/LWA/database/formatDb.gdbm'
-	055240-012223568 : [DATABASE] DB: 'FORMAT-SPEC-1' => 'K1224'
-	055240-012223568 : [DATABASE] DB: 'FORMAT-PAYLOAD-2' => '1024'
-	055240-012223568 : [DATABASE] DB: 'FORMAT-PAYLOAD-1' => '1224'
-	055240-012223569 : [DATABASE] DB: 'FORMAT-RATE-1' => '104857600'
-	055240-012223569 : [DATABASE] DB: 'FORMAT-NAME-2' => 'TEST_TBN'
-	055240-012223569 : [DATABASE] DB: 'FORMAT-RATE-0' => '117440512'
-	055240-012223570 : [DATABASE] DB: 'FORMAT-NAME-1' => 'DEFAULT_TBW'
-	055240-012223570 : [DATABASE] DB: 'FORMAT-PAYLOAD-0' => '1024'
-	055240-012223571 : [DATABASE] DB: 'FORMAT-SPEC-2' => 'K100D100K100D724'
-	055240-012223571 : [DATABASE] DB: 'FORMAT-NAME-0' => 'DEFAULT_TBN'
-	055240-012223571 : [DATABASE] DB: 'FORMAT-RATE-2' => '117440512'
-	055240-012223572 : [DATABASE] DB: 'FORMAT-COUNT' => '3'
-	055240-012223572 : [DATABASE] DB: 'FORMAT-SPEC-0' => 'K1024'
-	055240-012223573 : [BOOT] Read data formats database.
-	055240-012223573 : [BOOT] Creating messaging receive socket.
-	055240-012223574 : [BOOT] Created messaging receive socket.
-	055240-012223574 : [BOOT] Creating messaging send socket.
-	055240-012223574 : [BOOT] Created messaging send socket.
-	055240-012223575 : [BOOT] Opening messaging receive socket.
-	055240-012223575 : [BOOT] Opened messaging receive socket.
-	055240-012223576 : [BOOT] Opening messaging send socket.
-	055240-012223576 : [BOOT] Opened messaging send socket.
-	055240-012223577 : [BOOT] Creating messaging receive queue.
-	055240-012223578 : [BOOT] Created messaging receive queue.
-	055240-012223578 : [BOOT] Creating messaging send queue.
-	055240-012223579 : [BOOT] Created messaging send queue.
-	055240-012223579 : [BOOT] Creating data receive socket.
-	055240-012223580 : [BOOT] Created data receive socket.
-	055240-012223580 : [BOOT] Creating data receive queue.
-	055240-012223996 : [BOOT] Created data receive queue.
-	055240-012223997 : [BOOT] Reading system schedule.
-	055240-012224001 : [DATABASE] Database File Created: '/LWA/database/scheduleDb.gdbm'
-	055240-012224001 : [DATABASE] Database File Opened: '/LWA/database/scheduleDb.gdbm'
-	055240-012224008 : [DATABASE] Database File Opened: '/LWA/database/scheduleDb.gdbm'
-	055240-012224009 : [DATABASE] DB: 'SCHEDULEDATA.count' => '0'
-	055240-012224010 : [DATABASE] DB: 'SCHEDULEENTRY.count' => '0'
-	055240-012224010 : [BOOT] Finished reading system schedule.
-	055240-012224011 : [BOOT] Booting Complete.
+	  ========================== Logfile rotated ==========================
+	  ========================== Logfile opened ==========================
+	  FATAL: Error inserting f71882fg (/lib/modules/3.2.0-30-generic/kernel/drivers/hwmon/f71882fg.ko): No such device
+	  2012-11-09 23:09:24.415 [I] message originating in      ../System/System.cpp:134
+				  [I] [System          ] ======================= Active Thread Report =======================
+				  [I] [System          ] [   0]: tid = 13279
+				  [I] [System          ] ===================== End Active Thread Report =====================
+	  2012-11-09 23:09:24.416 [I] [System          ] [System] Booting Start
+	  2012-11-09 23:09:24.416 [I] [System          ] [System] Hardware CPU count: 8
+	  2012-11-09 23:09:24.416 [I] [System          ] [System] Read config...
+	  2012-11-09 23:09:24.416 [I] [System          ] Configuration data loaded...
+	  2012-11-09 23:09:24.416 [D] message originating in      ../System/Config.cpp:98
+				  [D] [System          ] MyReferenceDesignator         DR1
+				  [D] [System          ] SelfIp                        192.168.1.20
+				  [D] [System          ] MessageInPort                 5000
+				  [D] [System          ] MessageOutPort                5001
+				  [D] [System          ] TimeAuthority                 Time.Ubuntu.com
+				  [D] [System          ] SerialNumber                  0
+				  [D] [System          ] ArraySelect                   1
+				  [D] [System          ] DataInPort                    16180
+	  2012-11-09 23:09:24.417 [I] [System          ] [System] Scan storage devices...
+	  2012-11-09 23:09:24.417 [I] [System          ] Beginning storage subsystem initialization.
 
-  *: In this example, loopback devices are used in lieu of physical drives, so replace
-  /dev/loopX with /dev/sdX on a system with a DRSU attached.
+< will pause here for a few minutes >
+	  
+	  2012-11-09 23:10:20.880 [D] message originating in      ../System/Storage.cpp:200                                                                                                                                                                                              
+				  [D] [System          ] ls /LWA_STORAGE/Internal:
+				  [D] [System          ] 0
+				  [D] [System          ] '                                                                                                                                                                                                                               
+	  2012-11-09 23:10:20.911 [D] [System          ] Examining '/LWA_STORAGE/Internal/0'
+	  2012-11-09 23:10:23.431 [D] [System          ] Watched folder re-read '/LWA_STORAGE/Internal/0/DROS/Rec'                                                                                                                                                                       
+	  2012-11-09 23:10:23.442 [D] [System          ] Watched folder re-read '/LWA_STORAGE/Internal/0/DROS/Spec'                                                                                                                                                                      
+	  2012-11-09 23:10:23.445 [D] [System          ] Watched folder re-read '/LWA_STORAGE/Internal/0/DROS/Corr'                                                                                                                                                                      
+	  2012-11-09 23:10:23.445 [D] message originating in      ../System/Storage.cpp:721                                                                                                                                                                                              
+				  [D] [System          ] Opened storage volume                                                                                                                                                                                                           
+				  [D] [System          ]  Type               Internal                                                                                                                                                                                                    
+				  [D] [System          ]  Partition          /dev/md0                                                                                                                                                                                                    
+				  [D] [System          ]  Mountpoint         /LWA_STORAGE/Internal/0                                                                                                                                                                                     
+				  [D] [System          ]  Volume Name        hello55                                                                                                                                                                                                     
+				  [D] [System          ]  Block Size         4.00000 KiB                                                                                                                                                                                                 
+				  [D] [System          ]  Block Count        2441893120                                                                                                                                                                                                  
+				  [D] [System          ]  Size               9.09676 TiB                                                                                                                                                                                                 
+				  [D] [System          ]  Number Drives      5                                                                                                                                                                                                           
+				  [D] [System          ]  Raid Stride Size   256.00000 KiB                                                                                                                                                                                               
+				  [D] [System          ]  Raid Stripe Size   1.25000 MiB                                                                                                                                                                                                 
+	  2012-11-09 23:10:23.467 [D] [System          ] Examining '/LWA_STORAGE/External/0'
+	  2012-11-09 23:10:23.524 [D] [System          ] Watched folder re-read '/LWA_STORAGE/External/0/DROS/'                                                                                                                                                                          
+	  2012-11-09 23:10:23.534 [D] message originating in      ../System/Storage.cpp:721                                                                                                                                                                                              
+				  [D] [System          ] Opened storage volume                                                                                                                                                                                                           
+				  [D] [System          ]  Type               External                                                                                                                                                                                                    
+				  [D] [System          ]  Partition          /dev/sdg1                                                                                                                                                                                                   
+				  [D] [System          ]  Mountpoint         /LWA_STORAGE/External/0                                                                                                                                                                                     
+				  [D] [System          ]  Volume Name        puppy                                                                                                                                                                                                       
+				  [D] [System          ]  Block Size         4.00000 KiB                                                                                                                                                                                                 
+				  [D] [System          ]  Block Count        58564864                                                                                                                                                                                                    
+				  [D] [System          ]  Size               223.40723 GiB                                                                                                                                                                                               
+				  [D] [System          ]  Number Drives      1                                                                                                                                                                                                           
+				  [D] [System          ]  Raid Stride Size   0.00000 B                                                                                                                                                                                                   
+				  [D] [System          ]  Raid Stripe Size   0.00000 B                                                                                                                                                                                                   
+	  2012-11-09 23:10:23.535 [I] [System          ] Storage subsystem initialized!!!
+	  2012-11-09 23:10:23.535 [I] message originating in      ../System/Storage.cpp:142                                                                                                                                                                                              
+				  [I] [System          ] ============================================================
+				  [I] [System          ] ==       Storage Subsystem Report                         ==
+				  [I] [System          ] ============================================================
+				  [I] [System          ] ==                  -- Online ---                         ==                                                                                                                                                                    
+				  [I] [System          ] == Number Internal Devices:     1                                                                                                                                                                                               
+				  [I] [System          ] == Internal device 0                                                                                                                                                                                                            
+				  [I] [System          ] ==   Type               Internal
+				  [I] [System          ] ==   Partition          /dev/md0
+				  [I] [System          ] ==   Mountpoint         /LWA_STORAGE/Internal/0                                                                                                                                                                                 
+				  [I] [System          ] ==   Volume Name        hello55
+				  [I] [System          ] ==   Block Size         4.00000 KiB                                                                                                                                                                                             
+				  [I] [System          ] ==   Block Count        2441893120                                                                                                                                                                                              
+				  [I] [System          ] ==   Size               9.09676 TiB                                                                                                                                                                                             
+				  [I] [System          ] ==   Number Drives      5                                                                                                                                                                                                       
+				  [I] [System          ] ==   Raid Stride Size   256.00000 KiB                                                                                                                                                                                           
+				  [I] [System          ] ==   Raid Stripe Size   1.25000 MiB                                                                                                                                                                                             
+				  [I] [System          ] ==   Monitored folders  3                                                                                                                                                                                                       
+				  [I] [System          ] ==    * Monitored folder 0   (Purpose: General)                                                                                                                                                                                 
+				  [I] [System          ] ==      /LWA_STORAGE/Internal/0/DROS/Rec
+				  [I] [System          ] ==       ** File      0: '056232_000000000' 2.32035 GiB (2.32036 GiB allocated)                                                                                                                                                 
+				  [I] [System          ] ==       ** File      1: '056232_000000004' 2.20256 GiB (2.20257 GiB allocated)                                                                                                                                                 
+				  [I] [System          ] ==       ** File      2: '056233_000000108' 75.99536 MiB (76.00000 MiB allocated)                                                                                                                                               
+				  [I] [System          ] ==       ** File      3: '056233_000000109' 77.40472 MiB (77.41016 MiB allocated)                                                                                                                                               
+				  [I] [System          ] ==                                                                                                                                                                                                                              
+				  [I] [System          ] ==    * Monitored folder 1   (Purpose: Spectrogram)                                                                                                                                                                             
+				  [I] [System          ] ==      /LWA_STORAGE/Internal/0/DROS/Spec
+				  [I] [System          ] ==       ** File      0: '056238_000000087' 2.19040 MiB (2.19531 MiB allocated)                                                                                                                                                 
+				  [I] [System          ] ==       ** File      1: '056238_000000088' 186.91406 KiB (192.00000 KiB allocated)                                                                                                                                             
+				  [I] [System          ] ==       ** File      2: '056238_000000089' 0.00000 B   (4.00000 KiB allocated)                                                                                                                                                 
+				  [I] [System          ] ==       ** File      3: '056238_000000090' 0.00000 B   (4.00000 KiB allocated)                                                                                                                                                 
+				  [I] [System          ] ==       ** File      4: '056238_000000091' 1.49026 MiB (1.49609 MiB allocated)                                                                                                                                                 
+<additional output not shown, will vary by DRSU content>
+				  [I] [System          ] ==       ** File     60: '056240_000000018' 34.68132 MiB (34.68750 MiB allocated)                                                                                                                                               
+				  [I] [System          ] ==       ** File     61: '056240_000000019' 25.18959 MiB (25.19531 MiB allocated)                                                                                                                                               
+				  [I] [System          ] ==       ** File     62: '056240_000000020' 48.86770 MiB (48.87500 MiB allocated)                                                                                                                                               
+				  [I] [System          ] ==                                                                                                                                                                                                                              
+				  [I] [System          ] ==    * Monitored folder 2   (Purpose: Correlation)                                                                                                                                                                             
+				  [I] [System          ] ==      /LWA_STORAGE/Internal/0/DROS/Corr
+				  [I] [System          ] ==                                                                                                                                                                                                                              
+				  [I] [System          ] ==   Active Files       0                                                                                                                                                                                                       
+				  [I] [System          ] ==  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~  ==                                                                                                                                                                    
+				  [I] [System          ] ==                                                                                                                                                                                                                              
+				  [I] [System          ] == Number External Devices:     1                                                                                                                                                                                               
+				  [I] [System          ] == External device 0                                                                                                                                                                                                            
+				  [I] [System          ] ==   Type               External
+				  [I] [System          ] ==   Partition          /dev/sdg1
+				  [I] [System          ] ==   Mountpoint         /LWA_STORAGE/External/0                                                                                                                                                                                 
+				  [I] [System          ] ==   Volume Name        puppy
+				  [I] [System          ] ==   Block Size         4.00000 KiB                                                                                                                                                                                             
+				  [I] [System          ] ==   Block Count        58564864                                                                                                                                                                                                
+				  [I] [System          ] ==   Size               223.40723 GiB                                                                                                                                                                                           
+				  [I] [System          ] ==   Number Drives      1                                                                                                                                                                                                       
+				  [I] [System          ] ==   Raid Stride Size   0.00000 B                                                                                                                                                                                               
+				  [I] [System          ] ==   Raid Stripe Size   0.00000 B                                                                                                                                                                                               
+				  [I] [System          ] ==   Monitored folders  1                                                                                                                                                                                                       
+				  [I] [System          ] ==    * Monitored folder 0   (Purpose: General)                                                                                                                                                                                 
+				  [I] [System          ] ==      /LWA_STORAGE/External/0/DROS/
+				  [I] [System          ] ==                                                                                                                                                                                                                              
+				  [I] [System          ] ==   Active Files       0                                                                                                                                                                                                       
+				  [I] [System          ] ==  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~  ==                                                                                                                                                                    
+				  [I] [System          ] ==                                                                                                                                                                                                                              
+				  [I] [System          ] ============================================================
+				  [I] [System          ] ==       End Report                                       ==
+				  [I] [System          ] ============================================================
+	  2012-11-09 23:10:23.539 [D] [System          ] RESOLVE BY INDEX
+	  2012-11-09 23:10:23.539 [D] [System          ] RESOLVED TO 0
+	  2012-11-09 23:10:23.540 [I] [System          ] [System] Initialize scheduler...
+	  2012-11-09 23:10:23.540 [I] [System          ] [System] Initialize receive buffer...
+	  2012-11-09 23:10:23.540 [I] [Schedule        ] [GenericThread] : Set CPU affinity : '0'
+	  2012-11-09 23:10:23.540 [I] [Schedule        ] [GenericThread] : Set priority : '-1'
+	  2012-11-09 23:10:23.540 [I] [Schedule        ] [Schedule] started scheduler.
+	  2012-11-09 23:10:23.540 [I] [System          ] [System] Initialize receiver...
+	  2012-11-09 23:10:23.540 [I] [System          ] [System] Wait for receiver to start...
+	  2012-11-09 23:10:23.572 [I] [Receiver        ] [GenericThread] : Set CPU affinity : '1'
+	  2012-11-09 23:10:23.573 [I] [Receiver        ] [GenericThread] : Set priority : '-2'
+	  2012-11-09 23:10:23.573 [I] [Receiver        ] [Receiver] initializing ...
+	  2012-11-09 23:10:23.573 [D] [Receiver        ] [TicketBuffer:MasterReceiveBuffer] Resizing to 1.00000 GiB with 4.03125 KiB frames and 1016 frames/ticket
+	  2012-11-09 23:10:23.574 [D] [Receiver        ] [TicketBuffer:MasterReceiveBuffer] Destroyed 0 old tickets
+	  2012-11-09 23:10:23.574 [D] [Receiver        ] [TicketBuffer:MasterReceiveBuffer] Created 256 new tickets
+	  2012-11-09 23:10:23.587 [D] [Receiver        ] [TicketBuffer:MasterReceiveBuffer] Resizing complete 
+	  2012-11-09 23:10:23.588 [I] [Receiver        ] [Receiver] opened data socket on port 16180
+	  Socket opened on port 16180.
+	  2012-11-09 23:10:23.588 [I] [System          ] [System] Start messaging responder...
+	  2012-11-09 23:10:23.588 [I] [Receiver        ] [Receiver] Buffer usage: [________________________________________] (  0%)
+	  2012-11-09 23:10:23.588 [D] [System          ] WaitQueue 'ResponseSender' constructed.
+	  2012-11-09 23:10:23.588 [I] [Receiver        ] [Receiver] Receive rate: [________________________________________] (  0%)  0.00000 B/s  
+	  2012-11-09 23:10:23.588 [I] [Receiver        ] [Receiver] Subscribers 0
+	  2012-11-09 23:10:23.588 [D] [System          ] [WaitQueueManager] Registered queue 'ResponseSender'.
+	  2012-11-09 23:10:23.588 [I] [System          ] [System] Start message processor...
+	  2012-11-09 23:10:23.589 [D] [System          ] WaitQueue 'MessageProcessor' constructed.
+	  2012-11-09 23:10:23.589 [D] [System          ] [WaitQueueManager] Registered queue 'MessageProcessor'.
+	  2012-11-09 23:10:23.589 [I] [System          ] [System] Start message receiver...
+	  2012-11-09 23:10:23.589 [I] [System          ] [MessageListener] : Messaging socket opened on port5000
+	  2012-11-09 23:10:23.589 [I] [System          ] [System] Determining system status...
+	  2012-11-09 23:10:23.589 [I] [System          ] [System] system is 'NORMAL '
+	  2012-11-09 23:10:23.589 [I] [System          ] [System] Booting Complete
 
-  At this point, the system is up and listening for command messages. 
+	  
+  At this point, the system is up and listening for command messages. It should periodically spit out messages indicating buffer usage: as below:
+	2012-11-09 23:10:23.588 [I] [Receiver        ] [Receiver] Buffer usage: [________________________________________] (  0%)
+	2012-11-09 23:10:23.588 [I] [Receiver        ] [Receiver] Receive rate: [________________________________________] (  0%)  0.00000 B/s  
+	2012-11-09 23:10:23.588 [I] [Receiver        ] [Receiver] Subscribers 0
+
   To test messaging, use the included Msender utility. 
-
+  ===================================================
+  
   *** In a new terminal ****:
-
-	>/LWA/bin/Msender -v -Source "MCS" -Destination "MD1" -Type "PNG" -ReferenceNumber 0 -DestinationIpAddress localhost -DestinationPort 5001 -ResponseListenPort 5000    
-
+	>/LWA/bin/Msender -v -Source "MCS" -Destination "DR1" -Type "PNG" -ReferenceNumber 0 -DestinationIpAddress localhost -DestinationPort 5001 -ResponseListenPort 5000    
   On the original terminal you should see:
-	[MESSAGING] Received: 'MCS MD1 PNG         0  55240  12609312    0 '
-	[MESSAGING] Sent: 'MD1 MCS PNG         0 055240 012609313 0009 A NORMAL  '
+	  2012-11-09 23:16:03.934 [I] [MessageListener ] >> Message(56240:83763934, MCS, DR1, 1, PNG, 0, '' ) 127.0.0.1:39352
+	  2012-11-09 23:16:03.935 [I] [ResponseSender  ] << Response(56240:83763935, DR1, MCS, 1, PNG, 8, Accept, NORMAL , '', '' ) 127.0.0.1:5001
 
   On the new terminal you should see:
 	[send]Message :
 	[send]	Sender:                     MCS
-	[send]	Destination:                MD1
+	[send]	Destination:                DR1
 	[send]	Type:                       PNG
 	[send]	Reference:                  0
-	[send]	Modified Julian Day:        55240
-	[send]	Milliseconds Past Midnight: 12609312
+	[send]	Modified Julian Day:        56240
+	[send]	Milliseconds Past Midnight: 83763934
 	[send]	Data Length:                0
 	[send]	Data:                       No Data Specified
 
 	[recv]Response :
-	[recv]	Sender:                     MD1
+	[recv]	Sender:                     DR1
 	[recv]	Destination:                MCS
 	[recv]	Type:                       PNG
 	[recv]	Reference:                  0
-	[recv]	Modified Julian Day:        55240
-	[recv]	Milliseconds Past Midnight: 12609313
+	[recv]	Modified Julian Day:        56240
+	[recv]	Milliseconds Past Midnight: 83763935
 	[recv]	Accept/Reject:              Accepted
 	[recv]	General Status:             NORMAL 
 	[recv]	Comment:                    No Comment Specified
@@ -629,45 +696,70 @@ First Run : Running the application
 Normal operation:
 ==============================================
   Once communication has been verified, and nothing looks fishy with output, then 
-  installing the DROS software to run on boot will enable normal operation
+  installing the DROSv2 software to run on boot will enable normal operation
 
-  First we need to cause the initial run of DROS to exit. In the new terminal:
-	>/LWA/bin/Msender -v -Source "MCS" -Destination "MD1" -Type "SHT" -ReferenceNumber 0 -DestinationIpAddress localhost -DestinationPort 5001 -ResponseListenPort 5000    
+  First we need to cause the initial run of DROSv2 to exit. In the new terminal:
+	>/LWA/bin/Msender -v -Source "MCS" -Destination "DR1" -Type "SHT" -ReferenceNumber 0 -DestinationIpAddress localhost -DestinationPort 5001 -ResponseListenPort 5000    
 
   On the original terminal you should see:
-	[MESSAGING] Received: 'MCS MD1 SHT         0  55240  12847605    0 '
-	[MESSAGING] Sent: 'MD1 MCS SHT         0 055240 012847605 0009 A SHUTDWN '
-	055240-012847605 : [SHUTDOWN] Closing system schedule.
-	055240-012847611 : [SHUTDOWN] Closed system schedule.
-	055240-012847612 : [SHUTDOWN] Destroying data receive queue.
-	055240-012847874 : [SHUTDOWN] Destroyed data receive queue.
-	055240-012847874 : [SHUTDOWN] Destroying data receive socket.
-	055240-012847875 : [SHUTDOWN] Destroyed data receive socket.
-	055240-012847876 : [SHUTDOWN] Destroying messaging send queue.
-	055240-012847876 : [SHUTDOWN] Destroyed messaging send queue.
-	055240-012847877 : [SHUTDOWN] Destroying messaging receive queue.
-	055240-012847878 : [SHUTDOWN] Destroyed messaging receive queue.
-	055240-012847879 : [SHUTDOWN] Closing messaging send socket.
-	055240-012847879 : [SHUTDOWN] Closed messaging send socket.
-	055240-012847880 : [SHUTDOWN] Closing messaging receive socket.
-	055240-012847881 : [SHUTDOWN] Closed messaging receive socket.
-	055240-012847882 : [SHUTDOWN] Destroying messaging send socket.
-	055240-012847882 : [SHUTDOWN] Destroyed messaging send socket.
-	055240-012847883 : [SHUTDOWN] Destroying messaging receive socket.
-	055240-012847884 : [SHUTDOWN] Destroyed messaging receive socket.
-	055240-012847885 : [SHUTDOWN] Closing data formats database.
-	055240-012847890 : [SHUTDOWN] Closed messaging receive socket.
-	055240-012847891 : [SHUTDOWN] Closing internal storage file system.
-	055240-012847892 : [FILE SYSTEM] Closing filesystem.
-	055240-012847895 : [FILE SYSTEM] Unregistering Active File System 0:<140736579321776>
-	055240-012847896 : [SHUTDOWN] Closed internal storage file system.
-	055240-012847897 : [SHUTDOWN] Closing system log.
-	055240-012847941 : [SHUTDOWN] Closing config database. 
-
+	2012-11-09 23:22:39.684 [I] [MessageListener ] >> Message(56240:84159683, MCS, DR1, 3, SHT, 0, '' ) 127.0.0.1:31903
+	2012-11-09 23:22:39.685 [I] [ResponseSender  ] << Response(56240:84159684, DR1, MCS, 3, SHT, 8, Accept, NORMAL , '', '' ) 127.0.0.1:5001
+	2012-11-09 23:22:40.445 [I] [System          ] [System] Shutdown Start
+	2012-11-09 23:22:40.446 [I] [System          ] [System] Shutting down message receiver...
+	2012-11-09 23:22:40.735 [I] [MessageListener ] [MessageListener] Stopped.
+	2012-11-09 23:22:40.735 [I] [System          ] [System] Shutting down message processor...
+	2012-11-09 23:22:40.738 [I] [MessageProcessor] [MessageProcessor] Stopped.
+	2012-11-09 23:22:40.738 [D] [System          ] [WaitQueueManager] Unregistered queue 'MessageProcessor'.
+	2012-11-09 23:22:40.738 [D] [System          ] WaitQueue 'MessageProcessor' destroyed.
+	2012-11-09 23:22:40.738 [I] [System          ] [System] Shutting down message responder...
+	2012-11-09 23:22:40.788 [I] [ResponseSender  ] [ResponseSender] Stopped.
+	2012-11-09 23:22:40.788 [D] [System          ] [WaitQueueManager] Unregistered queue 'ResponseSender'.
+	2012-11-09 23:22:40.788 [D] [System          ] WaitQueue 'ResponseSender' destroyed.
+	2012-11-09 23:22:40.789 [I] [System          ] [System] Shutting down receiver...
+	2012-11-09 23:22:40.941 [I] [Receiver        ] [Receiver] finalizing ...
+	2012-11-09 23:22:40.941 [I] [Receiver        ] [Receiver] closed data socket on port 16180
+	2012-11-09 23:22:40.941 [I] [System          ] [System] Destroying receive buffer...
+	2012-11-09 23:22:40.941 [D] [System          ] [TicketBuffer:MasterReceiveBuffer] Releasing resources
+	2012-11-09 23:22:40.942 [D] [System          ] [TicketBuffer:MasterReceiveBuffer] Resource release complete 
+	2012-11-09 23:22:40.942 [I] [System          ] [System] Shutting down scheduler...
+	2012-11-09 23:22:40.999 [I] [Schedule        ] [Schedule] stopped scheduler.
+	2012-11-09 23:22:40.999 [I] [System          ] [System] Shutting down storage...
+	2012-11-09 23:22:41.000 [I] [System          ] START DOWN
+	2012-11-09 23:22:41.000 [I] [System          ] DOWN EXT:puppy
+	2012-11-09 23:22:41.000 [D] message originating in      ../System/Storage.cpp:605
+				[D] [System          ] Closed storage volume
+				[D] [System          ]  Type               External
+				[D] [System          ]  Partition          /dev/sdg1
+				[D] [System          ]  Mountpoint         /LWA_STORAGE/External/0
+				[D] [System          ]  Volume Name        puppy
+	2012-11-09 23:22:41.401 [I] [System          ] DOWN INT:hello55
+	2012-11-09 23:22:41.401 [D] message originating in      ../System/Storage.cpp:605
+				[D] [System          ] Closed storage volume
+				[D] [System          ]  Type               Internal
+				[D] [System          ]  Partition          /dev/md0
+				[D] [System          ]  Mountpoint         /LWA_STORAGE/Internal/0
+				[D] [System          ]  Volume Name        hello55
+	2012-11-09 23:22:41.401 [I] [System          ] DOWN FT_GENERAL
+	2012-11-09 23:22:41.881 [I] [System          ] DOWN FT_SPECTROMETER
+	2012-11-09 23:22:42.393 [I] [System          ] DOWN FT_CORRELATION
+	2012-11-09 23:22:42.869 [I] [System          ] DOWN DONEISH
+	2012-11-09 23:22:42.869 [I] message originating in      ../System/Storage.cpp:142
+				[I] [System          ] ============================================================
+				[I] [System          ] ==       Storage Subsystem Report                         ==
+				[I] [System          ] ============================================================
+				[I] [System          ] ==                  -- Offline --                         ==
+				[I] [System          ] ============================================================
+				[I] [System          ] ==       End Report                                       ==
+				[I] [System          ] ============================================================
+	2012-11-09 23:22:42.869 [I] [System          ] [System] Shutting down config...
+	2012-11-09 23:22:42.870 [I] [System          ] Configuration data saved...
+	2012-11-09 23:22:42.870 [I] [System          ] [System] Shutdown Complete
+	========================== Logfile closed ==========================
+	
   On the new terminal you should see:
 	[send]Message :
 	[send]	Sender:                     MCS
-	[send]	Destination:                MD1
+	[send]	Destination:                DR1
 	[send]	Type:                       SHT
 	[send]	Reference:                  0
 	[send]	Modified Julian Day:        55240
@@ -676,7 +768,7 @@ Normal operation:
 	[send]	Data:                       No Data Specified
 
 	[recv]Response :
-	[recv]	Sender:                     MD1
+	[recv]	Sender:                     DR1
 	[recv]	Destination:                MCS
 	[recv]	Type:                       SHT
 	[recv]	Reference:                  0
@@ -691,7 +783,7 @@ Normal operation:
 	 
  
   
-  To install the DROS software to start on system boot, execute the following:
+  To install the DROSv2 software to start on system boot, execute the following:
 	>cd /LWA/scripts	
 	>./installStartupScript.sh StartDROS.sh
 
@@ -707,27 +799,16 @@ Normal operation:
 	   /etc/rc4.d/S99StartDROS.sh -> ../init.d/StartDROS.sh
 	   /etc/rc5.d/S99StartDROS.sh -> ../init.d/StartDROS.sh
 
-   Next, reboot the system, and verify that DROS is communicating, as in the first-time launch above.
-   If DROS is not responding, inspect the files in '/LWA/runtime'. Generally, the following files 
+   Next, reboot the system, and verify that DROSv2 is communicating, as in the first-time launch above.
+   If DROSv2 is not responding, inspect the files in '/LWA/runtime'. Generally, the following files 
    should be present:
 	root@MD3:/home/mcsdr# ls -l /LWA/runtime/
 	total 28
-	-rw-r--r-- 1 root root     0 2010-12-06 04:55 BootComplete.temp
-	-rw-r--r-- 1 root root     0 2010-12-06 04:55 BootStart.temp
-	-rw-r--r-- 1 root root   763 2010-12-06 04:55 BootupArrayScan.log
-	-rw-r--r-- 1 root root     5 2010-12-06 04:55 okgo
 	-rw-r--r-- 1 root root 12636 2010-12-06 04:55 runtime.log
-	-rw-r--r-- 1 root root   266 2010-12-06 04:55 start.info
 
-   In order that these files matter:   
-   'start.info' : records execution date of the startup script, and the supplied parameter (start or stop)  
-   'BootupArrayScan.log'   output of script which checks for DRSU presence
-   'okgo'                  textfile indicating that a DRSU was detected 
-   **'runtime.log'           console log of output of the WAVE_Y process. 
-   'BootStart.temp'        indicates that DROS has started   the boot process
-   'BootComplete.temp'     indicates that DROS has completed the boot process
-   'ShutdownStart.temp'    indicates that DROS has started   the shutdown process (typically absent)
-   'ShutdownComplete.temp' indicates that DROS has completed the shutdown process (typically absent)
+   'runtime.log'                       console log of output of the WAVE_Y process. 
+   'runtime.log.XXX.tgz'               older, rotated console log of output of the WAVE_Y process. 
+   'DROS_crash_log_<DATE>_<TIME>.tgz'  crash log generated due to DROS crash
    
    The runtime log is generally the first place to look if something isn't working correctly.
    This log contains all the colsole output, including accessory information that is not logged 
@@ -745,7 +826,7 @@ Scheduling a recording
   Directions to begin a recording  will vary depending on what method of controlling the 
   MCS-DR is employed, but examples are given here using the Msender utility included in the 
   tar-ball. Issuing the following:
-	/LWA/bin/Msender -Source MCS -Destination MD1 -Type REC -ReferenceNumber 123456789 
+	/LWA/bin/Msender -Source MCS -Destination DR1 -Type REC -ReferenceNumber 123456789 
 	-DestinationIpAddress localhost -DestinationPort 5000 -ResponseListenPort 5001 
 	-Data "xxxxxx yyyyyyyyy zzzzzzzzz FFFFFFFFFFFFFF...FFF"
   will request that a recording of z milliseconds in length be recorded on the day with MJD=x, 
@@ -766,14 +847,14 @@ Scheduling a recording
   the beginning of the next. 
   
   At the command line (remember to substitute appropriate config and time info):
-	>/LWA/bin/Msender -v -Source MCS -Destination MD1 -Type REC -ReferenceNumber 1 \
+	>/LWA/bin/Msender -v -Source MCS -Destination DR1 -Type REC -ReferenceNumber 1 \
 	-DestinationIpAddress localhost -DestinationPort 5001 -ResponseListenPort 5000 \
 	-Data "55240 13500000 10000 DEFAULT_TBN"
 
   In the second terminal, you should see:
 	[send]Message :
 	[send]	Sender:                     MCS
-	[send]	Destination:                MD1
+	[send]	Destination:                DR1
 	[send]	Type:                       REC
 	[send]	Reference:                  1
 	[send]	Modified Julian Day:        55240
@@ -784,7 +865,7 @@ Scheduling a recording
 	[send]		<  10>:   30 30 30 30 20 44 45 46 41 55 4c 54 5f 54 42 4e 
 
 	[recv]Response :
-	[recv]	Sender:                     MD1
+	[recv]	Sender:                     DR1
 	[recv]	Destination:                MCS
 	[recv]	Type:                       REC
 	[recv]	Reference:                  1
@@ -792,37 +873,46 @@ Scheduling a recording
 	[recv]	Milliseconds Past Midnight: 13276752
 	[recv]	Accept/Reject:              Accepted
 	[recv]	General Status:             NORMAL 
-	[recv]	Comment:                    055240_000000001
+	[recv]	Comment:                    056240_000000004
 	[recv]	Data Length:                25
 	[recv]	Data: 
 	[recv]		<   0>:   41 4e 4f 52 4d 41 4c 20 30 35 35 32 34 30 5f 30 
 	[recv]		<  10>:   30 30 30 30 30 30 30 31  0 
   
-  This notifies us that the command was received and the the file 055240_000000001 will
+  This notifies us that the command was received and the the file 056240_000000004 will
   be used to hold the data.	
 
-  In the original terminal, you should immediately see:
-	055240-013276748 : [FILE SYSTEM] Creating file '055240_000000001' of size 1174405120 bytes
-	055240-013276751 : [FILE SYSTEM] File created successfully
-	055240-013276751 : [FILE SYSTEM] Set File Metadata for '055240_000000001'.
-	[MESSAGING] Received: 'MCS MD1 REC         1  55240  13276747   32 55240 13500000 10000 DEFAULT_TBN'
-	[MESSAGING] Sent: 'MD1 MCS REC         1 055240 013276752 0025 A NORMAL  055240_000000001'
-	055240-013276752 : [SCHEDULER] Entered wait phase for operation with reference number 1
-
+  In '/LWA/runtime/runtime.log', you should see:
+	2012-11-09 23:54:23.979 [I] [MessageListener ] >> Message(56240:86063978, MCS, DR1, 4, REC, 34, '056240 086066978 30000 DEFAULT_TBN' ) 127.0.0.1:47029
+	2012-11-09 23:54:23.980 [D] [Folder Watcher  ] Watched folder '/LWA_STORAGE/Internal/0/DROS/Rec' select returned 1
+	2012-11-09 23:54:23.980 [D] [Folder Watcher  ] Watched folder re-read '/LWA_STORAGE/Internal/0/DROS/Rec'
+	2012-11-09 23:54:23.980 [I] [MessageProcessor] [Scheduler] Scheduled operation 'Record      000000004 056240 086066978  056240 086096978  DEFAULT_TBN                     
+	2012-11-09 23:54:23.981 [I] [ResponseSender  ] << Response(56240:86063980, DR1, MCS, 4, REC, 24, Accept, NORMAL , '056240 086066978 30000 DEFAULT_TBN', '056240_000000004' ) 127.0.0.1:5001
+	2012-11-09 23:54:24.478 [I] [Schedule        ] [Schedule] window start current operation: Record      000000004 056240 086066978  056240 086096978  DEFAULT_TBN                     
+	2012-11-09 23:54:24.478 [I] [Schedule        ] [RECORD] Starting recorder
+	2012-11-09 23:54:24.478 [I] [Schedule        ] [RECORD] Recorder started
+	2012-11-09 23:54:24.478 [I] [FileWriter:/ ...] [GenericThread] : Set CPU affinity : '2'
+	2012-11-09 23:54:24.478 [I] [FileWriter:/ ...] [GenericThread] : Set priority : '-2'
+	2012-11-09 23:54:24.478 [I] [FileWriter:/ ...] [RECORD] FileWriter thread started
+	2012-11-09 23:54:24.478 [D] [FileWriter:/ ...] [TicketBuffer:MasterReceiveBuffer] <SUBSCRIBE:FileWriter:/LWA_STORAGE/Internal/0/DROS/Rec/056240_000000004>
+	2012-11-09 23:54:26.978 [I] [Schedule        ] [Schedule] execution start current operation: Record      000000004 056240 086066978  056240 086096978  DEFAULT_TBN                     
+	2012-11-09 23:54:26.978 [I] [FileWriter:/ ...] [RECORD] FileWriter record started
   Sometime later you should see:
-	055240-013500000 : [SCHEDULER] Entered start phase for operation with reference number 1
-	[OPERATION RECORD] Opening socket on port 6002
-	[OPERATION RECORD] Bytes Received = 000000000000000; Ring Queue Occupancy=000000000315392; Live Capture PacketsAvailable=000000000000000; Time=02 Apr 2010 15:56:03:000000384
-	[OPERATION RECORD] Bytes Received = 000000000000000; Ring Queue Occupancy=000000000315392; Live Capture PacketsAvailable=000000000000000; Time=02 Apr 2010 15:56:03:000000384
-	[OPERATION RECORD] Bytes Received = 000000000000000; Ring Queue Occupancy=000000000315392; Live Capture PacketsAvailable=000000000000000; Time=02 Apr 2010 15:56:03:000000384
-	[OPERATION RECORD] Bytes Received = 000000000000000; Ring Queue Occupancy=000000000315392; Live Capture PacketsAvailable=000000000000000; Time=02 Apr 2010 15:56:03:000000384
-		...
-
-	055240-013510000 : [SCHEDULER] Entered stop phase for operation with reference number 1
-	055240-013510001 : [FILE SYSTEM] Set Complete Flag for '055240_000000001'.
-	055240-013512500 : [SCHEDULER] Cooldown ended for operation with reference number 1, goto delete
-	055240-013512501 : [SCHEDULER] Clean-up for operation with reference number 1 
-	055240-013512502 : [SCHEDULER] Deleting operation with reference number 1 from schedule, return to idle
+	2012-11-09 23:54:50.924 [I] [Receiver        ] [Receiver] Buffer usage: [________________________________________] (  0%)
+	2012-11-09 23:54:50.925 [I] [Receiver        ] [Receiver] Receive rate: [________________________________________] (  0%)  0.00000 B/s  
+	2012-11-09 23:54:50.925 [I] [Receiver        ] [Receiver] Subscribers 1
+	2012-11-09 23:54:56.997 [I] [Schedule        ] [Schedule] execution stop current operation: Record      000000004 056240 086066978  056240 086096978  DEFAULT_TBN                     
+	2012-11-09 23:54:56.997 [I] [Schedule        ] [RECORD] Waiting on recorder cleanup
+	2012-11-09 23:54:56.997 [I] [FileWriter:/ ...] [RECORD] FileWriter record finished
+	2012-11-09 23:54:56.997 [D] [FileWriter:/ ...] [TicketBuffer:MasterReceiveBuffer] ENTER UNSUBSCRIBE >
+	2012-11-09 23:54:56.997 [D] [FileWriter:/ ...] [TicketBuffer:MasterReceiveBuffer] <UNSUBSCRIBE:FileWriter:/LWA_STORAGE/Internal/0/DROS/Rec/056240_000000004>
+	2012-11-09 23:54:56.998 [D] [FileWriter:/ ...] [TicketBuffer:MasterReceiveBuffer] Last subscriber unsubscribed
+	2012-11-09 23:54:56.998 [D] [FileWriter:/ ...] [TicketBuffer:MasterReceiveBuffer] LEAVE UNSUBSCRIBE >
+	2012-11-09 23:54:56.998 [I] [FileWriter:/ ...] [RECORD] FileWriter thread finished
+	2012-11-09 23:54:57.497 [I] [Schedule        ] [RECORD] Recorder cleanup complete
+	2012-11-09 23:54:59.504 [I] [Schedule        ] [Schedule] window stop current operation: Record      000000004 056240 086066978  056240 086096978  DEFAULT_TBN                     
+	2012-11-09 23:54:59.504 [I] [Schedule        ] [Schedule] completed as scheduled: Record      000000004 056240 086066978  056240 086096978  DEFAULT_TBN                     
+	2012-11-09 23:54:59.504 [I] [Schedule        ] [Schedule] ===========================================
 
   In this example, the recording was for 10 seconds, but no data source was attached,
   consequently, Bytes Received is always 0. If a data source is connected and configured 
@@ -831,13 +921,13 @@ Scheduling a recording
 
 
   Now, to verify that the recording was made, issue a DIRECTORY-ENTRY-X MIB request:
-	>/LWA/bin/Msender -v -Source MCS -Destination MD1 -Type RPT -ReferenceNumber 1 \
+	>/LWA/bin/Msender -v -Source MCS -Destination DR1 -Type RPT -ReferenceNumber 1 \
         -DestinationIpAddress localhost -DestinationPort 5001 -ResponseListenPort 5000 -Data "DIRECTORY-ENTRY-0"
 
   On the second terminal you should see:
 	[send]Message :
 	[send]	Sender:                     MCS
-	[send]	Destination:                MD1
+	[send]	Destination:                DR1
 	[send]	Type:                       RPT
 	[send]	Reference:                  1
 	[send]	Modified Julian Day:        55240
@@ -847,7 +937,7 @@ Scheduling a recording
 	[send]		<   0>:   44 49 52 45 43 54 4f 52 59 2d 45 4e 54 52 59 2d 
 	[send]		<  10>:   30 
 	[recv]Response :
-	[recv]	Sender:                     MD1
+	[recv]	Sender:                     DR1
 	[recv]	Destination:                MCS
 	[recv]	Type:                       RPT
 	[recv]	Reference:                  1
@@ -855,7 +945,7 @@ Scheduling a recording
 	[recv]	Milliseconds Past Midnight: 15455364
 	[recv]	Accept/Reject:              Accepted
 	[recv]	General Status:             NORMAL 
-	[recv]	Comment:                    055240_000000001 055240 013500000 055240 013510000                      DEFAULT_TBN 000000000000000 000000000004096 YES
+	[recv]	Comment:                    056240_000000004 056240 013500000 056240 013510000                      DEFAULT_TBN 000000000000000 000000000004096 YES
 	[recv]	Data Length:                128
 	[recv]	Data: 
 	[recv]		<   0>:   41 4e 4f 52 4d 41 4c 20 30 35 35 32 34 30 5f 30 
@@ -867,20 +957,14 @@ Scheduling a recording
 	[recv]		<  60>:   30 30 30 30 30 30 30 30 30 30 30 20 30 30 30 30 
 	[recv]		<  70>:   30 30 30 30 30 30 30 34 30 39 36 20 59 45 53  0 
 
-  On the original terminal you should see:
-	[MESSAGING] Received: 'MCS MD1 RPT         1  55240  15455362   17 DIRECTORY-ENTRY-0'
-	[MESSAGING] Sent: 'MD1 MCS RPT         1 055240 015455364 0128 A NORMAL  055240_000000001 055240 013500000 055240 013510000                      DEFAULT_TBN 000000000000000 000000000004096 YES'
 
 
 Retrieving recorded data
 ========================
-  There are 4 methods of retrieving recorded data:
+  There are 3 methods of retrieving recorded data:
 	1) Use the GET command to retrieve small chunks of data
 	2) Use the CPY command to copy a selection of data to a file on an external drive
 	3) Use the DMP command to copy a selection into a series of files on an external drive
-	4) Use the FUSE-LWAFS-READER to mount the DRSU and use Linux commands to transfer/read data
-  The fourth is in the alpha stage, and not currently recommended. It is available in its present 
-  condition for early evaluation, and because it may also be a useful way to retrieve data.
   
   Method 1)
   The get command takes arguments "<File name> <Start position> <length>", and length must 
@@ -888,11 +972,11 @@ Retrieving recorded data
   Obviously, retrieving data this way is not going to be as fast as the recording rate. The 
   following is an example of retrieving data for visual inspection using the Msender utility:
 
-	>/LWA/bin/Msender -v -Source MCS -Destination MD1 -Type GET -ReferenceNumber 123456790 \
+	>/LWA/bin/Msender -v -Source MCS -Destination DR1 -Type GET -ReferenceNumber 123456790 \
 	-DestinationIpAddress localhost -DestinationPort 5001 -ResponseListenPort 5000 -Data \
-	"055240_000000001 000000000 4096"
+	"056240_000000004 000000000 4096"
 
-  This would retrieve the 4096 bytes starting at position 0 from the file 055240_000000001.
+  This would retrieve the 4096 bytes starting at position 0 from the file 056240_000000004.
   Note: Recording file names are constructed automatically from the MJD and reference number of 
   the REC command. The -v flag tells Msender to display both the outgoing message and response. 
   In our example, no data was recorded, so MCS-DR will respond with an 'Invalid range' because
@@ -907,9 +991,9 @@ Retrieving recorded data
   "<Tag> <Start Byte> <Length> <Device ID> <Filename>" for CPY.
 
   Assuming you had an external drive attached which showed as /dev/sdk,	
-	>/LWA/bin/Msender -v -Source MCS -Destination MD1 -Type DMP -ReferenceNumber 123456790 \
+	>/LWA/bin/Msender -v -Source MCS -Destination DR1 -Type DMP -ReferenceNumber 123456790 \
 	-DestinationIpAddress localhost -DestinationPort 5001 -ResponseListenPort 5000 -Data \
-	"055240_000000001 000000000 000004096 000000016 /dev/sdk MyFirstDataSeries"
+	"056240_000000004 000000000 000004096 000000016 /dev/sdk MyFirstDataSeries"
 
   would create a data series in the root folder of /dev/sdk1 named MyFirstDataSeries.000 through
   MyFirstDataSeries.255. Each would be 16 bytes in size, and altogether would constitute the 
@@ -917,10 +1001,6 @@ Retrieving recorded data
   REC command as it is a scheduled operation. In the second terminal, the Msender will return 
   a response immediately, but the operation will take some time to complete. Monitor the original
   terminal or use the 'OP-TYPE' MIB entry to check operation status. 
-
-  Method 4:
-  Again, this is not yet recommended, but can be useful in some circumstances. For specific 
-  instructions, please see the readme in the FUSE-LWAFS-READER folder.
 
 
 Live Wire Test (Recording Real Data)
@@ -965,14 +1045,12 @@ Live Wire Test (Recording Real Data)
 Troubleshooting
 ===============
   0) The first thing do if things aren't right is to check the DROS's terminal window to see 
-  what if any error messages are displayed. If the MCS-DR is responding to messages,
-  using Msender to read the MIB can also be helpful.
-
-  1) If the DROS software is not exited/shut down properly, it is possible that messages
-  may persist in message queues, causing the software to enter an endless loop on start-up.
-  If this happens, specifying -flushSchedule, -flushConfig, and -flushLog should clear the 
-  problem up. (To terminate the loop, kill the process using CTRL+C, etc. )
+  what if any error messages are displayed. Blinking or colorful text call attention to 
+  important issues. If the MCS-DR is responding to messages, using Msender to read the 
+  MIB can also be helpful.
   
+  1) <<< No longer relevant >>>
+
   2) If the initial run terminates, generally it will be because some configuration hasn't been done.
   The output in the original terminal will indicate the point at which an error occurred.
   Typically, this will contain the word 'Error' followed by or slightly preceded by the 
@@ -982,9 +1060,7 @@ Troubleshooting
 
   3) <<< No longer relevant >>>
 
-  4) Method 4 for data retrieval is in the alpha stage. The probability of it crashing increases 
-  with use. Very little help can be offerred at this point, but if you do decide to use method 4
-  and require assistance, please email me, Christopher Wolfe, at chwolfe2@vt.edu.  
+  4) <<< No longer relevant >>>
 
   5) in a deployment environment, DRSUs will likely be added and removed frequently. This poses 
   a challenge in maintaining consistent configuration in a constantly changing environment. 
@@ -1020,16 +1096,7 @@ Troubleshooting
 
 Advanced utility: ICD-Compliance-Test.sh
 ========================================
-  If all goes as planned, and you have an MCS-DR with DROS up and running, a DRSU at /dev/md0,
-  an external drive at /dev/sdg with an ext2 partition at /dev/sdg1, you may be able to use the 
-  script 'ICD-Compliance-Test.sh' installed to /LWA/scripts/ folder. This is a development tool, 
-  and not meant for general use, but if you're comfortable with bash shell scripts, then have a 
-  look, and feel free to use and modify. I use this script to test DROS in the lab for ICD
-  compliance. Likely to be of use are the functions which I created that use Msender and DataSource
-  to script interaction with the MCS-DR and perform recording and other command tests.
-  In particular, it's a good way to grab the whole MIB (take what you need, leave the rest). 
-  If you have questions about this script, or any of the binaries, please email me 
-  (chwolfe2@vt.edu)
+  [Deprecated]
   
 
 

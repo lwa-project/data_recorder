@@ -4,21 +4,22 @@
 		========================================
 
 ====================================================================================
-Version: DROS-1.5.0-Beta-Release
-Date:    2012-06-22
+Version: DROS-2.0-Beta-Release
+Date:    2012-11-13
 Author:  Christopher Wolfe
 ====================================================================================
 
 DROS Versions and ICD Version
 =============================
-  This quick start applies to DROS-1.5.0-Beta-Release. For additional information about versions and 
+  This quick start applies to DROS-2.0-Beta-Release. For additional information about versions and 
   features, please refer to the extended user's guide 'ExtendedUsersGuide.txt'.
 
 Prerequisites
 =============
-  1) MCS-DR PC with x86_64 Ubuntu 9.04 
-  2) packages installed: fftw3-dev, libgdbm3, libgdbm-dev, libfuse2, libfuse-dev, 
-     lmsensors, smartmontools, mdadm, coretemp or f71882fg
+  1) MCS-DR PC with x86_64 Ubuntu 12.04 
+  2) the following packages are installed: libgdbm3, libgdbm-dev, libfuse2, 
+      libfuse-dev, lmsensors, smartmontools, mdadm, libfftw3-dev, fftw3,
+      libboost-all-dev, gnuplot
   3) gnu C/C++ compiler (stdlib, pthreads, librt)
   4) DRSU (assembled IAW "LWA Engineering Memo MCS0019")
   5) Drivers for the Myricom 10GbE adapter have been built and installed
@@ -77,10 +78,10 @@ Step 1: Installation
 	# You must modify defaults.cfg.example to reflect your network environment.
 	# 
 	# To launch the software, execute:
-	#       /LWA/bin/WAVE_Y
+	#       /LWA/bin/DROS
 	# 
 	# To install the software to run on-boot, execute:
-	#       /LWA/scripts/installStartupScript.sh /LWA/scripts/StartDROS.sh
+	#       cd /LWA/scripts; ./installStartupScript.sh /LWA/scripts/StartDROS.sh
 	# 
 	################################################################
 
@@ -96,35 +97,18 @@ Step 2: System Configuration
   	>nano /etc/network/interfaces
 	>nano /etc/resolv.conf
 
-  C) Edit /LWA/config/defaults.cfg to reflect configuraiton in step 2 section B (above), as well.
+  C) Edit /LWA/config/defaults_v2.cfg to reflect configuraiton in step 2 section B (above), as well.
      as machine reference designator, serial number, etc.
-
-  D) TCP/IP + UDP configuration:
-	>sysctl -e -p /LWA/config/netperformance.sysctl.conf;
-
-  The following will be displayed:
-	net.ipv4.tcp_mem = 56371200	75161600	112742400
-	net.ipv4.tcp_wmem = 409600	1638400	419430400
-	net.ipv4.tcp_rmem = 409600	8738000	419430400
-	net.ipv4.udp_mem = 57859200	77145600	115718400
-	net.ipv4.udp_rmem_min = 409600
-	net.ipv4.udp_wmem_min = 409600
-	net.core.wmem_max = 13107100
-	net.core.rmem_max = 13107100
-	net.core.wmem_default = 12492800
-	net.core.rmem_default = 12492800
-	net.core.netdev_max_backlog = 100000
-	net.core.optmem_max = 204800
-
 
 Step 3: DRSU preparation
 ========================
   This command will create a DRSU array for the most likely partition naming. For
   more complete description, see the extended user's guide.
   A) Create the array:
-   	>mdadm --create /dev/md0 -c 256 -l 0 -n 5 /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf
-
-     You should see:
+     Note: where b-f are your root partitions to add to the array.
+	>sudo mdadm -C /dev/md0 -C 256 -l 0 -n 5 /dev/sd{b,c,d,e,f}     
+     
+     You should see something along the lines of 
 	mdadm: /dev/md0 has been started with 5 drives.
      
      Next:
@@ -132,27 +116,32 @@ Step 3: DRSU preparation
   	>mdadm --examine --scan > /etc/mdadm.conf
   
   B) Format the DRSU
-	>mkdir -p /LWA/mounts/DRSU0
-	>/LWA/bin/FUSE-LWAFS-READER -o direct_io,max_read=262144,max_write=262144,sync_read,device=/dev/md0 -s -f /LWA/mounts/DRSU0
-     	
-     You should see something like:
-		...
+   	>/LWA/scripts/StorageControl.sh format /dev/md0 MyDrsuBarcode
 
-		LWAFS: Creating filesystem on device '/dev/md0'
-		[FILE SYSTEM] WARNING: Creating filesystem on device /dev/md0 !!!!
-      		
-		...
-   	
-		[FILE SYSTEM] Summary:
-		[FILE SYSTEM]	         0 Files
-		[FILE SYSTEM]	                 0 Bytes used by files
-		[FILE SYSTEM]	           4194304 Bytes used for filesystem and formatting
+     You should see something similar to:
+	mke2fs 1.42 (29-Nov-2011)
+	Filesystem label='myDrsuBarcode'
+	OS type: Linux
+	Block size=4096 (log=2)
+	Fragment size=4096 (log=2)
+	Stride=64 blocks, Stripe width=320 blocks
+	1192336 inodes, 2441893120 blocks
+	122094656 blocks (5.00%) reserved for the super user
+	First data block=0
+	Maximum filesystem blocks=4294967296
+	74521 block groups
+	32768 blocks per group, 32768 fragments per group
+	16 inodes per group
+	Superblock backups stored on blocks: 
+		32768, 98304, 163840, 229376, 294912, 819200, 884736, 1605632, 2654208, 
+		4096000, 7962624, 11239424, 20480000, 23887872, 71663616, 78675968, 
+		102400000, 214990848, 512000000, 550731776, 644972544, 1934917632
 
-     In another terminal:
-	> umount /LWA/mounts/DRSU0
-     
-     The program in the first terminal should exit. 
-
+	Allocating group tables: done                            
+	Writing inode tables: done                            
+	Writing superblocks and filesystem accounting information: 
+	Complete!!!
+	To mount the new DRSU, type 'mount -t ext4 -o defaults,data=writeback,noatime,barrier=0 /dev/md0 <mountpoint>' Or Use this script to enable use with DROS.
 
 
 Step 4: First Run
@@ -160,32 +149,41 @@ Step 4: First Run
   Normally, the DROS binary is launched from a rc.d script, but the first
   time it is run, I recommend launching it directly. 
   So, at the command line type:
-	>/LWA/bin/WAVE_Y -flushData -flushLog -flushSchedule -flushConfig
+	>/LWA/bin/DROS
 
   The following will be displayed:
-	055240-012222981 : [BOOT] Processing option '-flushData'
-	055240-012222981 : [BOOT] Processing option '-flushLog'
-	055240-012222981 : [BOOT] Processing option '-flushSchedule'
-	055240-012222981 : [BOOT] Processing option '-flushConfig'
-	055240-012222981 : [BOOT] Loading system configuration.
-	055240-012222985 : [DATABASE] Database File Created: '/LWA/database/configDb.gdbm'
-	055240-012222985 : [DATABASE] Opening default values file: '/LWA/config/defaults.cfg'
-	055240-012222985 : [DATABASE] Now filling database with default values.
-	055240-012222987 : [DATABASE] Finished initializing database. 	Processed 20 lines 	 Added 7 records
-	055240-012222987 : [DATABASE] Database File Opened: '/LWA/database/configDb.gdbm'
-	055240-012222987 : [DATABASE] DB: 'MessageOutPort' => '5000'
-	055240-012222987 : [DATABASE] DB: 'MyReferenceDesignator' => 'MD1'
-	055240-012222987 : [DATABASE] DB: 'DataInPort' => '6002'
-	...
-	055240-012223996 : [BOOT] Created data receive queue.
-	055240-012223997 : [BOOT] Reading system schedule.
-	055240-012224001 : [DATABASE] Database File Created: '/LWA/database/scheduleDb.gdbm'
-	055240-012224001 : [DATABASE] Database File Opened: '/LWA/database/scheduleDb.gdbm'
-	055240-012224008 : [DATABASE] Database File Opened: '/LWA/database/scheduleDb.gdbm'
-	055240-012224009 : [DATABASE] DB: 'SCHEDULEDATA.count' => '0'
-	055240-012224010 : [DATABASE] DB: 'SCHEDULEENTRY.count' => '0'
-	055240-012224010 : [BOOT] Finished reading system schedule.
-	055240-012224011 : [BOOT] Booting Complete.
+	  ========================== Logfile rotated ==========================
+	  ========================== Logfile opened ==========================
+	  FATAL: Error inserting f71882fg (/lib/modules/3.2.0-30-generic/kernel/drivers/hwmon/f71882fg.ko): No such device
+	  2012-11-09 23:09:24.415 [I] message originating in      ../System/System.cpp:134
+				  [I] [System          ] ======================= Active Thread Report =======================
+				  [I] [System          ] [   0]: tid = 13279
+				  [I] [System          ] ===================== End Active Thread Report =====================
+	  2012-11-09 23:09:24.416 [I] [System          ] [System] Booting Start
+	  2012-11-09 23:09:24.416 [I] [System          ] [System] Hardware CPU count: 8
+	  2012-11-09 23:09:24.416 [I] [System          ] [System] Read config...
+	  2012-11-09 23:09:24.416 [I] [System          ] Configuration data loaded...
+	  2012-11-09 23:09:24.416 [D] message originating in      ../System/Config.cpp:98
+				  [D] [System          ] MyReferenceDesignator         DR1
+				  [D] [System          ] SelfIp                        192.168.1.20
+				  [D] [System          ] MessageInPort                 5000
+				  [D] [System          ] MessageOutPort                5001
+				  [D] [System          ] TimeAuthority                 Time.Ubuntu.com
+				  [D] [System          ] SerialNumber                  0
+				  [D] [System          ] ArraySelect                   1
+				  [D] [System          ] DataInPort                    16180
+	  2012-11-09 23:09:24.417 [I] [System          ] [System] Scan storage devices...
+	  2012-11-09 23:09:24.417 [I] [System          ] Beginning storage subsystem initialization.
+
+< will pause here for a few minutes >
+	  
+...
+	  2012-11-09 23:10:23.589 [D] [System          ] [WaitQueueManager] Registered queue 'MessageProcessor'.
+	  2012-11-09 23:10:23.589 [I] [System          ] [System] Start message receiver...
+	  2012-11-09 23:10:23.589 [I] [System          ] [MessageListener] : Messaging socket opened on port5000
+	  2012-11-09 23:10:23.589 [I] [System          ] [System] Determining system status...
+	  2012-11-09 23:10:23.589 [I] [System          ] [System] system is 'NORMAL '
+	  2012-11-09 23:10:23.589 [I] [System          ] [System] Booting Complete
 
 Step 5: Test Messaging
 ======================
@@ -193,30 +191,30 @@ Step 5: Test Messaging
   To test messaging, use the included Msender utility. 
 
   In a new terminal:
-	>/LWA/bin/Msender -v -Source "MCS" -Destination "MD1" -Type "PNG" -ReferenceNumber 0 -DestinationIpAddress localhost -DestinationPort 5001 -ResponseListenPort 5000    
+	>/LWA/bin/Msender -v -Source "MCS" -Destination "DR1" -Type "PNG" -ReferenceNumber 0 -DestinationIpAddress localhost -DestinationPort 5001 -ResponseListenPort 5000    
 
   On the original terminal you should see:
-	[MESSAGING] Received: 'MCS MD1 PNG         0  55240  12609312    0 '
-	[MESSAGING] Sent: 'MD1 MCS PNG         0 055240 012609313 0009 A NORMAL  '
+	  2012-11-09 23:16:03.934 [I] [MessageListener ] >> Message(56240:83763934, MCS, DR1, 1, PNG, 0, '' ) 127.0.0.1:39352
+	  2012-11-09 23:16:03.935 [I] [ResponseSender  ] << Response(56240:83763935, DR1, MCS, 1, PNG, 8, Accept, NORMAL , '', '' ) 127.0.0.1:5001
 
   On the new terminal you should see:
 	[send]Message :
 	[send]	Sender:                     MCS
-	[send]	Destination:                MD1
+	[send]	Destination:                DR1
 	[send]	Type:                       PNG
 	[send]	Reference:                  0
-	[send]	Modified Julian Day:        55240
-	[send]	Milliseconds Past Midnight: 12609312
+	[send]	Modified Julian Day:        56240
+	[send]	Milliseconds Past Midnight: 83763934
 	[send]	Data Length:                0
 	[send]	Data:                       No Data Specified
 
 	[recv]Response :
-	[recv]	Sender:                     MD1
+	[recv]	Sender:                     DR1
 	[recv]	Destination:                MCS
 	[recv]	Type:                       PNG
 	[recv]	Reference:                  0
-	[recv]	Modified Julian Day:        55240
-	[recv]	Milliseconds Past Midnight: 12609313
+	[recv]	Modified Julian Day:        56240
+	[recv]	Milliseconds Past Midnight: 83763935
 	[recv]	Accept/Reject:              Accepted
 	[recv]	General Status:             NORMAL 
 	[recv]	Comment:                    No Comment Specified
@@ -227,18 +225,21 @@ Step 5: Test Messaging
 Step 6: Exit First Run
 ======================
   In the new terminal from step 5:
-	>/LWA/bin/Msender -v -Source "MCS" -Destination "MD1" -Type "SHT" -ReferenceNumber 0 -DestinationIpAddress localhost -DestinationPort 5001 -ResponseListenPort 5000    
+	>/LWA/bin/Msender -v -Source "MCS" -Destination "DR1" -Type "SHT" -ReferenceNumber 0 -DestinationIpAddress localhost -DestinationPort 5001 -ResponseListenPort 5000    
   In the DROS terminal you should see 
-
 	...
-
-	055329-068135297 : [SHUTDOWN] Closed messaging receive socket.
-	055329-068135316 : [SHUTDOWN] Closing internal storage file system.
-	055329-068135335 : [FILE SYSTEM] Closing filesystem.
-	055329-068135412 : [FILE SYSTEM] Unregistering Active File System 0:<34342936128>
-	055329-068135433 : [SHUTDOWN] Closed internal storage file system.
-	055329-068135453 : [SHUTDOWN] Closing system log.
-	055329-068135514 : [SHUTDOWN] Closing config database. 
+	2012-11-09 23:22:42.869 [I] message originating in      ../System/Storage.cpp:142
+				[I] [System          ] ============================================================
+				[I] [System          ] ==       Storage Subsystem Report                         ==
+				[I] [System          ] ============================================================
+				[I] [System          ] ==                  -- Offline --                         ==
+				[I] [System          ] ============================================================
+				[I] [System          ] ==       End Report                                       ==
+				[I] [System          ] ============================================================
+	2012-11-09 23:22:42.869 [I] [System          ] [System] Shutting down config...
+	2012-11-09 23:22:42.870 [I] [System          ] Configuration data saved...
+	2012-11-09 23:22:42.870 [I] [System          ] [System] Shutdown Complete
+	========================== Logfile closed ==========================
   
   and the DROS program will exit, returning control of the original terminal to you.
 
@@ -273,7 +274,7 @@ Step 8: Scheduling a recording
   The format of scheduling a recording is as follows:
   	>/LWA/bin/Msender 
 		-Source MCS 
-		-Destination MD1 
+		-Destination DR1 
 		-Type REC 
 		-ReferenceNumber 123456789 
 		-DestinationIpAddress localhost 
@@ -293,14 +294,11 @@ Step 8: Scheduling a recording
   Note the FFFFFFFFFFFFFF...FFF values are defined in 'formats.cfg'
 
   In the new window from step 5, enter the following* (line breaks added for clarity):
-  *Remember to substitute appropriate config and time info
-	>/LWA/bin/Msender -v -Source MCS -Destination MD1 -Type REC -ReferenceNumber 1 
-	-DestinationIpAddress localhost -DestinationPort 5001 -ResponseListenPort 5000 
-	-Data "55240 13500000 10000 DEFAULT_TBN"
-
+	>/LWA/bin/Msender -s MCS -d DR1 -r 4 -I 127.0.0.1 -po 5000 -pi 5001 -v -t "REC" -D "MJD MPM+3000 30000 DEFAULT_TBN"
+  
   In the second terminal, you should see:
 	...
-	[recv]	Modified Julian Day:        55240
+	[recv]	Modified Julian Day:        56240
 	[recv]	Milliseconds Past Midnight: 13276752
 	[recv]	Accept/Reject:              Accepted
 	[recv]	General Status:             NORMAL 
@@ -314,51 +312,55 @@ Step 8: Scheduling a recording
   be used to hold the data.	
 
   In '/LWA/runtime/runtime.log', you should see:
-	055240-013276748 : [FILE SYSTEM] Creating file '055240_000000001' of size 1174405120 bytes
-	055240-013276751 : [FILE SYSTEM] File created successfully
-	055240-013276751 : [FILE SYSTEM] Set File Metadata for '055240_000000001'.
-	[MESSAGING] Received: 'MCS MD1 REC         1  55240  13276747   32 55240 13500000 10000 DEFAULT_TBN'
-	[MESSAGING] Sent: 'MD1 MCS REC         1 055240 013276752 0025 A NORMAL  055240_000000001'
-	055240-013276752 : [SCHEDULER] Entered wait phase for operation with reference number 1
-
+	2012-11-09 23:54:23.979 [I] [MessageListener ] >> Message(56240:86063978, MCS, DR1, 4, REC, 34, '056240 086066978 30000 DEFAULT_TBN' ) 127.0.0.1:47029
+	2012-11-09 23:54:23.980 [D] [Folder Watcher  ] Watched folder '/LWA_STORAGE/Internal/0/DROS/Rec' select returned 1
+	2012-11-09 23:54:23.980 [D] [Folder Watcher  ] Watched folder re-read '/LWA_STORAGE/Internal/0/DROS/Rec'
+	2012-11-09 23:54:23.980 [I] [MessageProcessor] [Scheduler] Scheduled operation 'Record      000000004 056240 086066978  056240 086096978  DEFAULT_TBN                     
+	2012-11-09 23:54:23.981 [I] [ResponseSender  ] << Response(56240:86063980, DR1, MCS, 4, REC, 24, Accept, NORMAL , '056240 086066978 30000 DEFAULT_TBN', '056240_000000004' ) 127.0.0.1:5001
+	2012-11-09 23:54:24.478 [I] [Schedule        ] [Schedule] window start current operation: Record      000000004 056240 086066978  056240 086096978  DEFAULT_TBN                     
+	2012-11-09 23:54:24.478 [I] [Schedule        ] [RECORD] Starting recorder
+	2012-11-09 23:54:24.478 [I] [Schedule        ] [RECORD] Recorder started
+	2012-11-09 23:54:24.478 [I] [FileWriter:/ ...] [GenericThread] : Set CPU affinity : '2'
+	2012-11-09 23:54:24.478 [I] [FileWriter:/ ...] [GenericThread] : Set priority : '-2'
+	2012-11-09 23:54:24.478 [I] [FileWriter:/ ...] [RECORD] FileWriter thread started
+	2012-11-09 23:54:24.478 [D] [FileWriter:/ ...] [TicketBuffer:MasterReceiveBuffer] <SUBSCRIBE:FileWriter:/LWA_STORAGE/Internal/0/DROS/Rec/056240_000000004>
+	2012-11-09 23:54:26.978 [I] [Schedule        ] [Schedule] execution start current operation: Record      000000004 056240 086066978  056240 086096978  DEFAULT_TBN                     
+	2012-11-09 23:54:26.978 [I] [FileWriter:/ ...] [RECORD] FileWriter record started
   Sometime later you should see:
-	055240-013500000 : [SCHEDULER] Entered start phase for operation with reference number 1
-	[OPERATION RECORD] Opening socket on port 6002
-	[OPERATION RECORD] Bytes Received = 000000000000000; Ring Queue Occupancy=000000000315392; Live Capture PacketsAvailable=000000000000000; Time=02 Apr 2010 15:56:03:000000384
-	[OPERATION RECORD] Bytes Received = 000000000000000; Ring Queue Occupancy=000000000315392; Live Capture PacketsAvailable=000000000000000; Time=02 Apr 2010 15:56:03:000000384
-	[OPERATION RECORD] Bytes Received = 000000000000000; Ring Queue Occupancy=000000000315392; Live Capture PacketsAvailable=000000000000000; Time=02 Apr 2010 15:56:03:000000384
-	[OPERATION RECORD] Bytes Received = 000000000000000; Ring Queue Occupancy=000000000315392; Live Capture PacketsAvailable=000000000000000; Time=02 Apr 2010 15:56:03:000000384
-		...
+	2012-11-09 23:54:50.924 [I] [Receiver        ] [Receiver] Buffer usage: [________________________________________] (  0%)
+	2012-11-09 23:54:50.925 [I] [Receiver        ] [Receiver] Receive rate: [________________________________________] (  0%)  0.00000 B/s  
+	2012-11-09 23:54:50.925 [I] [Receiver        ] [Receiver] Subscribers 1
+	2012-11-09 23:54:56.997 [I] [Schedule        ] [Schedule] execution stop current operation: Record      000000004 056240 086066978  056240 086096978  DEFAULT_TBN                     
+	2012-11-09 23:54:56.997 [I] [Schedule        ] [RECORD] Waiting on recorder cleanup
+	2012-11-09 23:54:56.997 [I] [FileWriter:/ ...] [RECORD] FileWriter record finished
+	2012-11-09 23:54:56.997 [D] [FileWriter:/ ...] [TicketBuffer:MasterReceiveBuffer] ENTER UNSUBSCRIBE >
+	2012-11-09 23:54:56.997 [D] [FileWriter:/ ...] [TicketBuffer:MasterReceiveBuffer] <UNSUBSCRIBE:FileWriter:/LWA_STORAGE/Internal/0/DROS/Rec/056240_000000004>
+	2012-11-09 23:54:56.998 [D] [FileWriter:/ ...] [TicketBuffer:MasterReceiveBuffer] Last subscriber unsubscribed
+	2012-11-09 23:54:56.998 [D] [FileWriter:/ ...] [TicketBuffer:MasterReceiveBuffer] LEAVE UNSUBSCRIBE >
+	2012-11-09 23:54:56.998 [I] [FileWriter:/ ...] [RECORD] FileWriter thread finished
+	2012-11-09 23:54:57.497 [I] [Schedule        ] [RECORD] Recorder cleanup complete
+	2012-11-09 23:54:59.504 [I] [Schedule        ] [Schedule] window stop current operation: Record      000000004 056240 086066978  056240 086096978  DEFAULT_TBN                     
+	2012-11-09 23:54:59.504 [I] [Schedule        ] [Schedule] completed as scheduled: Record      000000004 056240 086066978  056240 086096978  DEFAULT_TBN                     
+	2012-11-09 23:54:59.504 [I] [Schedule        ] [Schedule] ===========================================
 
-	055240-013510000 : [SCHEDULER] Entered stop phase for operation with reference number 1
-	055240-013510001 : [FILE SYSTEM] Set Complete Flag for '055240_000000001'.
-	055240-013512500 : [SCHEDULER] Cooldown ended for operation with reference number 1, goto delete
-	055240-013512501 : [SCHEDULER] Clean-up for operation with reference number 1 
-	055240-013512502 : [SCHEDULER] Deleting operation with reference number 1 from schedule, return to idle
-
-  In this example, the recording was for 10 seconds, but no data source was attached,
-  consequently, Bytes Received is always 0. If a data source is connected and configured 
+  In this example, the recording was for 30 seconds, but no data source was attached,
+  consequently, Receive rate is always 0. If a data source is connected and configured 
   to send to the MCS-DR, these numbers will be non-zero. 
   
 
 
   Now, to verify that the recording was made, issue a DIRECTORY-ENTRY-X MIB request:
-	>/LWA/bin/Msender -v -Source MCS -Destination MD1 -Type RPT -ReferenceNumber 1 \
-        -DestinationIpAddress localhost -DestinationPort 5001 -ResponseListenPort 5000 -Data "DIRECTORY-ENTRY-0"
+	>/LWA/bin/Msender -s MCS -d DR1 -r 4 -I 127.0.0.1 -po 5000 -pi 5001 -v -t "RPT" -D "DIRECTORY-ENTRY-1"
 
   On the second terminal you should see:
 	...
-	[recv]	Modified Julian Day:        55240
+	[recv]	Modified Julian Day:        56240
 	[recv]	Milliseconds Past Midnight: 15455364
 	[recv]	Accept/Reject:              Accepted
 	[recv]	General Status:             NORMAL 
-	[recv]	Comment:                    055240_000000001 055240 013500000 055240 013510000                      DEFAULT_TBN 000000000000000 000000000004096 YES
+	[recv]	Comment:                    065240_000000004 055240 013500000 055240 013510000                      DEFAULT_TBN 000000000000000 000000000004096 YES
 	[recv]	Data Length:                128
 	...
-
-  On the original terminal you should see:
-	[MESSAGING] Received: 'MCS MD1 RPT         1  55240  15455362   17 DIRECTORY-ENTRY-0'
-	[MESSAGING] Sent: 'MD1 MCS RPT         1 055240 015455364 0128 A NORMAL  055240_000000001 055240 013500000 055240 013510000                      DEFAULT_TBN 000000000000000 000000000004096 YES'
 
 
 Step 8: Retrieving recorded data
@@ -368,11 +370,10 @@ Step 8: Retrieving recorded data
   Obviously, retrieving data this way is not going to be as fast as the recording rate. The 
   following is an example of retrieving data for visual inspection using the Msender utility:
 
-	>/LWA/bin/Msender -v -Source MCS -Destination MD1 -Type GET -ReferenceNumber 123456790 \
-	-DestinationIpAddress localhost -DestinationPort 5001 -ResponseListenPort 5000 -Data \
-	"055240_000000001 000000000 4096"
+	>/LWA/bin/Msender -s MCS -d DR1 -r 4 -I 127.0.0.1 -po 5000 -pi 5001 -v -t "GET" -D "065240_000000004 000000000 4096"
+	
 
-  This would retrieve the 4096 bytes starting at position 0 from the file 055240_000000001.
+  This would retrieve the 4096 bytes starting at position 0 from the file 056240_000000001.
   Note: Recording file names are constructed automatically from the MJD and reference number of 
   the REC command. The -v flag tells Msender to display both the outgoing message and response. 
   In our example, no data was recorded, so MCS-DR will respond with an 'Invalid range' because
