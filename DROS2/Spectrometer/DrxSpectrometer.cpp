@@ -48,7 +48,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "DrxSpectrometer.h"
-
+#include "../System/LoggableAssert.h"
 #ifdef USE_LUTS
 	fftwf_complex DrxSpectrometer::LUT[256];
 #endif
@@ -273,8 +273,8 @@ void DrxSpectrometer::run_slave(){
 		// check if we can have done/error blocks (previously started)
 		if (canMove(&blocks_computing, &blocks_free)){
 			DrxBlockSetup*    bs    = *blocks_computing.nextOut();
-			assert(bs != NULL);
-			assert(bs->state == BS_PROCESSING);
+			LOG_ASSERT(bs != NULL);
+			LOG_ASSERT(bs->state == BS_PROCESSING);
 			if (isDoneOrError(bs)){
 				if (isError(bs)){
 					counters.checkBlockDone_Error++;
@@ -305,8 +305,8 @@ void DrxSpectrometer::run_slave(){
 		// check if we can have error blocks (not previously started)
 		if (canMove(&blocks_dropped, &blocks_free)){
 			DrxBlockSetup* bs = *blocks_dropped.nextOut();
-			assert(bs != NULL);
-			assert(bs->state == BS_DROPPED);
+			LOG_ASSERT(bs != NULL);
+			LOG_ASSERT(bs->state == BS_DROPPED);
 			spc->resetBlock(bs->bIdx);
 			resetBlockSetup(bs);
 			doMove(&blocks_dropped, &blocks_free);
@@ -318,22 +318,22 @@ void DrxSpectrometer::run_slave(){
 }
 
 void DrxSpectrometer::resetBlockSetup(DrxBlockSetup* bs){
-	assert(spc!=NULL);
-	assert(blocks!=NULL);
-	assert(bs!=NULL);
-	assert((bs->state == BS_DONE) || (bs->state == BS_DROPPED));
+	LOG_ASSERT(spc!=NULL);
+	LOG_ASSERT(blocks!=NULL);
+	LOG_ASSERT(bs!=NULL);
+	LOG_ASSERT((bs->state == BS_DONE) || (bs->state == BS_DROPPED));
 	size_t bIdx = bs->bIdx;
 	bzero(bs, sizeof(DrxBlockSetup));
 	bs->bIdx = bIdx;
 }
 
 void DrxSpectrometer::startBlock(DrxBlockSetup* bs, DrxSpectraHeader* dsh, float* aData){
-	assert(spc!=NULL);
-	assert(blocks!=NULL);
-	assert(bs!=NULL);
-	assert(dsh!=NULL);
-	assert(aData!=NULL);
-	assert(bs->state == BS_STARTABLE);
+	LOG_ASSERT(spc!=NULL);
+	LOG_ASSERT(blocks!=NULL);
+	LOG_ASSERT(bs!=NULL);
+	LOG_ASSERT(dsh!=NULL);
+	LOG_ASSERT(aData!=NULL);
+	LOG_ASSERT(bs->state == BS_STARTABLE);
 	initSpectraHeader(bs,dsh);
 	spc->startBlock(bs->bIdx, aData);
 	bs->state = BS_PROCESSING;
@@ -341,25 +341,25 @@ void DrxSpectrometer::startBlock(DrxBlockSetup* bs, DrxSpectraHeader* dsh, float
 }
 
 bool DrxSpectrometer::isDoneOrError(DrxBlockSetup* bs){
-	assert(spc!=NULL);
-	assert(blocks!=NULL);
-	assert(bs!=NULL);
-	assert(bs->state == BS_PROCESSING);
+	LOG_ASSERT(spc!=NULL);
+	LOG_ASSERT(blocks!=NULL);
+	LOG_ASSERT(bs!=NULL);
+	LOG_ASSERT(bs->state == BS_PROCESSING);
 	return (spc->isBlockDone(bs->bIdx) || spc->isBlockError(bs->bIdx));
 }
 
 bool DrxSpectrometer::isError(DrxBlockSetup* bs){
-	assert(spc!=NULL);
-	assert(blocks!=NULL);
-	assert(bs!=NULL);
+	LOG_ASSERT(spc!=NULL);
+	LOG_ASSERT(blocks!=NULL);
+	LOG_ASSERT(bs!=NULL);
 	return (spc->isBlockError(bs->bIdx));
 }
 
 void DrxSpectrometer::initSpectraHeader(DrxBlockSetup* bs, DrxSpectraHeader* dsh){
-	assert(spc!=NULL);
-	assert(blocks!=NULL);
-	assert(bs!=NULL);
-	assert(dsh!=NULL);
+	LOG_ASSERT(spc!=NULL);
+	LOG_ASSERT(blocks!=NULL);
+	LOG_ASSERT(bs!=NULL);
+	LOG_ASSERT(dsh!=NULL);
 	size_t cell0index = spc->cellIndex(bs->bIdx, 0, 0);
 	dsh->MAGIC1        = DRX_SPECTRA_MAGIC1;
 	dsh->MAGIC2        = DRX_SPECTRA_MAGIC2;
@@ -396,14 +396,14 @@ void DrxSpectrometer::initSpectraHeader(DrxBlockSetup* bs, DrxSpectraHeader* dsh
 }
 
 uint64_t DrxSpectrometer::nextTimeTagAfterBlock(DrxBlockSetup* bs){
-	assert(spc!=NULL);
-	assert(blocks!=NULL);
-	assert(bs!=NULL);
+	LOG_ASSERT(spc!=NULL);
+	LOG_ASSERT(blocks!=NULL);
+	LOG_ASSERT(bs!=NULL);
 	return bs->timeTagN + ((bs->decFactor * freqCount_or_samp_per_frame * intCount) / DRX_SAMPLES_PER_FRAME);
 }
 
 void DrxSpectrometer::initBlockSetup(DrxBlockSetup* toPrepare, DrxFrame* f, DrxBlockSetup* predecessor){
-	assert(toPrepare->state == BS_UNUSED);
+	LOG_ASSERT(toPrepare->state == BS_UNUSED);
 	if (predecessor != NULL){
 		counters.framesInsertedStale++;
 		toPrepare->beam      		= predecessor->beam;
@@ -436,10 +436,10 @@ void DrxSpectrometer::initBlockSetup(DrxBlockSetup* toPrepare, DrxFrame* f, DrxB
 }
 
 bool DrxSpectrometer::blockMatch(DrxFrame* f, DrxBlockSetup* bs){
-	assert(spc!=NULL);
-	assert(blocks!=NULL);
-	assert(bs!=NULL);
-	assert(f!=NULL);
+	LOG_ASSERT(spc!=NULL);
+	LOG_ASSERT(blocks!=NULL);
+	LOG_ASSERT(bs!=NULL);
+	LOG_ASSERT(f!=NULL);
 	int    t              = f->header.drx_tuning - 1;
 	size_t frameStepPhase = (((uint64_t)f->header.timeTag) % (((uint64_t) f->header.decFactor) * ((uint64_t) DRX_SAMPLES_PER_FRAME)));
 	bool compatible =
@@ -453,10 +453,10 @@ bool DrxSpectrometer::blockMatch(DrxFrame* f, DrxBlockSetup* bs){
 }
 
 int DrxSpectrometer::compare(DrxFrame* f, DrxBlockSetup* bs){
-	assert(spc!=NULL);
-	assert(blocks!=NULL);
-	assert(bs!=NULL);
-	assert(f!=NULL);
+	LOG_ASSERT(spc!=NULL);
+	LOG_ASSERT(blocks!=NULL);
+	LOG_ASSERT(bs!=NULL);
+	LOG_ASSERT(f!=NULL);
 	if (f->header.timeTag < bs->timeTag0)
 		return -1;
 	if (f->header.timeTag > bs->timeTagN)
@@ -467,9 +467,9 @@ int DrxSpectrometer::compare(DrxFrame* f, DrxBlockSetup* bs){
 
 // we can drop the frame or insert it, or take no action; return true for the first two, false otherwise
 bool DrxSpectrometer::insert(DrxFrame* f){
-	assert(spc!=NULL);
-	assert(blocks!=NULL);
-	assert(f!=NULL);
+	LOG_ASSERT(spc!=NULL);
+	LOG_ASSERT(blocks!=NULL);
+	LOG_ASSERT(f!=NULL);
 	if (f->header.timeTag < minTimeTag){
 		counters.framesDroppedArrivedLate++;
 		return true;
@@ -492,8 +492,8 @@ bool DrxSpectrometer::insert(DrxFrame* f){
 			(searchPos != listEnd)
 	){
 		bs = *searchPos;
-		assert(bs!=NULL);
-		assert(bs->state == BS_FILLING);
+		LOG_ASSERT(bs!=NULL);
+		LOG_ASSERT(bs->state == BS_FILLING);
 
 		int  order        = compare(f,bs);
 		bool compatible   = blockMatch(f,bs);
@@ -535,12 +535,12 @@ bool DrxSpectrometer::insert(DrxFrame* f){
 
 	if (inserted){
 		if (blockStartable){
-			assert(canStartABlock);
-			assert(bs!=NULL);
+			LOG_ASSERT(canStartABlock);
+			LOG_ASSERT(bs!=NULL);
 			// flush up to the started block
 			while(clearPos != searchPos){
 				DrxBlockSetup** mvptr = blocks_dropped.nextIn();
-				assert(mvptr!=NULL);
+				LOG_ASSERT(mvptr!=NULL);
 				*mvptr=*clearPos;
 				(*mvptr)->state = BS_DROPPED;
 				blocks_dropped.doneIn(mvptr);
@@ -560,7 +560,7 @@ bool DrxSpectrometer::insert(DrxFrame* f){
 
 			// insert the block into startable list
 			DrxBlockSetup** insptr = blocks_startable.nextIn();
-			assert(insptr!=NULL);
+			LOG_ASSERT(insptr!=NULL);
 			*insptr=bs;
 			bs->state = BS_STARTABLE;
 			blocks_startable.doneIn(insptr);
@@ -572,16 +572,16 @@ bool DrxSpectrometer::insert(DrxFrame* f){
 		}
 		return true;
 	} else {
-		assert(searchPos == listEnd);
+		LOG_ASSERT(searchPos == listEnd);
 		if (!canFillNewBlock){
 			counters.framesStalledWaitingBlock++;
 			return false;
 		} else {
 			// get a new block
 			DrxBlockSetup** newPtr = blocks_free.nextOut();
-			assert(newPtr!=NULL);
+			LOG_ASSERT(newPtr!=NULL);
 			DrxBlockSetup* bs_new = *newPtr;
-			assert(bs_new->state == BS_UNUSED);
+			LOG_ASSERT(bs_new->state == BS_UNUSED);
 
 
 			// initialize the block
@@ -597,11 +597,11 @@ bool DrxSpectrometer::insert(DrxFrame* f){
 					initBlockSetup(bs_new, f);
 				}
 			}
-			assert(bs_new->insertionCount == 0);
-			assert(*spc->getCellFills(spc->cellIndex(bs_new->bIdx, 0 ,0))== 0);
-			assert(*spc->getCellFills(spc->cellIndex(bs_new->bIdx, 0 ,1))== 0);
-			assert(*spc->getCellFills(spc->cellIndex(bs_new->bIdx, 1 ,0))== 0);
-			assert(*spc->getCellFills(spc->cellIndex(bs_new->bIdx, 1 ,1))== 0);
+			LOG_ASSERT(bs_new->insertionCount == 0);
+			LOG_ASSERT(*spc->getCellFills(spc->cellIndex(bs_new->bIdx, 0 ,0))== 0);
+			LOG_ASSERT(*spc->getCellFills(spc->cellIndex(bs_new->bIdx, 0 ,1))== 0);
+			LOG_ASSERT(*spc->getCellFills(spc->cellIndex(bs_new->bIdx, 1 ,0))== 0);
+			LOG_ASSERT(*spc->getCellFills(spc->cellIndex(bs_new->bIdx, 1 ,1))== 0);
 			// always invalidate since we have a newer block setup
 			lastFilledBlockSetupGood = false;
 			if (unpack(f,bs_new)){
@@ -617,11 +617,11 @@ bool DrxSpectrometer::insert(DrxFrame* f){
 
 bool DrxSpectrometer::unpack(DrxFrame* f, DrxBlockSetup* bs){
 	//printSpecSetup();
-	assert(spc!=NULL);
-	assert(blocks!=NULL);
-	assert(bs!=NULL);
-	assert(f!=NULL);
-	assert(bs->state == BS_FILLING);
+	LOG_ASSERT(spc!=NULL);
+	LOG_ASSERT(blocks!=NULL);
+	LOG_ASSERT(bs!=NULL);
+	LOG_ASSERT(f!=NULL);
+	LOG_ASSERT(bs->state == BS_FILLING);
 	bool    error         = false;
 	size_t  satsThisRound = 0;
 	size_t  framePos      = (f->header.timeTag - bs->timeTag0) / bs->timeTagStep;
@@ -632,14 +632,14 @@ bool DrxSpectrometer::unpack(DrxFrame* f, DrxBlockSetup* bs){
 	size_t* sat_counts    = spc->getCellSatCounts(cellIndex);
 	fftwf_complex* idata  = &spc->getCellIdata(cellIndex)[framePos*DRX_SAMPLES_PER_FRAME];
 
-	assert(framePos           < inputFramesPerCell);
-	assert(bs->insertionCount < inputFramesPerBlock);
-	assert((polIndex==0)||(polIndex==1));
-	assert((tunIndex==0)||(tunIndex==1));
-	assert(fills!=NULL);
-	assert(sat_counts!=NULL);
-	assert(idata!=NULL);
-	assert((*fills) <= intCount);
+	LOG_ASSERT(framePos           < inputFramesPerCell);
+	LOG_ASSERT(bs->insertionCount < inputFramesPerBlock);
+	LOG_ASSERT((polIndex==0)||(polIndex==1));
+	LOG_ASSERT((tunIndex==0)||(tunIndex==1));
+	LOG_ASSERT(fills!=NULL);
+	LOG_ASSERT(sat_counts!=NULL);
+	LOG_ASSERT(idata!=NULL);
+	LOG_ASSERT((*fills) <= intCount);
 
 
 	// possibly update freq code

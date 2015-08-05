@@ -67,6 +67,8 @@ void signalHandler(int sig){
 }
 
 int main(int argc, char* argv[]) {
+	//DRAPI_UT();
+	//exit(-1);
 	Log::initializeLog();
 	Log::setLogLevel(L_DEBUG);
 	CpuInfo::getCpuCount();                                             // trigger module loading

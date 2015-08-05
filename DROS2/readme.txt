@@ -50,7 +50,7 @@
 
 Software: MCS-DR Operating Software
 Author:    C.N. Wolfe
-Version:  DROS-2.0-Devel-27740
+Version:  DROS-2.0-Devel-31614
 Date:     
 
 Introduction
@@ -83,7 +83,7 @@ Introduction
 Limitations
 ===========
  DROSv2 is currently under development, and the version provided here is 'beta'. Remaining tasks 
- are mostly cosmetic. Version DROS-2.0-Devel-27740 is ready with the following exceptions:
+ are mostly cosmetic. Version DROS-2.0-Devel-31614 is ready with the following exceptions:
   <<none>>
  
  
@@ -99,7 +99,7 @@ Build instructions
   
 Usage Instructions
 ==================
-    For detailed usage instructions, please see ExtendedUsersGuide.txt in the DROS-2.0-Devel-27740 tarball.
+    For detailed usage instructions, please see ExtendedUsersGuide.txt in the DROS-2.0-Devel-31614 tarball.
     
     Minimally, extract and build the tarball, and start the DROSv2 software by:
     >sudo /LWA/bin/DROS2

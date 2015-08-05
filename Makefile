@@ -17,7 +17,7 @@ INSTALL_LOCATION=/LWA
 FILES=.
 
 deps:
-	sudo apt-get install build-essential libgdbm-dev libgdbm3 libfuse-dev libfuse2 lm-sensors smartmontools mdadm libboost-all-dev libfftw3
+	sudo apt-get install build-essential libgdbm-dev libgdbm3 libfuse-dev libfuse2 lm-sensors smartmontools mdadm libboost-all-dev libfftw3-dev fftw3
 
 all:
 	make -C $(WORKSPACE)/Msender/Release

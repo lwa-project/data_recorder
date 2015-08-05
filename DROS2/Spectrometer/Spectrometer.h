@@ -49,13 +49,6 @@
 
 #ifndef SPECTROMETER_H_
 #define SPECTROMETER_H_
-//#ifdef DEBUG_SPEC
-	#include <cassert>
-//#else
-	//#define assert(...)
-//#endif
-
-
 
 
 #include <immintrin.h>
@@ -70,6 +63,7 @@
 #include "../Common/branchPredict.h"
 #include "../Threading/LockHelper.h"
 #include "../System/Log.h"
+#include "../System/LoggableAssert.h"
 
 enum Pol{POL_X=0,POL_Y=1};
 
@@ -171,7 +165,7 @@ typedef void*(*threadFunc)(void*);
 			float* __a = (float*)&(a);\
 			float* __b = (float*)&(b);\
 			for (int qq = 0; qq<4; qq++){\
-				assert(__c[qq] == (__a[qq] op __b[qq]));\
+				LOG_ASSERT(__c[qq] == (__a[qq] op __b[qq]));\
 			}\
 		}
 	#define ASSERT_BUILTIN_V_H_OP(a, b, c, op)\
@@ -180,10 +174,10 @@ typedef void*(*threadFunc)(void*);
 				float* __a = (float*)&(a);\
 				float* __b = (float*)&(b);\
 				for (int qq = 0; qq<2; qq++){\
-					assert(__c[qq] == (__a[qq*2] op __a[(qq*2)+1]));\
+					LOG_ASSERT(__c[qq] == (__a[qq*2] op __a[(qq*2)+1]));\
 				}\
 				for (int qq = 2; qq<4; qq++){\
-					assert(__c[qq] == (__b[(qq-2)*2] op __b[((qq-2)*2)+1]));\
+					LOG_ASSERT(__c[qq] == (__b[(qq-2)*2] op __b[((qq-2)*2)+1]));\
 				}\
 			}
 
@@ -202,10 +196,10 @@ typedef void*(*threadFunc)(void*);
 				cout << setw(12) << __a[qq] << setw(12) << __b[qq] << setw(12) << "..." << __c[qq] << endl;\
 			}\
 			LOG_END_SESSION();\
-			assert(__c[0] == __a[i3]);\
-			assert(__c[1] == __a[i2]);\
-			assert(__c[2] == __b[i1]);\
-			assert(__c[3] == __b[i0]);\
+			LOG_ASSERT(__c[0] == __a[i3]);\
+			LOG_ASSERT(__c[1] == __a[i2]);\
+			LOG_ASSERT(__c[2] == __b[i1]);\
+			LOG_ASSERT(__c[3] == __b[i0]);\
 		}
 #else
 	#define ASSERT_BUILTIN_V_OP(a, b, c, op)
@@ -451,8 +445,8 @@ public:
 
 
 	void startBlock(unsigned bIdx, float* adataPtr){
-		assert(bIdx < number_blocks);
-		assert(adataPtr != NULL);
+		LOG_ASSERT(bIdx < number_blocks);
+		LOG_ASSERT(adataPtr != NULL);
 		bInfo[bIdx].done       = false;
 		bInfo[bIdx].error      = false;
 		adata[bIdx]            = adataPtr;		for (unsigned i=0; i<number_threads; i++){
@@ -477,7 +471,7 @@ public:
 	}
 
 	void waitBlock(unsigned bIdx){
-		assert(bIdx < number_blocks);		if (!bInfo[bIdx].error){
+		LOG_ASSERT(bIdx < number_blocks);		if (!bInfo[bIdx].error){
 			for (unsigned i=0; i<number_threads; i++){
 				unsigned t_linear = (bIdx*number_threads)+i;
 				pthread_join(tInfo[t_linear].thread, NULL);
@@ -487,7 +481,7 @@ public:
 	}
 
 	void resetBlock(unsigned bIdx){
-		assert(bIdx < number_blocks);		for (unsigned cur_str=0; cur_str<number_streams; cur_str++){
+		LOG_ASSERT(bIdx < number_blocks);		for (unsigned cur_str=0; cur_str<number_streams; cur_str++){
 			for (unsigned cur_c=0; cur_c<number_cells; cur_c++){
 				size_t ci = cellIndex(bIdx,cur_str,cur_c);
 				clearCellCounters(ci);
@@ -500,10 +494,10 @@ public:
 	// compute the fft for the cell identified by thread/block indices
 	void doFft(unsigned bIdx,unsigned threadIndex){
 		//static float s=0;
-		assert(bIdx < number_blocks);		unsigned sIdx = threadIndex / number_cells;
+		LOG_ASSERT(bIdx < number_blocks);		unsigned sIdx = threadIndex / number_cells;
 		unsigned pIdx = threadIndex % number_cells;
 		unsigned cIdx = cellIndex(bIdx, sIdx, pIdx);
-		assert(cIdx < total_cells);
+		LOG_ASSERT(cIdx < total_cells);
 		if (!outputType.isCorr){
 			fftwf_execute(plans[cIdx]);
 			//clearCellInput(cIdx);
@@ -551,7 +545,7 @@ public:
 
 	// accumulate results for the given block, assuming the cells have been calculated
 	void doAcc(unsigned bIdx,unsigned threadIndex){
-		assert(bIdx < number_blocks);
+		LOG_ASSERT(bIdx < number_blocks);
 		if (outputType.isCorr){
 			switch (outputType.toCorr()){
 				case cXY:		doAcc_c_XY(bIdx,threadIndex); break;
@@ -591,12 +585,12 @@ public:
 		unsigned fStep              = number_products;
 		for (unsigned cur_str=0; cur_str<number_streams; cur_str++){
 			// where is x starting from?
-			unsigned cIdx_x       = cellIndex(bIdx, cur_str, POL_X); //assert(cIdx_x < total_cells);
+			unsigned cIdx_x       = cellIndex(bIdx, cur_str, POL_X); //LOG_ASSERT(cIdx_x < total_cells);
 			fftwf_complex* x_base = getCellOdata(cIdx_x);
 			__v4sf* x             = (__v4sf*) x_base;
 
 			// where is y starting from?
-			unsigned cIdx_y       = cellIndex(bIdx, cur_str, POL_Y); //assert(cIdx_y < total_cells);
+			unsigned cIdx_y       = cellIndex(bIdx, cur_str, POL_Y); //LOG_ASSERT(cIdx_y < total_cells);
 			fftwf_complex* y_base = getCellOdata(cIdx_y);
 			__v4sf* y             = (__v4sf*) y_base;
 
@@ -665,12 +659,12 @@ public:
 
 		for (unsigned cur_str=0; cur_str<number_streams; cur_str++){
 			// where is x starting from?
-			unsigned cIdx_x       = cellIndex(bIdx, cur_str, POL_X); //assert(cIdx_x < total_cells);
+			unsigned cIdx_x       = cellIndex(bIdx, cur_str, POL_X); //LOG_ASSERT(cIdx_x < total_cells);
 			fftwf_complex* x_base = getCellOdata(cIdx_x);
 			__v4sf* x             = (__v4sf*) x_base;
 
 			// where is y starting from?
-			unsigned cIdx_y       = cellIndex(bIdx, cur_str, POL_Y); //assert(cIdx_y < total_cells);
+			unsigned cIdx_y       = cellIndex(bIdx, cur_str, POL_Y); //LOG_ASSERT(cIdx_y < total_cells);
 			fftwf_complex* y_base = getCellOdata(cIdx_y);
 			__v4sf* y             = (__v4sf*) y_base;
 
@@ -750,16 +744,16 @@ public:
 		// output stepping
 		unsigned fStep              = number_products;
 
-		assert(number_products == 4);
+		LOG_ASSERT(number_products == 4);
 
 		for (unsigned cur_str=0; cur_str<number_streams; cur_str++){
 			// where is x starting from?
-			unsigned cIdx_x       = cellIndex(bIdx, cur_str, POL_X); //assert(cIdx_x < total_cells);
+			unsigned cIdx_x       = cellIndex(bIdx, cur_str, POL_X); //LOG_ASSERT(cIdx_x < total_cells);
 			fftwf_complex* x_base = getCellOdata(cIdx_x);
 			__v4sf* x             = (__v4sf*) x_base;
 
 			// where is y starting from?
-			unsigned cIdx_y       = cellIndex(bIdx, cur_str, POL_Y); //assert(cIdx_y < total_cells);
+			unsigned cIdx_y       = cellIndex(bIdx, cur_str, POL_Y); //LOG_ASSERT(cIdx_y < total_cells);
 			fftwf_complex* y_base = getCellOdata(cIdx_y);
 			__v4sf* y             = (__v4sf*) y_base;
 
@@ -866,22 +860,22 @@ public:
 
 					#ifdef DEBUG_STOKES_IQUV
 					if (cur_int == 0){
-						assert(a_str[f_index_1 + i_index] == 0.0);
-						assert(a_str[f_index_1 + q_index] == 0.0);
-						assert(a_str[f_index_1 + u_index] == 0.0);
-						assert(a_str[f_index_1 + v_index] == 0.0);
-						assert(a_str[f_index_2 + i_index] == 0.0);
-						assert(a_str[f_index_2 + q_index] == 0.0);
-						assert(a_str[f_index_2 + u_index] == 0.0);
-						assert(a_str[f_index_2 + v_index] == 0.0);
-						assert(a_str[f_index_3 + i_index] == 0.0);
-						assert(a_str[f_index_3 + q_index] == 0.0);
-						assert(a_str[f_index_3 + u_index] == 0.0);
-						assert(a_str[f_index_3 + v_index] == 0.0);
-						assert(a_str[f_index_4 + i_index] == 0.0);
-						assert(a_str[f_index_4 + q_index] == 0.0);
-						assert(a_str[f_index_4 + u_index] == 0.0);
-						assert(a_str[f_index_4 + v_index] == 0.0);
+						LOG_ASSERT(a_str[f_index_1 + i_index] == 0.0);
+						LOG_ASSERT(a_str[f_index_1 + q_index] == 0.0);
+						LOG_ASSERT(a_str[f_index_1 + u_index] == 0.0);
+						LOG_ASSERT(a_str[f_index_1 + v_index] == 0.0);
+						LOG_ASSERT(a_str[f_index_2 + i_index] == 0.0);
+						LOG_ASSERT(a_str[f_index_2 + q_index] == 0.0);
+						LOG_ASSERT(a_str[f_index_2 + u_index] == 0.0);
+						LOG_ASSERT(a_str[f_index_2 + v_index] == 0.0);
+						LOG_ASSERT(a_str[f_index_3 + i_index] == 0.0);
+						LOG_ASSERT(a_str[f_index_3 + q_index] == 0.0);
+						LOG_ASSERT(a_str[f_index_3 + u_index] == 0.0);
+						LOG_ASSERT(a_str[f_index_3 + v_index] == 0.0);
+						LOG_ASSERT(a_str[f_index_4 + i_index] == 0.0);
+						LOG_ASSERT(a_str[f_index_4 + q_index] == 0.0);
+						LOG_ASSERT(a_str[f_index_4 + u_index] == 0.0);
+						LOG_ASSERT(a_str[f_index_4 + v_index] == 0.0);
 					}
 					#endif
 
@@ -934,16 +928,16 @@ public:
 			// output stepping
 			unsigned pStep              = number_products;
 
-			assert(number_products == 1);
+			LOG_ASSERT(number_products == 1);
 
 			for (unsigned cur_str=0; cur_str<number_streams; cur_str++){
 				// where is x starting from?
-				unsigned cIdx_x       = cellIndex(bIdx, cur_str, POL_X); //assert(cIdx_x < total_cells);
+				unsigned cIdx_x       = cellIndex(bIdx, cur_str, POL_X); //LOG_ASSERT(cIdx_x < total_cells);
 				fftwf_complex* x_base = getCellOdata(cIdx_x);
 				__v4sf* x             = (__v4sf*) x_base;
 
 				// where is y starting from?
-				unsigned cIdx_y       = cellIndex(bIdx, cur_str, POL_Y); //assert(cIdx_y < total_cells);
+				unsigned cIdx_y       = cellIndex(bIdx, cur_str, POL_Y); //LOG_ASSERT(cIdx_y < total_cells);
 				fftwf_complex* y_base = getCellOdata(cIdx_y);
 				__v4sf* y             = (__v4sf*) y_base;
 
@@ -1012,49 +1006,49 @@ public:
 
 
 	fftwf_complex* getCellIdata(unsigned cIdx){
-		assert(cIdx < total_cells);
+		LOG_ASSERT(cIdx < total_cells);
 		size_t c_data_index = cIdx * samples_per_cell;
 		return &idata[c_data_index];
 	}
 
 	fftwf_complex* getCellOdata(unsigned cIdx){
-		assert(cIdx < total_cells);
+		LOG_ASSERT(cIdx < total_cells);
 		size_t c_data_index = cIdx * samples_per_cell;
 		return &odata[c_data_index];
 	}
 
 
 	size_t* getCellFills(unsigned cIdx){
-		assert(cIdx < total_cells);
+		LOG_ASSERT(cIdx < total_cells);
 		return &fills[cIdx];
 	}
 
 	size_t* getCellSatCounts(unsigned cIdx){
-		assert(cIdx < total_cells);
+		LOG_ASSERT(cIdx < total_cells);
 		return &sat_counts[cIdx];
 	}
 
 
 	//clear input data area, fills, sat_counts, and optionally output data for the cell
 	void clearCellInput(unsigned cIdx){
-		assert(cIdx < total_cells);		size_t c_data_index = cIdx * samples_per_cell;
+		LOG_ASSERT(cIdx < total_cells);		size_t c_data_index = cIdx * samples_per_cell;
 		bzero((void*)&(idata[c_data_index]), samples_per_cell * sizeof(fftwf_complex));
 	}
 	// clear cell's oputput data
 	void clearCellOutput(unsigned cIdx){
-		assert(cIdx < total_cells);		size_t c_data_index = cIdx * samples_per_cell;
+		LOG_ASSERT(cIdx < total_cells);		size_t c_data_index = cIdx * samples_per_cell;
 		bzero((void*)&(odata[c_data_index]), samples_per_cell * sizeof(fftwf_complex));
 	}
 	void clearCellCounters(unsigned cIdx){
-		assert(cIdx < total_cells);		fills[cIdx]         = 0;
+		LOG_ASSERT(cIdx < total_cells);		fills[cIdx]         = 0;
 		sat_counts[cIdx]    = 0;
 	}
 
 	// compute cell linear index
 	inline size_t cellIndex(unsigned bIdx, unsigned sIdx, unsigned pIdx){
-		assert(bIdx < number_blocks);
-		assert(sIdx < number_streams);
-		assert(pIdx < number_cells);
+		LOG_ASSERT(bIdx < number_blocks);
+		LOG_ASSERT(sIdx < number_streams);
+		LOG_ASSERT(pIdx < number_cells);
 		return
 			(bIdx * number_streams * number_cells) +
 			(sIdx * number_cells) +
@@ -1152,12 +1146,12 @@ private:
 
 		for (unsigned cur_str=0; cur_str<number_streams; cur_str++){
 			// where is x starting from?
-			unsigned cIdx_x       = cellIndex(bIdx, cur_str, POL_X); //assert(cIdx_x < total_cells);
+			unsigned cIdx_x       = cellIndex(bIdx, cur_str, POL_X); //LOG_ASSERT(cIdx_x < total_cells);
 			fftwf_complex* x_base = getCellOdata(cIdx_x);
 			__v4sf* x             = (__v4sf*) &x_base[startFreq];
 
 			// where is y starting from?
-			unsigned cIdx_y       = cellIndex(bIdx, cur_str, POL_Y); //assert(cIdx_y < total_cells);
+			unsigned cIdx_y       = cellIndex(bIdx, cur_str, POL_Y); //LOG_ASSERT(cIdx_y < total_cells);
 			fftwf_complex* y_base = getCellOdata(cIdx_y);
 			__v4sf* y             = (__v4sf*) &y_base[startFreq];
 

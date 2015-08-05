@@ -65,10 +65,12 @@ public:
 	SubscriberThread(string name, TicketBuffer* buf):
 		GenericThread(name, PG_IO, 1),
 		QueuedSubscriber(name),
-		buf(buf){
+		buf(buf),
+		size(0),
+		framesize(0),
+		framesPerTicket(0){
 		}
 	virtual ~SubscriberThread(){
-
 	}
 
 	// to be implemented in derived classes

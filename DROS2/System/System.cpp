@@ -276,8 +276,7 @@ void  System::__run(){
 	//spectest();
 	bool done = false;
 	while (!done){
-
-		sleep(1);
+		usleep(100000);// ~10Hz
 		{
 			SERIALIZE_ACCESS();
 			__scanSystemState();

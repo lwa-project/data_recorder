@@ -28,7 +28,7 @@
 
 Software: MCS-DR Operating Software utility: Spectrogram Viewer Utility
 Author:    C.N. Wolfe
-Version:  DROS-2.0-Devel-27740
+Version:  DROS-2.0-Devel-31614
 Date:     
 
 Introduction

@@ -137,7 +137,7 @@ public:
 			case 20:  newFormat = DataFormat::getFormatByName("DRX_FILT_6"); return true; break;
 			case 10:  newFormat = DataFormat::getFormatByName("DRX_FILT_7"); return true; break;
 			default:
-				if (Time::compare(Time::addTime(lastErrorLogged, 5000), Time::now()) <=0){
+				if (Time::compareTimestamps(Time::addTime(lastErrorLogged, 5000), Time::now()) <=0){
 					lastErrorLogged = Time::now();
 					LOGC(L_FATAL, "[Receiver] Bad DRX Decimation factor: " + LXS(decFactor) + " {"+LXS(errCount)+" previous occurrences}", FATAL_COLORS );
 					errCount = 0;

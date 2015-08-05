@@ -20,7 +20,6 @@ RM := rm -rf
 -include Common/subdir.mk
 -include Buffers/subdir.mk
 -include Actors/subdir.mk
--include API/subdir.mk
 -include subdir.mk
 -include objects.mk
 
