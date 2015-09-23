@@ -55,6 +55,9 @@ install: backup_config
 		$(FILES)/installStartupScript.sh \
 		$(FILES)/uninstallStartupScript.sh \
 		$(FILES)/StartDROS.sh \
+		$(FILES)/MultipartPostHandler.py \
+		$(FILES)/uploadLogfile.py \
+		$(FILES)/uploadLogfile.sh \
 		$(WORKSPACE)/DROS2-Spectrometer/Scripts/StorageControl.sh
 	@if [ -f "/BACKUP.defaults_v2.cfg" ]; then echo "Restoring current configuration..."; cp /BACKUP.defaults_v2.cfg $(INSTALL_LOCATION)/config/defaults_v2.cfg; fi
 	@echo 
