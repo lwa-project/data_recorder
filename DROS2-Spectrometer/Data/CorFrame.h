@@ -92,7 +92,7 @@ typedef CorFrame	PackedCorFrame;
 
 typedef struct __UnpackedCorFrame{
 	CorFrameHeader  header;
-	UnpackedSample  samples[COR_SAMPLES_PER_FRAME];
+	UnpackedSample64  samples[COR_SAMPLES_PER_FRAME];
 } __attribute__((packed)) UnpackedCorFrame;
 
 

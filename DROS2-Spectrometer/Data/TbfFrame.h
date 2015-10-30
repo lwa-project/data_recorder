@@ -82,7 +82,6 @@ typedef struct __TbfFrameHeader{
 typedef struct __TbfFrame{
 	TbfFrameHeader  header;
 	PackedSample4   samples[TBF_SAMPLES_PER_FRAME];
-	};
 } __attribute__((packed)) TbfFrame;
 // alias to the above
 typedef TbfFrame	PackedTbfFrame;

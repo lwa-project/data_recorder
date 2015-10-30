@@ -349,7 +349,7 @@ public:
 					case TBF_FRAME_SIZE:
 						tt = __builtin_bswap64(*((size_t*)(&((TbfFrame*)t->iovs[cnt-1].iov_base)->header.timeTag)));
 					case COR_FRAME_SIZE:
-						tt = _builtin_bswap64(*((size_t*)(&((CorFrame*)t->iovs[cnt-1].iov_base)->header.timeTag)));
+						tt = __builtin_bswap64(*((size_t*)(&((CorFrame*)t->iovs[cnt-1].iov_base)->header.timeTag)));
 					default : break;
 				}
 				if (tt!=0){
@@ -370,7 +370,7 @@ public:
 						if (newDrxDecFactor != currentDrxDecFactor){
 							drxRateChange=true;
 						}
-						isADP = ((DrxFrame*) t->frames[j])->header.id.drx_is_adp;
+						isADP = ((DrxFrame*) t->frames[j])->header.drx_is_adp;
 					}
 					if ((size_t) t->mhdrs[j].msg_len != fsize){
 						lookMore=true;
@@ -512,7 +512,8 @@ public:
 					case DRX_FRAME_SIZE:
 						// changed to DRX
 						f = (DrxFrame*) t->frames[last_seen];
-						if (!setNewFmtDrx(bswap16(f->header.decFactor))){
+						isADP = ((DrxFrame*) f)->header.drx_is_adp;
+						if (!setNewFmtDrx(bswap16(f->header.decFactor), isADP)){
 							CANCEL_TICKET();
 							RESUME_RECEPTION();
 							/* CONTINUE_WITH_TICKET(); */
