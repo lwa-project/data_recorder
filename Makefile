@@ -25,7 +25,6 @@ all:
 	make -j 6 -C $(WORKSPACE)/DataSource_v2/Debug
 	make -j 6 -C $(WORKSPACE)/DROS2-LiveBuffer/Debug
 	make -j 6 -C $(WORKSPACE)/DROS2-Spectrometer/Debug
-	make -j 6 -C $(WORKSPACE)/SpectrogramViewerOld/Release
 	make -j 6 -C $(WORKSPACE)/SpectrogramViewer/Release
 
 backup_config:
@@ -46,7 +45,6 @@ install: backup_config
 		$(WORKSPACE)/DataSource_v2/Debug/DataSource_v2 \
 		$(WORKSPACE)/DROS2-LiveBuffer/Debug/DROS2-LiveBuffer \
 		$(WORKSPACE)/DROS2-Spectrometer/Debug/DROS2-Spectrometer \
-		$(WORKSPACE)/SpectrogramViewerOld/Release/SpectrogramViewerOld \
 		$(WORKSPACE)/SpectrogramViewer/Release/SpectrogramViewer 
 	install -b -g root -o root -m 644 -t $(INSTALL_LOCATION)/config \
 		$(FILES)/defaults_v2.cfg.example \
@@ -86,7 +84,6 @@ clean:
 	make -C $(WORKSPACE)/DataSource_v2/Debug clean
 	make -C $(WORKSPACE)/DROS2-Spectrometer/Debug clean
 	make -C $(WORKSPACE)/DROS2-LiveBuffer/Debug clean
-	make -C $(WORKSPACE)/SpectrogramViewerOld/Release clean
 	make -C $(WORKSPACE)/SpectrogramViewer/Release clean
 
 
