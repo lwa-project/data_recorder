@@ -47,71 +47,64 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef COMPLEX_H_
-#define COMPLEX_H_
+#ifndef CORFRAME_H_
+#define CORFRAME_H_
 
 #ifdef __cplusplus
 extern "C"{
 #endif
-#include <stdint.h>
+
+#define COR_SAMPLES_PER_FRAME 576
+
+#define Fs_Day (196l* 1000000l * 60l *60l * 24l) /*16934400000000l*/
+
 #include <fftw3.h>
+#include <stdint.h>
+#include "Complex.h"
 
-// define the type of datums (float)
-typedef fftwf_complex 	 ComplexType;
-typedef float			 RealType;
-typedef union __PackedSample4{
-	struct {
-		int8_t q:4;
-		int8_t i:4;
-	};
-	struct {
-		int8_t im:4;
-		int8_t re:4;
-	};
-	uint8_t packed;
-}__attribute__((packed)) PackedSample4;
 
-typedef union __PackedSample8{
-	struct {
-		int8_t q;
-		int8_t i;
+typedef struct __CorFrameHeader{
+	uint32_t syncCode;
+	union {
+		uint8_t  id;
+		uint32_t frameCount;
 	};
-	struct {
-		int8_t im;
-		int8_t re;
+	uint32_t secondsCount;
+	union {
+		uint16_t freq_chan;
+		uint16_t cor_gain;
 	};
-	uint16_t packed;
-}__attribute__((packed)) PackedSample8;
+	uint64_t timeTag;
+	uint32_t cor_navg;
+	union {
+		uint16_t stand_i;
+		uint16_t stand_j;
+	};
+}__attribute__((packed)) CorFrameHeader;
 
-typedef union __PackedSample64{
-	struct {
-		int32_t weight:22;
-		int32_t q:21;
-		int32_t i:21;
-	}
-	struct {
-		int32_t weight:22;
-		int32_t im:21;
-		int32_t re:21;
-	}
-	uint64_t packed;
-}__attribute__((packed)) PackedSample64;
+// COR frame as received
+typedef struct __CorFrame{
+	CorFrameHeader  header;
+	PackedSample64   samples[COR_SAMPLES_PER_FRAME];
+} __attribute__((packed)) CorFrame;
+// alias to the above
+typedef CorFrame	PackedCorFrame;
 
-// define union type for an unpacked sample
-typedef union __UnpackedSample{
-	struct {
-		RealType i;
-		RealType q;
-	};
-	struct {
-		RealType re;
-		RealType im;
-	};
-	ComplexType packed;
-}__attribute__((packed)) UnpackedSample;
+typedef struct __UnpackedCorFrame{
+	CorFrameHeader  header;
+	UnpackedSample  samples[COR_SAMPLES_PER_FRAME];
+} __attribute__((packed)) UnpackedCorFrame;
+
+
+#define COR_FRAME_SIZE (sizeof(CorFrame))
+#define COR_TUNINGS            	2l
+#define COR_POLARIZATIONS     	2l
+#define COR_STREAMS            	(COR_TUNINGS*COR_POLARIZATIONS)
+
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* COMPLEX_H_ */
+
+#endif /* CORFRAME_H_ */

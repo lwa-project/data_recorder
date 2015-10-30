@@ -51,9 +51,14 @@
 #ifndef LWADATAFORMATS_H_
 #define LWADATAFORMATS_H_
 
+// Classic DP
 #include "TbnFrame.h"
 #include "TbwFrame.h"
 #include "DrxFrame.h"
 
+// ADP
+#include "TbfFrame.h"
+#include "CorFrame.h"
+#include "Drx8Frame.h"
 
 #endif /* LWADATAFORMATS_H_ */

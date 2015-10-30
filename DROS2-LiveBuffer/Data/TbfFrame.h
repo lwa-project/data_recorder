@@ -47,71 +47,61 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef COMPLEX_H_
-#define COMPLEX_H_
+
+
+#ifndef TBFFRAME_H_
+#define TBFFRAME_H_
+
 
 #ifdef __cplusplus
 extern "C"{
 #endif
-#include <stdint.h>
+
+#define TBF_SAMPLES_PER_FRAME 6144
+
+#define Fs_Day (196l* 1000000l * 60l *60l * 24l) /*16934400000000l*/
+
 #include <fftw3.h>
+#include <stdint.h>
+#include "Complex.h"
 
-// define the type of datums (float)
-typedef fftwf_complex 	 ComplexType;
-typedef float			 RealType;
-typedef union __PackedSample4{
-	struct {
-		int8_t q:4;
-		int8_t i:4;
-	};
-	struct {
-		int8_t im:4;
-		int8_t re:4;
-	};
-	uint8_t packed;
-}__attribute__((packed)) PackedSample4;
 
-typedef union __PackedSample8{
-	struct {
-		int8_t q;
-		int8_t i;
+typedef struct __TbfFrameHeader{
+	uint32_t syncCode;
+	union {
+		uint8_t  id;
+		uint32_t frameCount;
 	};
-	struct {
-		int8_t im;
-		int8_t re;
-	};
-	uint16_t packed;
-}__attribute__((packed)) PackedSample8;
+	uint32_t secondsCount;
+	uint16_t freq_chan;
+	uint16_t unassigned;
+	uint64_t timeTag;
+}__attribute__((packed)) TbfFrameHeader;
 
-typedef union __PackedSample64{
-	struct {
-		int32_t weight:22;
-		int32_t q:21;
-		int32_t i:21;
-	}
-	struct {
-		int32_t weight:22;
-		int32_t im:21;
-		int32_t re:21;
-	}
-	uint64_t packed;
-}__attribute__((packed)) PackedSample64;
+// TBF frame as received
+typedef struct __TbfFrame{
+	TbfFrameHeader  header;
+	PackedSample4   samples[TBF_SAMPLES_PER_FRAME];
+	};
+} __attribute__((packed)) TbfFrame;
+// alias to the above
+typedef TbfFrame	PackedTbfFrame;
 
-// define union type for an unpacked sample
-typedef union __UnpackedSample{
-	struct {
-		RealType i;
-		RealType q;
-	};
-	struct {
-		RealType re;
-		RealType im;
-	};
-	ComplexType packed;
-}__attribute__((packed)) UnpackedSample;
+typedef struct __UnpackedTbfFrame{
+	TbfFrameHeader  header;
+	UnpackedSample  samples[TBF_SAMPLES_PER_FRAME];
+} __attribute__((packed)) UnpackedTbfFrame4;
+
+
+#define TBF_FRAME_SIZE (sizeof(TbfFrame))
+#define TBF_TUNINGS            	2l
+#define TBF_POLARIZATIONS     	2l
+#define TBF_STREAMS            	(TBF_TUNINGS*TBF_POLARIZATIONS)
+
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* COMPLEX_H_ */
+
+#endif /* TBFFRAME_H_ */

@@ -83,6 +83,19 @@ typedef union __PackedSample8{
 	uint16_t packed;
 }__attribute__((packed)) PackedSample8;
 
+typedef union __PackedSample64{
+	struct {
+		int32_t weight:22;
+		int32_t q:21;
+		int32_t i:21;
+	}
+	struct {
+		int32_t weight:22;
+		int32_t im:21;
+		int32_t re:21;
+	}
+	uint64_t packed;
+}__attribute__((packed)) PackedSample64;
 
 // define union type for an unpacked sample
 typedef union __UnpackedSample{

@@ -70,7 +70,7 @@ typedef struct __DrxFrameHeader{
 			struct {
 				uint8_t drx_beam:3;
 				uint8_t drx_tuning:3;
-				uint8_t drx_ignored:1;
+				uint8_t drx_is_adp:1;
 				uint8_t drx_polarization:1;
 			};
 		};
@@ -118,7 +118,8 @@ const uint64_t DrxSampleRates[] = {
 	 2000000lu,
 	 4900000lu,
 	 9800000lu,
-	19600000lu
+	19600000lu,
+	39200000lu,
 };
 
 const uint64_t DrxDecFactors[] = {
@@ -128,7 +129,8 @@ const uint64_t DrxDecFactors[] = {
 	 98lu,
 	 40lu,
 	 20lu,
-	 10lu
+	 10lu,
+	  5lu
 };
 
 const uint64_t DrxTimeTagSteps[] = {
@@ -138,7 +140,8 @@ const uint64_t DrxTimeTagSteps[] = {
 		DRX_SAMPLES_PER_FRAME *  98lu,
 		DRX_SAMPLES_PER_FRAME *  40lu,
 		DRX_SAMPLES_PER_FRAME *  20lu,
-		DRX_SAMPLES_PER_FRAME *  10lu
+		DRX_SAMPLES_PER_FRAME *  10lu,
+		DRX_SAMPLES_PER_FRAME *   5lu
 };
 const uint64_t DrxDataRates[] = {
 		((  250000lu * DRX_STREAMS * DRX_FRAME_SIZE) / DRX_SAMPLES_PER_FRAME),
@@ -147,7 +150,8 @@ const uint64_t DrxDataRates[] = {
 		(( 2000000lu * DRX_STREAMS * DRX_FRAME_SIZE) / DRX_SAMPLES_PER_FRAME),
 		(( 4900000lu * DRX_STREAMS * DRX_FRAME_SIZE) / DRX_SAMPLES_PER_FRAME),
 		(( 9800000lu * DRX_STREAMS * DRX_FRAME_SIZE) / DRX_SAMPLES_PER_FRAME),
-		((19600000lu * DRX_STREAMS * DRX_FRAME_SIZE) / DRX_SAMPLES_PER_FRAME)
+		((19600000lu * DRX_STREAMS * DRX_FRAME_SIZE) / DRX_SAMPLES_PER_FRAME),
+		((39200000lu * DRX_STREAMS * DRX_FRAME_SIZE) / DRX_SAMPLES_PER_FRAME),
 };
 const double DrxTimeSteps[] = {
 		1.0f /  250000.0f,
@@ -156,7 +160,8 @@ const double DrxTimeSteps[] = {
 		1.0f / 2000000.0f,
 		1.0f / 4900000.0f,
 		1.0f / 9800000.0f,
-		1.0f /19600000.0f
+		1.0f /19600000.0f,
+		1.0f /39200000.0f
 };
 
 

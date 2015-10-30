@@ -80,7 +80,7 @@
 	t = NULL
 
 #define CANCEL_TICKET() 	\
-	t->returnEmpty();   	\
+	t->returnEmpty();   \
 	t=NULL
 
 #define RESUME_RECEPTION()	\
@@ -88,8 +88,8 @@
 
 #define ABORT_RECEPTION()	\
 	buf->uninit();			\
-	finalize();				\
-	_done=true;				\
+	finalize();			\
+	_done=true;			\
 	return
 
 
@@ -149,26 +149,49 @@ public:
 
 	}
 
-	bool setNewFmtDrx(int decFactor){
+	bool setNewFmtDrx(int decFactor, int isADP){
 		static TimeStamp lastErrorLogged = Time::now();
 		static size_t errCount = 0;
-		switch(decFactor){
-			case 784: newFormat = DataFormat::getFormatByName("DRX_FILT_1"); return true; break;
-			case 392: newFormat = DataFormat::getFormatByName("DRX_FILT_2"); return true; break;
-			case 196: newFormat = DataFormat::getFormatByName("DRX_FILT_3"); return true; break;
-			case 98:  newFormat = DataFormat::getFormatByName("DRX_FILT_4"); return true; break;
-			case 40:  newFormat = DataFormat::getFormatByName("DRX_FILT_5"); return true; break;
-			case 20:  newFormat = DataFormat::getFormatByName("DRX_FILT_6"); return true; break;
-			case 10:  newFormat = DataFormat::getFormatByName("DRX_FILT_7"); return true; break;
-			default:
-				if (Time::compareTimestamps(Time::addTime(lastErrorLogged, 5000), Time::now()) <=0){
-					lastErrorLogged = Time::now();
-					LOGC(L_FATAL, "[Receiver] Bad DRX Decimation factor: " + LXS(decFactor) + " {"+LXS(errCount)+" previous occurrences}", FATAL_COLORS );
-					errCount = 0;
-				} else {
-					errCount++;
-				}
-				break;
+		if( isADP ) {
+			switch(decFactor){
+				case 784: newFormat = DataFormat::getFormatByName("DRX8_FILT_1"); return true; break;
+				case 392: newFormat = DataFormat::getFormatByName("DRX8_FILT_2"); return true; break;
+				case 196: newFormat = DataFormat::getFormatByName("DRX8_FILT_3"); return true; break;
+				case 98:  newFormat = DataFormat::getFormatByName("DRX8_FILT_4"); return true; break;
+				case 40:  newFormat = DataFormat::getFormatByName("DRX8_FILT_5"); return true; break;
+				case 20:  newFormat = DataFormat::getFormatByName("DRX8_FILT_6"); return true; break;
+				case 10:  newFormat = DataFormat::getFormatByName("DRX8_FILT_7"); return true; break;
+				case 5:   newFormat = DataFormat::getFormatByName("DRX8_FILT_8"); return true; break;
+				default:
+					if (Time::compareTimestamps(Time::addTime(lastErrorLogged, 5000), Time::now()) <=0){
+						lastErrorLogged = Time::now();
+						LOGC(L_FATAL, "[Receiver] Bad DRX8 Decimation factor: " + LXS(decFactor) + " {"+LXS(errCount)+" previous occurrences}", FATAL_COLORS );
+						errCount = 0;
+					} else {
+						errCount++;
+					}
+					break;
+			}
+		} else {
+			switch(decFactor){
+				case 784: newFormat = DataFormat::getFormatByName("DRX_FILT_1"); return true; break;
+				case 392: newFormat = DataFormat::getFormatByName("DRX_FILT_2"); return true; break;
+				case 196: newFormat = DataFormat::getFormatByName("DRX_FILT_3"); return true; break;
+				case 98:  newFormat = DataFormat::getFormatByName("DRX_FILT_4"); return true; break;
+				case 40:  newFormat = DataFormat::getFormatByName("DRX_FILT_5"); return true; break;
+				case 20:  newFormat = DataFormat::getFormatByName("DRX_FILT_6"); return true; break;
+				case 10:  newFormat = DataFormat::getFormatByName("DRX_FILT_7"); return true; break;
+				case 5:   newFormat = DataFormat::getFormatByName("DRX_FILT_8"); return true; break;
+				default:
+					if (Time::compareTimestamps(Time::addTime(lastErrorLogged, 5000), Time::now()) <=0){
+						lastErrorLogged = Time::now();
+						LOGC(L_FATAL, "[Receiver] Bad DRX Decimation factor: " + LXS(decFactor) + " {"+LXS(errCount)+" previous occurrences}", FATAL_COLORS );
+						errCount = 0;
+					} else {
+						errCount++;
+					}
+					break;
+			}
 		}
 		newFormat = DataFormat::getFormatByName("DEFAULT_DRX");
 		return true;
@@ -305,6 +328,7 @@ public:
 				bool   drxRateChange = false;
 				size_t cnt           = (size_t) res;
 				uint16_t newDrxDecFactor;
+				uint8_t isADP;
 				for (size_t c=0; c<(size_t)res; c++){
 					bytesReceived += t->mhdrs[c].msg_len;
 				}
@@ -322,6 +346,10 @@ public:
 					case TBW_FRAME_SIZE:
 						tt = __builtin_bswap64(*((size_t*)(&((TbwFrame*)t->iovs[cnt-1].iov_base)->header.timeTag)));
 						break;
+					case TBF_FRAME_SIZE:
+						tt = __builtin_bswap64(*((size_t*)(&((TbfFrame*)t->iovs[cnt-1].iov_base)->header.timeTag)));
+					case COR_FRAME_SIZE:
+						tt = _builtin_bswap64(*((size_t*)(&((CorFrame*)t->iovs[cnt-1].iov_base)->header.timeTag)));
 					default : break;
 				}
 				if (tt!=0){
@@ -342,17 +370,17 @@ public:
 						if (newDrxDecFactor != currentDrxDecFactor){
 							drxRateChange=true;
 						}
+						isADP = ((DrxFrame*) t->frames[j])->header.id.drx_is_adp;
 					}
 					if ((size_t) t->mhdrs[j].msg_len != fsize){
 						lookMore=true;
 						break;
 					}
-
 				}
 
 				// check in case drx rate changed
 				if ((fsize == DRX_FRAME_SIZE) && drxRateChange && !lookMore){
-					if (!setNewFmtDrx(newDrxDecFactor)){
+					if (!setNewFmtDrx(newDrxDecFactor, isADP)){
 						CANCEL_TICKET();
 						RESUME_RECEPTION();
 						/* CONTINUE_WITH_TICKET(); */
@@ -369,13 +397,15 @@ public:
 #define IDX_EMPTY   1
 #define IDX_TBN     2
 #define IDX_TBW     3
-#define IDX_DRX     4
-#define IDX_ODDBALL 5
+#define IDX_TBF     4
+#define IDX_COR     5
+#define IDX_DRX     6
+#define IDX_ODDBALL 7
 
 				// some count variables for deeper inspection
-				size_t n[6]    = {0,0,0,0,0,0};         // in order : error, empty, tbn, tbw, drx, odd
-				size_t last[6] = {0,0,0,0,0,0};         // in order : error, empty, tbn, tbw, drx, odd
-				int    sz[6]   = {0,-1,TBN_FRAME_SIZE,TBW_FRAME_SIZE,DRX_FRAME_SIZE,-2}; // in order : error, empty, tbn, tbw, drx, odd
+				size_t n[8]    = {0,0,0,0,0,0,0,0};         // in order : error, empty, tbn, tbw, tbf, cor, drx, odd
+				size_t last[8] = {0,0,0,0,0,0,0,0};         // in order : error, empty, tbn, tbw, tbf, cor, drx, odd
+				int    sz[8]   = {0,-1,TBN_FRAME_SIZE,TBW_FRAME_SIZE,TBF_FRAME_SIZE,COR_FRAME_SIZE,DRX_FRAME_SIZE,-2}; // in order : error, empty, tbn, tbw, tbf, cor, drx, odd
 				size_t curIdx;
 				// count packet sizes
 				for (size_t j=0; j<(size_t) res; j++){
@@ -384,6 +414,8 @@ public:
 						case    0:           n[IDX_EMPTY]++;   last[IDX_EMPTY]=j; break;
 						case TBN_FRAME_SIZE: n[IDX_TBN]++;     last[IDX_TBN]=j; break;
 						case TBW_FRAME_SIZE: n[IDX_TBW]++;     last[IDX_TBW]=j; break;
+						case TBF_FRAME_SIZE: n[IDX_TBF]++;     last[IDX_TBF]=j; break;
+						case COR_FRAME_SIZE: n[IDX_COR]++;     last[IDX_COR]=j; break;
 						case DRX_FRAME_SIZE: n[IDX_DRX]++;     last[IDX_DRX]=j; break;
 						default:
 							LOGC(L_DEBUG, "Bad size: " + LXS(t->mhdrs[j].msg_len), TRACE_COLORS);
@@ -395,6 +427,8 @@ public:
 					case    0:           curIdx = IDX_EMPTY;   break;
 					case TBN_FRAME_SIZE: curIdx = IDX_TBN;     break;
 					case TBW_FRAME_SIZE: curIdx = IDX_TBW;     break;
+					case TBF_FRAME_SIZE: curIdx = IDX_TBF;     break;
+					case COR_FRAME_SIZE: curIdx = IDX_COR;     break;
 					case DRX_FRAME_SIZE: curIdx = IDX_DRX;     break;
 					default:             curIdx = IDX_ODDBALL; break;
 				}
@@ -413,7 +447,7 @@ public:
 					}
 				}
 
-				// check that one of the 6 cases was a clear winner
+				// check that one of the 8 cases was a clear winner
 				if (new_frame_size == -3){
 					LOGC(L_FATAL, "[Receiver] Program error: lookmore triggerred, but no clear change.", FATAL_COLORS );
 					LOGC(L_FATAL, "[Receiver] n    " + LXS((size_t) res), FATAL_COLORS );
@@ -423,6 +457,8 @@ public:
 					LOGC(L_FATAL, "[Receiver] n[3] " + LXS(n[3]), FATAL_COLORS );
 					LOGC(L_FATAL, "[Receiver] n[4] " + LXS(n[4]), FATAL_COLORS );
 					LOGC(L_FATAL, "[Receiver] n[5] " + LXS(n[5]), FATAL_COLORS );
+					LOGC(L_FATAL, "[Receiver] n[6] " + LXS(n[6]), FATAL_COLORS );
+					LOGC(L_FATAL, "[Receiver] n[7] " + LXS(n[7]), FATAL_COLORS );
 					CANCEL_TICKET();
 					RESUME_RECEPTION();
 					/* CONTINUE_WITH_TICKET(); */
@@ -464,6 +500,14 @@ public:
 					case TBW_FRAME_SIZE:
 						// changed to TBW
 						newFormat = DataFormat::getFormatByName("DEFAULT_TBW");
+						break;
+					case TBF_FRAME_SIZE:
+						// changed to TBF
+						newFormat = DataFormat::getFormatByName("DEFAULT_TBF");
+						break;
+					case COR_FRAME_SIZE:
+						// changed to COR
+						newFormat = DataFormat::getFormatByName("DEFAULT_COR");
 						break;
 					case DRX_FRAME_SIZE:
 						// changed to DRX
