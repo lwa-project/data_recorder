@@ -1,13 +1,13 @@
 /*
- * DrxFrameGenerator.h
+ * Drx8FrameGenerator.h
  *
- *  Created on: Jan 29, 2012
- *      Author: chwolfe2
+ *  Created on: Oct 20, 2015
+ *      Author: J. Dowell
  */
 
-#ifndef DRXFRAMEGENERATOR_H_
-#define DRXFRAMEGENERATOR_H_
-#include "DrxFrame.h"
+#ifndef DRX8FRAMEGENERATOR_H_
+#define DRX8FRAMEGENERATOR_H_
+#include "Drx8Frame.h"
 #include <stdint.h>
 #include <iostream>
 #include <cstring>
@@ -20,12 +20,12 @@
 #include "../Signals/ChirpGenerator.h"
 using namespace std;
 
-class DrxFrameGenerator {
+class Drx8FrameGenerator {
 public:
-	static void fixByteOrder(DrxFrame* frame);
-	static void unfixByteOrder(DrxFrame* frame);
+	static void fixByteOrder(Drx8Frame* frame);
+	static void unfixByteOrder(Drx8Frame* frame);
 	static double getFrequency(uint64_t fs, uint32_t freqCode);
-	DrxFrameGenerator(
+	Drx8FrameGenerator(
 			bool     _bitPattern,
 			bool     _correlatorTest,
 			bool	 _useComplex,
@@ -40,13 +40,13 @@ public:
      		SignalGenerator* _sig1
 	);
 	void generate();
-	DrxFrame * next();
+	Drx8Frame * next();
 	void resetTimeTag(uint64_t start);
 
-	virtual ~DrxFrameGenerator();
+	virtual ~Drx8FrameGenerator();
 private:
-	DrxFrame*			frames[DRX_TUNINGS];
-	UnpackedSample 		samples[DRX_SAMPLES_PER_FRAME];
+	Drx8Frame*			frames[DRX8_TUNINGS];
+	UnpackedSample 		samples[DRX8_SAMPLES_PER_FRAME];
 	bool     bitPattern;
 	bool     correlatorTest;
 	bool	 useComplex;
@@ -57,11 +57,11 @@ private:
 	uint32_t statusFlags;
 	uint32_t freqCode0;
 	uint32_t freqCode1;
-	SignalGenerator* sig[DRX_TUNINGS];
+	SignalGenerator* sig[DRX8_TUNINGS];
 	uint64_t			curFrame;
 	uint64_t			start;
-	void __pack(UnpackedSample* u, PackedSample4* p);
-	void __printFrame(DrxFrame* f, bool compact=false, bool single=false);
+	void __pack(UnpackedSample* u, PackedSample8* p);
+	void __printFrame(Drx8Frame* f, bool compact=false, bool single=false);
 };
 
-#endif /* DRXFRAMEGENERATOR_H_ */
+#endif /* DRX8FRAMEGENERATOR_H_ */

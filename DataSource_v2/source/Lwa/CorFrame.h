@@ -47,14 +47,14 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef TBNFRAME_H_
-#define TBNFRAME_H_
+#ifndef CORFRAME_H_
+#define CORFRAME_H_
 
 #ifdef __cplusplus
 extern "C"{
 #endif
 
-#define TBN_SAMPLES_PER_FRAME 512
+#define COR_SAMPLES_PER_FRAME 576
 
 #define Fs_Day (196l* 1000000l * 60l *60l * 24l) /*16934400000000l*/
 
@@ -63,7 +63,7 @@ extern "C"{
 #include "../Signals/Complex.h"
 
 
-typedef struct __TbnFrameHeader{
+typedef struct __CorFrameHeader{
 	uint32_t syncCode;
 	union {
 		uint8_t  id;
@@ -71,109 +71,35 @@ typedef struct __TbnFrameHeader{
 	};
 	uint32_t secondsCount;
 	union {
-		struct {
-			uint16_t tbn_tbn_bit_n:1;    // 0-> tbn, 1-> not tbn
-			uint16_t tbn_stand_pol:15;   // 1..519 -> (1->260, X..Y)
-		};
-		uint16_t tbn_id;
+		uint16_t freq_chan;
+		uint16_t cor_gain;
 	};
-	uint16_t unassigned;
 	uint64_t timeTag;
-}__attribute__((packed)) TbnFrameHeader;
+	uint32_t cor_navg;
+	union {
+		uint16_t stand_i;
+		uint16_t stand_j;
+	};
+}__attribute__((packed)) CorFrameHeader;
 
-// TBN frame as received
-typedef struct __TbnFrame{
-	TbnFrameHeader  header;
-	PackedSample8   samples[TBN_SAMPLES_PER_FRAME];
-} __attribute__((packed)) TbnFrame;
+// COR frame as received
+typedef struct __CorFrame{
+	CorFrameHeader  header;
+	PackedSample64   samples[COR_SAMPLES_PER_FRAME];
+} __attribute__((packed)) CorFrame;
 // alias to the above
-typedef TbnFrame	PackedTbnFrame;
+typedef CorFrame	PackedCorFrame;
 
-typedef struct __UnpackedTbnFrame{
-	TbnFrameHeader  header;
-	UnpackedSample  samples[TBN_SAMPLES_PER_FRAME];
-} __attribute__((packed)) UnpackedTbnFrame;
-
-#define TBN_FRAME_SIZE (sizeof(TbnFrame))
+typedef struct __UnpackedCorFrame{
+	CorFrameHeader  header;
+	UnpackedSample64  samples[COR_SAMPLES_PER_FRAME];
+} __attribute__((packed)) UnpackedCorFrame;
 
 
-#define TBN_TUNINGS            	2l
-#define TBN_POLARIZATIONS     	2l
-#define TBN_STREAMS            	(TBN_TUNINGS*TBN_POLARIZATIONS)
-
-
-const uint64_t TbnSampleRates[] = {
-	   1000lu,
-	   3125lu,
-	   6250lu,
-	  12500lu,
-	  25000lu,
-	  50000lu,
-	 100000lu,
-	 200000lu,
-	 400000lu,
-	 800000lu,
-	1600000lu
-};
-const uint64_t TbnDecFactors[] = {
-	196000lu,
-	 62720lu,
-	 31360lu,
-	 15680lu,
-	  7840lu,
-	  3920lu,
-	  1960lu,
-	   980lu,
-	   460lu,
-	   245lu,
-	   122lu
-};
-const uint64_t TbnTimeTagSteps[] = {
-	100352000lu,
-	 32112640lu,
-	 16056320lu,
-	  8028160lu,
-	  4014080lu,
-	  2007040lu,
-	  1003520lu,
-	   501760lu,
-	   250880lu,
-	   125440lu,
-	    62720lu
-};
-const uint64_t TbnDataRates[] = {
-	   1064375lu,
-	   3326172lu,
-	   6652344lu,
-	  13304688lu,
-	  26609375lu,
-	  53218750lu,
-	 106437500lu,
-	 212875000lu,
-	 425750000lu,
-	 851500000lu,
-	1703000000lu
-};
-const double TbnTimeSteps[] = {
-	1.0f /   1000.0l,
-	1.0f /   3125.0l,
-	1.0f /   6250.0l,
-	1.0f /  12500.0l,
-	1.0f /  25000.0l,
-	1.0f /  50000.0l,
-	1.0f / 100000.0l,
-	1.0f / 200000.0l,
-	1.0f / 400000.0l,
-	1.0f / 800000.0l,
-	1.0f /1600000.0l
-};
-
-
-
-
-
-
-
+#define COR_FRAME_SIZE (sizeof(CorFrame))
+#define COR_TUNINGS            	2l
+#define COR_POLARIZATIONS     	2l
+#define COR_STREAMS            	(COR_TUNINGS*COR_POLARIZATIONS)
 
 
 #ifdef __cplusplus
@@ -181,4 +107,4 @@ const double TbnTimeSteps[] = {
 #endif
 
 
-#endif /* TBNFRAME_H_ */
+#endif /* CORFRAME_H_ */
