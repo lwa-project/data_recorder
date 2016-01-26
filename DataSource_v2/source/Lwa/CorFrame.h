@@ -70,16 +70,12 @@ typedef struct __CorFrameHeader{
 		uint32_t frameCount;
 	};
 	uint32_t secondsCount;
-	union {
-		uint16_t freq_chan;
-		uint16_t cor_gain;
-	};
+	uint16_t freq_chan;
+	uint16_t cor_gain;
 	uint64_t timeTag;
 	uint32_t cor_navg;
-	union {
-		uint16_t stand_i;
-		uint16_t stand_j;
-	};
+	uint16_t stand_i;
+	uint16_t stand_j;
 }__attribute__((packed)) CorFrameHeader;
 
 // COR frame as received

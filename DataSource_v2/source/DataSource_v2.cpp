@@ -33,6 +33,7 @@
 #include "Lwa/TbwFrameGenerator.h"
 #include "Lwa/Drx8FrameGenerator.hpp"
 #include "Lwa/TbfFrameGenerator.h"
+#include "Lwa/CorFrameGenerator.h"
 #include "Signals/TestPatternGenerator.h"
 
 using namespace std;
@@ -533,6 +534,12 @@ int main(int argc, char * argv[]){
 				cout << "Error: failed to allocate Tbf Frame Generator.\n";
 			}
 			break;
+		case COR:
+			fg = (void*) new CorFrameGenerator(bitPattern, correlatorTest, useComplex, N, tp[0]);
+			if (!fg){
+				cout << "Error: failed to allocate Cor Frame Generator.\n";
+			}
+			break;
 		case RAW:
 			ptr = new char [DataSize] ;
 			if (!ptr){
@@ -583,6 +590,9 @@ int main(int argc, char * argv[]){
 				break;
 			case TBF:
 				((TbfFrameGenerator*)fg)->resetTimeTag(TimeKeeper::getTT());
+				break;
+			case COR:
+				((CorFrameGenerator*)fg)->resetTimeTag(TimeKeeper::getTT());
 				break;
 			case RAW:
 				break;
@@ -653,6 +663,16 @@ int main(int argc, char * argv[]){
 			lastTimeTag = __builtin_bswap64(f_tbf->header.timeTag);
 			bs = mySocket.send((char*)f_tbf,sizeof(TbfFrame));
 			if (bs!=sizeof(TbfFrame)){
+				cout << "Error in send.\n";
+				return -1;
+			}
+			totalSent+=bs;
+			break;
+		case COR:
+			f_cor = ((CorFrameGenerator*)fg)->next();
+			lastTimeTag = __builtin_bswap64(f_cor->header.timeTag);
+			bs = mySocket.send((char*)f_cor,sizeof(CorFrame));
+			if (bs!=sizeof(CorFrame)){
 				cout << "Error in send.\n";
 				return -1;
 			}
