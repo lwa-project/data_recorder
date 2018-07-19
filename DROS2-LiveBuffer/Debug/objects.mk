@@ -4,5 +4,5 @@
 
 USER_OBJS :=
 
-LIBS := -lboost_program_options-mt -lboost_filesystem-mt -lboost_regex-mt -lboost_system-mt -lboost_thread-mt -lrt -lpthread -lfftw3f
+LIBS := -lboost_program_options -lboost_filesystem -lboost_regex -lboost_system -lboost_thread -lrt -lpthread -lfftw3f
 
