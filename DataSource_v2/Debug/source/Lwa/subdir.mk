@@ -7,7 +7,6 @@ CPP_SRCS += \
 ../source/Lwa/DrxFrameGenerator.cpp \
 ../source/Lwa/TbnFrameGenerator.cpp \
 ../source/Lwa/TbwFrameGenerator.cpp \
-../source/Lwa/Drx8FrameGenerator.cpp \
 ../source/Lwa/TbfFrameGenerator.cpp \
 ../source/Lwa/CorFrameGenerator.cpp
 
@@ -15,7 +14,6 @@ OBJS += \
 ./source/Lwa/DrxFrameGenerator.o \
 ./source/Lwa/TbnFrameGenerator.o \
 ./source/Lwa/TbwFrameGenerator.o \
-./source/Lwa/Drx8FrameGenerator.o \
 ./source/Lwa/TbfFrameGenerator.o \
 ./source/Lwa/CorFrameGenerator.o
 
@@ -23,7 +21,6 @@ CPP_DEPS += \
 ./source/Lwa/DrxFrameGenerator.d \
 ./source/Lwa/TbnFrameGenerator.d \
 ./source/Lwa/TbwFrameGenerator.d \
-./source/Lwa/Drx8FrameGenerator.d \
 ./source/Lwa/TbfFrameGenerator.d \
 ./source/Lwa/CorFrameGenerator.d
 

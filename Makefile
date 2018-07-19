@@ -16,16 +16,16 @@ WORKSPACE=.
 INSTALL_LOCATION=/LWA
 FILES=.
 
-deps:
-	sudo apt-get install build-essential libgdbm-dev libgdbm3 libfuse-dev libfuse2 lm-sensors smartmontools mdadm libboost-all-dev libfftw3-dev
-
 all:
 	make -j 6 -C $(WORKSPACE)/Msender/Release
 	make -j 6 -C $(WORKSPACE)/DataSource/Release
 	make -j 6 -C $(WORKSPACE)/DataSource_v2/Debug
-	make -j 6 -C $(WORKSPACE)/DROS2-LiveBuffer/Debug
-	make -j 6 -C $(WORKSPACE)/DROS2-Spectrometer/Debug
+	make -j 6 -C $(WORKSPACE)/DROS2-LiveBuffer/Debug all
+	make -j 6 -C $(WORKSPACE)/DROS2-Spectrometer/Debug all
 	make -j 6 -C $(WORKSPACE)/SpectrogramViewer/Release
+
+deps:
+	sudo apt-get install build-essential libgdbm-dev libgdbm3 libfuse-dev libfuse2 lm-sensors smartmontools mdadm libboost-all-dev libfftw3-dev
 
 backup_config:
 	@if [ -f "$(INSTALL_LOCATION)/config/defaults_v2.cfg" ]; then echo "Backing up current configuration..."; cp $(INSTALL_LOCATION)/config/defaults_v2.cfg /BACKUP.defaults_v2.cfg; fi
