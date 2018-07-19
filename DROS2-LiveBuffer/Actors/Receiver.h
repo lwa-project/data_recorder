@@ -149,49 +149,26 @@ public:
 
 	}
 
-	bool setNewFmtDrx(int decFactor, int isADP){
+	bool setNewFmtDrx(int decFactor){
 		static TimeStamp lastErrorLogged = Time::now();
 		static size_t errCount = 0;
-		if( isADP ) {
-			switch(decFactor){
-				case 784: newFormat = DataFormat::getFormatByName("DRX8_FILT_1"); return true; break;
-				case 392: newFormat = DataFormat::getFormatByName("DRX8_FILT_2"); return true; break;
-				case 196: newFormat = DataFormat::getFormatByName("DRX8_FILT_3"); return true; break;
-				case 98:  newFormat = DataFormat::getFormatByName("DRX8_FILT_4"); return true; break;
-				case 40:  newFormat = DataFormat::getFormatByName("DRX8_FILT_5"); return true; break;
-				case 20:  newFormat = DataFormat::getFormatByName("DRX8_FILT_6"); return true; break;
-				case 10:  newFormat = DataFormat::getFormatByName("DRX8_FILT_7"); return true; break;
-				case 5:   newFormat = DataFormat::getFormatByName("DRX8_FILT_8"); return true; break;
-				default:
-					if (Time::compareTimestamps(Time::addTime(lastErrorLogged, 5000), Time::now()) <=0){
-						lastErrorLogged = Time::now();
-						LOGC(L_FATAL, "[Receiver] Bad DRX8 Decimation factor: " + LXS(decFactor) + " {"+LXS(errCount)+" previous occurrences}", FATAL_COLORS );
-						errCount = 0;
-					} else {
-						errCount++;
-					}
-					break;
-			}
-		} else {
-			switch(decFactor){
-				case 784: newFormat = DataFormat::getFormatByName("DRX_FILT_1"); return true; break;
-				case 392: newFormat = DataFormat::getFormatByName("DRX_FILT_2"); return true; break;
-				case 196: newFormat = DataFormat::getFormatByName("DRX_FILT_3"); return true; break;
-				case 98:  newFormat = DataFormat::getFormatByName("DRX_FILT_4"); return true; break;
-				case 40:  newFormat = DataFormat::getFormatByName("DRX_FILT_5"); return true; break;
-				case 20:  newFormat = DataFormat::getFormatByName("DRX_FILT_6"); return true; break;
-				case 10:  newFormat = DataFormat::getFormatByName("DRX_FILT_7"); return true; break;
-				case 5:   newFormat = DataFormat::getFormatByName("DRX_FILT_8"); return true; break;
-				default:
-					if (Time::compareTimestamps(Time::addTime(lastErrorLogged, 5000), Time::now()) <=0){
-						lastErrorLogged = Time::now();
-						LOGC(L_FATAL, "[Receiver] Bad DRX Decimation factor: " + LXS(decFactor) + " {"+LXS(errCount)+" previous occurrences}", FATAL_COLORS );
-						errCount = 0;
-					} else {
-						errCount++;
-					}
-					break;
-			}
+		switch(decFactor){
+			case 784: newFormat = DataFormat::getFormatByName("DRX_FILT_1"); return true; break;
+			case 392: newFormat = DataFormat::getFormatByName("DRX_FILT_2"); return true; break;
+			case 196: newFormat = DataFormat::getFormatByName("DRX_FILT_3"); return true; break;
+			case 98:  newFormat = DataFormat::getFormatByName("DRX_FILT_4"); return true; break;
+			case 40:  newFormat = DataFormat::getFormatByName("DRX_FILT_5"); return true; break;
+			case 20:  newFormat = DataFormat::getFormatByName("DRX_FILT_6"); return true; break;
+			case 10:  newFormat = DataFormat::getFormatByName("DRX_FILT_7"); return true; break;
+			default:
+				if (Time::compareTimestamps(Time::addTime(lastErrorLogged, 5000), Time::now()) <=0){
+					lastErrorLogged = Time::now();
+					LOGC(L_FATAL, "[Receiver] Bad DRX Decimation factor: " + LXS(decFactor) + " {"+LXS(errCount)+" previous occurrences}", FATAL_COLORS );
+					errCount = 0;
+				} else {
+					errCount++;
+				}
+				break;
 		}
 		newFormat = DataFormat::getFormatByName("DEFAULT_DRX");
 		return true;
@@ -328,12 +305,10 @@ public:
 				bool   drxRateChange = false;
 				size_t cnt           = (size_t) res;
 				uint16_t newDrxDecFactor;
-				uint8_t isADP;
 				for (size_t c=0; c<(size_t)res; c++){
 					bytesReceived += t->mhdrs[c].msg_len;
 				}
-
-
+				
 				// measure lag, we do this on the last packet of the block since we receive large blocks at a time
 				size_t tt = 0;
 				switch(fsize){
@@ -370,29 +345,28 @@ public:
 						if (newDrxDecFactor != currentDrxDecFactor){
 							drxRateChange=true;
 						}
-						isADP = ((DrxFrame*) t->frames[j])->header.drx_is_adp;
 					}
 					if ((size_t) t->mhdrs[j].msg_len != fsize){
 						lookMore=true;
 						break;
 					}
 				}
-
+				
 				// check in case drx rate changed
 				if ((fsize == DRX_FRAME_SIZE) && drxRateChange && !lookMore){
-					if (!setNewFmtDrx(newDrxDecFactor, isADP)){
+					if (!setNewFmtDrx(newDrxDecFactor)){
 						CANCEL_TICKET();
 						RESUME_RECEPTION();
 						/* CONTINUE_WITH_TICKET(); */
 					}
 				}
-
+				
 				if (!lookMore){
 					POST_TICKET(cnt);
 					RESUME_RECEPTION();
 					/* CONTINUE_NO_TICKET(); */
 				}
-
+				
 #define IDX_ERROR   0
 #define IDX_EMPTY   1
 #define IDX_TBN     2
@@ -401,7 +375,7 @@ public:
 #define IDX_COR     5
 #define IDX_DRX     6
 #define IDX_ODDBALL 7
-
+				
 				// some count variables for deeper inspection
 				size_t n[8]    = {0,0,0,0,0,0,0,0};         // in order : error, empty, tbn, tbw, tbf, cor, drx, odd
 				size_t last[8] = {0,0,0,0,0,0,0,0};         // in order : error, empty, tbn, tbw, tbf, cor, drx, odd
@@ -432,12 +406,12 @@ public:
 					case DRX_FRAME_SIZE: curIdx = IDX_DRX;     break;
 					default:             curIdx = IDX_ODDBALL; break;
 				}
-
+				
 				// find the maximum count of packets whose size is not our current size
 				size_t max_count      = 0;
 				int    new_frame_size = -3;
 				size_t last_seen      = 0;
-				for (size_t j=0; j<6; j++){
+				for (size_t j=0; j<8; j++){
 					if (j != curIdx){
 						if (n[j] > max_count){
 							max_count      = n[j];
@@ -446,24 +420,24 @@ public:
 						}
 					}
 				}
-
+				
 				// check that one of the 8 cases was a clear winner
 				if (new_frame_size == -3){
 					LOGC(L_FATAL, "[Receiver] Program error: lookmore triggerred, but no clear change.", FATAL_COLORS );
-					LOGC(L_FATAL, "[Receiver] n    " + LXS((size_t) res), FATAL_COLORS );
-					LOGC(L_FATAL, "[Receiver] n[0] " + LXS(n[0]), FATAL_COLORS );
-					LOGC(L_FATAL, "[Receiver] n[1] " + LXS(n[1]), FATAL_COLORS );
-					LOGC(L_FATAL, "[Receiver] n[2] " + LXS(n[2]), FATAL_COLORS );
-					LOGC(L_FATAL, "[Receiver] n[3] " + LXS(n[3]), FATAL_COLORS );
-					LOGC(L_FATAL, "[Receiver] n[4] " + LXS(n[4]), FATAL_COLORS );
-					LOGC(L_FATAL, "[Receiver] n[5] " + LXS(n[5]), FATAL_COLORS );
-					LOGC(L_FATAL, "[Receiver] n[6] " + LXS(n[6]), FATAL_COLORS );
-					LOGC(L_FATAL, "[Receiver] n[7] " + LXS(n[7]), FATAL_COLORS );
+					LOGC(L_FATAL, "[Receiver] n     " + LXS((size_t) res), FATAL_COLORS );
+					LOGC(L_FATAL, "[Receiver] n[0]  " + LXS(n[0]), FATAL_COLORS );
+					LOGC(L_FATAL, "[Receiver] n[1]  " + LXS(n[1]), FATAL_COLORS );
+					LOGC(L_FATAL, "[Receiver] n[2]  " + LXS(n[2]), FATAL_COLORS );
+					LOGC(L_FATAL, "[Receiver] n[3]  " + LXS(n[3]), FATAL_COLORS );
+					LOGC(L_FATAL, "[Receiver] n[4]  " + LXS(n[4]), FATAL_COLORS );
+					LOGC(L_FATAL, "[Receiver] n[5]  " + LXS(n[5]), FATAL_COLORS );
+					LOGC(L_FATAL, "[Receiver] n[6]  " + LXS(n[6]), FATAL_COLORS );
+					LOGC(L_FATAL, "[Receiver] n[7]  " + LXS(n[7]), FATAL_COLORS );
 					CANCEL_TICKET();
 					RESUME_RECEPTION();
 					/* CONTINUE_WITH_TICKET(); */
 				}
-
+				
 				// check that the winner wasn't the existing case
 				if (new_frame_size == (int) t->fsize){
 					LOGC(L_FATAL, "[Receiver] Program error: reached unreachable code. : " __FILE__ + LXS(__LINE__), FATAL_COLORS );
@@ -471,7 +445,7 @@ public:
 					RESUME_RECEPTION();
 					/* CONTINUE_WITH_TICKET(); */
 				}
-
+				
 				// get the new format based on deeper packet inspection once we know the new size
 				DrxFrame* f; // only drx might require looking at the actual frame
 				switch(new_frame_size){
@@ -512,8 +486,7 @@ public:
 					case DRX_FRAME_SIZE:
 						// changed to DRX
 						f = (DrxFrame*) t->frames[last_seen];
-						isADP = ((DrxFrame*) f)->header.drx_is_adp;
-						if (!setNewFmtDrx(bswap16(f->header.decFactor), isADP)){
+						if (!setNewFmtDrx(bswap16(f->header.decFactor))){
 							CANCEL_TICKET();
 							RESUME_RECEPTION();
 							/* CONTINUE_WITH_TICKET(); */
@@ -525,20 +498,20 @@ public:
 						ABORT_RECEPTION();
 						/* BAIL_WITH_TICKET(); */
 				}
-
-
+				
+				
 				// now we have a new format, so set the reset required flag and leave
 				// (next thread to lock both phase locks will actually do the reset
 				LOGC(L_INFO, "[Receiver] Detected a data mode change to '"+newFormat.getName()+"'", ACTOR_COLORS );
 				t->returnEmpty();
-
+				
 				if (!__doReset()){
 					LOGC(L_FATAL, "[Receiver] failed to reset ticket buffer modes", FATAL_COLORS );
 					CANCEL_TICKET();
 					ABORT_RECEPTION();
 					/* BAIL_WITH_TICKET(); */
 				}
-
+				
 			}//
 		} // while loop
 		finalize();

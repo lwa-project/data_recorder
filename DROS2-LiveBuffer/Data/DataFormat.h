@@ -62,7 +62,7 @@ using namespace boost::assign;
 
 #define foreach BOOST_FOREACH
 
-enum PacketType{PT_DRX, PT_TBN, PT_TBW, PT_TBF, PT_FSC, PT_DRX8, PT_SPC, PT_COR};
+enum PacketType{PT_DRX, PT_TBN, PT_TBW, PT_TBF, PT_FSC, PT_SPC, PT_COR};
 
 class DataFormat {
 public:
@@ -145,8 +145,9 @@ public:
 	size_t     getFrameSize()    const {return frameSize;}
 	size_t     getDataRate()     const {return dataRate;}
 	double     getFrameRate()    const {return frameRate;}
-	PacketType getPacketType()    const {return type;}
+	PacketType getPacketType()   const {return type;}
 	int        getDecFactor()    const {return decFactor;}
+	int        getBitDepth()     const {return 4;}
 
 	size_t estimateDataVolume(millisecond runtime, double percentOverallocate = 5.0){
 		return (size_t)( (((double)runtime)*((double)dataRate)/1000.0)*(1.0+(percentOverallocate/100.0)));

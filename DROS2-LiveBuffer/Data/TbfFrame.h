@@ -89,7 +89,7 @@ typedef TbfFrame	PackedTbfFrame;
 typedef struct __UnpackedTbfFrame{
 	TbfFrameHeader  header;
 	UnpackedSample  samples[TBF_SAMPLES_PER_FRAME];
-} __attribute__((packed)) UnpackedTbfFrame4;
+} __attribute__((packed)) UnpackedTbfFrame;
 
 
 #define TBF_FRAME_SIZE (sizeof(TbfFrame))

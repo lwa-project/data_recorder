@@ -109,11 +109,7 @@ const uint64_t TbnSampleRates[] = {
 	  12500lu,
 	  25000lu,
 	  50000lu,
-	 100000lu,
-	 200000lu,
-	 400000lu,
-	 800000lu,
-	1600000lu
+	 100000lu
 };
 const uint64_t TbnDecFactors[] = {
 	196000lu,
@@ -122,11 +118,7 @@ const uint64_t TbnDecFactors[] = {
 	 15680lu,
 	  7840lu,
 	  3920lu,
-	  1960lu,
-	   980lu,
-	   460lu,
-	   245lu,
-	   122lu
+	  1960lu
 };
 const uint64_t TbnTimeTagSteps[] = {
 	100352000lu,
@@ -135,11 +127,7 @@ const uint64_t TbnTimeTagSteps[] = {
 	  8028160lu,
 	  4014080lu,
 	  2007040lu,
-	  1003520lu,
-	   501760lu,
-	   250880lu,
-	   125440lu,
-	    62720lu
+	  1003520lu
 };
 const uint64_t TbnDataRates[] = {
 	   1064375lu,
@@ -148,11 +136,7 @@ const uint64_t TbnDataRates[] = {
 	  13304688lu,
 	  26609375lu,
 	  53218750lu,
-	 106437500lu,
-	 212875000lu,
-	 425750000lu,
-	 851500000lu,
-	1703000000lu
+	 106437500lu
 };
 const double TbnTimeSteps[] = {
 	1.0f /   1000.0l,
@@ -161,19 +145,8 @@ const double TbnTimeSteps[] = {
 	1.0f /  12500.0l,
 	1.0f /  25000.0l,
 	1.0f /  50000.0l,
-	1.0f / 100000.0l,
-	1.0f / 200000.0l,
-	1.0f / 400000.0l,
-	1.0f / 800000.0l,
-	1.0f /1600000.0l
+	1.0f / 100000.0l
 };
-
-
-
-
-
-
-
 
 
 #ifdef __cplusplus
