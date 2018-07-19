@@ -60,7 +60,7 @@ const uint64_t DrxSampleRates[] = {
 	  500000lu,
 	 1000000lu,
 	 2000000lu,
-	 4000000lu,
+	 4900000lu,
 	 9800000lu,
 	19600000lu
 };
@@ -70,7 +70,7 @@ const uint64_t DrxDecFactors[] = {
 	392lu,
 	196lu,
 	 98lu,
-	 49lu,
+	 40lu,
 	 20lu,
 	 10lu
 };
@@ -80,7 +80,7 @@ const uint64_t DrxTimeTagSteps[] = {
 		DRX_SAMPLES_PER_FRAME * 392lu,
 		DRX_SAMPLES_PER_FRAME * 196lu,
 		DRX_SAMPLES_PER_FRAME *  98lu,
-		DRX_SAMPLES_PER_FRAME *  49lu,
+		DRX_SAMPLES_PER_FRAME *  40lu,
 		DRX_SAMPLES_PER_FRAME *  20lu,
 		DRX_SAMPLES_PER_FRAME *  10lu
 };
@@ -89,7 +89,7 @@ const uint64_t DrxDataRates[] = {
 		((  500000lu * DRX_STREAMS * DRX_FRAME_SIZE) / DRX_SAMPLES_PER_FRAME),
 		(( 1000000lu * DRX_STREAMS * DRX_FRAME_SIZE) / DRX_SAMPLES_PER_FRAME),
 		(( 2000000lu * DRX_STREAMS * DRX_FRAME_SIZE) / DRX_SAMPLES_PER_FRAME),
-		(( 4000000lu * DRX_STREAMS * DRX_FRAME_SIZE) / DRX_SAMPLES_PER_FRAME),
+		(( 4900000lu * DRX_STREAMS * DRX_FRAME_SIZE) / DRX_SAMPLES_PER_FRAME),
 		(( 9800000lu * DRX_STREAMS * DRX_FRAME_SIZE) / DRX_SAMPLES_PER_FRAME),
 		((19600000lu * DRX_STREAMS * DRX_FRAME_SIZE) / DRX_SAMPLES_PER_FRAME)
 };
@@ -98,7 +98,7 @@ const double DrxTimeSteps[] = {
 		1.0f /  500000.0f,
 		1.0f / 1000000.0f,
 		1.0f / 2000000.0f,
-		1.0f / 4000000.0f,
+		1.0f / 4900000.0f,
 		1.0f / 9800000.0f,
 		1.0f /19600000.0f
 };
