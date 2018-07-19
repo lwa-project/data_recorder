@@ -108,7 +108,7 @@ class Folder{
 		string   getPath()            const {return path;}
 
 
-		Folder(string path, FileType fType):fType(fType), path(path), files(), dirs(), watch_fd(-1), watch_wd(watch_wd), wt(NULL){
+		Folder(string path, FileType fType):fType(fType), path(path), files(), dirs(), watch_fd(-1), wt(NULL){
 			__readContent();
 			__setWatch();
 		}
