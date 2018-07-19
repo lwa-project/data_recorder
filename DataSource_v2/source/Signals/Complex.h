@@ -83,6 +83,19 @@ typedef union __PackedSample8{
 	uint16_t packed;
 }__attribute__((packed)) PackedSample8;
 
+// NOTE: little-endian packing
+typedef union __PackedSample64{
+    struct {
+        float i;
+        float q;
+    };
+    struct {
+        float re;
+        float im;
+    };
+    uint16_t packed;
+}__attribute__((packed)) PackedSample64;
+
 // define union type for an unpacked sample
 typedef union __UnpackedSample{
 	struct {

@@ -81,7 +81,7 @@ typedef struct __CorFrameHeader{
 // COR frame as received
 typedef struct __CorFrame{
 	CorFrameHeader  header;
-	ComplexType     samples[COR_SAMPLES_PER_FRAME];
+	PackedSample64  samples[COR_SAMPLES_PER_FRAME];
 } __attribute__((packed)) CorFrame;
 // alias to the above
 typedef CorFrame	PackedCorFrame;
