@@ -52,7 +52,7 @@ void usage(string errorMsg){
 	"\t-TBN       n/a (flag)       Generate TBN data streams        N/A                                                  \n"
 	"\t-TBW       n/a (flag)       Generate TBW data streams        N/A                                                  \n"
 	"\t-TBF       n/a (flag)       Generate TBF data streams        N/A                                                  \n"
-	"\t-COR       n/a (flag)       Generate COR data streams        N/A                                                  \n"                                                 \n"
+	"\t-COR       n/a (flag)       Generate COR data streams        N/A                                                  \n"
 	"\t-RAW       n/a (flag)       Generate RAW data streams        N/A                                                  \n"
 	"\t-po        n/a (flag)       fill packets with binary         N/A                                                  \n"
 	"\t                              pattern. (No sine waves)                                                            \n"
@@ -63,10 +63,10 @@ void usage(string errorMsg){
 	"\t-r         integer (+)      Data Rate                    bytes/s  ignored, by filt. code   <required> \n"
 	"\t-d         integer (0,+)    Duration                          ms  0, forever               0, forever \n"
 	"\t-k         integer (+)      Key                              N/A  <ignored>                0xFEEDDEADBEEF2DAD\n"
-	"\t-fc        integer (+)      DRX/TBN/DRX8 filter code        #1-7  7                        <ignored>\n"
+	"\t-fc        integer (+)      DRX/TBN filter code             #1-7  7                        <ignored>\n"
 	"\t                              Determines data rate, \n"
 	"\t                              decimation factor, etc.\n"
-	"\t                              DRX/TBN/DRX8 mode.\n"
+	"\t                              DRX/TBN mode.\n"
 
 	"\t-f0        float            Sine wave 0 frequency             Hz                           <ignored>\n"
 	"\t-m0        float            Sine wave 0 amplitude           arb.  6.0                      <ignored>\n"
@@ -249,7 +249,7 @@ int main(int argc, char * argv[]){
 
 
 	//common to multiple formats
-	uint16_t filterCode      = 7;         // used by TBN, DRX, DRX8
+	uint16_t filterCode      = 7;         // used by TBN, DRX, TBF
 	uint64_t N               = DEFAULT_N; // used by TBN, TBW, DRX
 	bool     useComplex      = false;     // used by TBN, TBW, DRX
 	bool     correlatorTest  = false;     // used by TBN, TBW, DRX
@@ -495,7 +495,6 @@ int main(int argc, char * argv[]){
 	DrxFrame*  f_drx;
 	TbnFrame*  f_tbn;
 	TbwFrame*  f_tbw;
-	Drx8Frame* f_drx8;
 	CorFrame*  f_cor;
 	TbfFrame*  f_tbf;
 
