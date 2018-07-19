@@ -142,7 +142,7 @@ function doUp()
                         mountpoint=/LWA_STORAGE/Internal/$N_INTERNAL
 			echo "DRSU volume: '$x' mounted at '$mountpoint'"
                         mkdir -p $mountpoint;
-                        mount -t ext4 -o defaults,data=writeback,noatime,barrier=0 $x $mountpoint
+                        mount -t ext4 -o defaults,noatime,barrier=0 $x $mountpoint
                         mkdir -p $mountpoint/DROS
                         mkdir -p $mountpoint/DROS/Rec
                         mkdir -p $mountpoint/DROS/Spec
@@ -193,11 +193,12 @@ function doFormat()
 	#OPTIONS="${OPTIONS} -o ${CREATOR_OS}"
 	OPTIONS="${OPTIONS} -t ext4"
 	OPTIONS="${OPTIONS} -L '${VOLUME_LABEL}'"
+	OPTIONS="${OPTIONS} -m 1"
 
 	if mkfs.ext4 $OPTIONS $DEVICE; then
 		echo "Complete!!!"
 		echo
-		echo "To mount the new DRSU, type \n\tmount -t ext4 -o defaults,data=writeback,noatime,barrier=0 $DEVICE <mountpoint> \nOr Use this script to enable use with DROS."
+		echo "To mount the new DRSU, type \n\tmount -t ext4 -o defaults,noatime,barrier=0 $DEVICE <mountpoint> \nOr Use this script to enable use with DROS."
 	else
 		echo "Failed!!!"
 		echo "Please see error message above"
