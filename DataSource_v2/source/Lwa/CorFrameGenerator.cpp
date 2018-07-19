@@ -36,7 +36,7 @@ CorFrameGenerator::CorFrameGenerator(
 	generate();
 }
 
-void CorFrameGenerator::__pack(UnpackedSample* u, PackedSample64* p){
+void CorFrameGenerator::__pack(UnpackedSample* u, ComplexType* p){
 	int _i = (int)round(u->re);
 	if(_i>7) _i=7;
 	if(_i<-8) _i=-8;
@@ -45,7 +45,6 @@ void CorFrameGenerator::__pack(UnpackedSample* u, PackedSample64* p){
 	if(_q<-8) _q=-8;
 	p->i =  (((int8_t) _i) & 0xf);
 	p->q =  (((int8_t) _q) & 0xf);
-	p->w =  1;
 }
 void CorFrameGenerator::__printFrame(CorFrame* f, bool compact, bool single){
 	if (compact){

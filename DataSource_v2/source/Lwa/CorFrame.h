@@ -54,7 +54,7 @@
 extern "C"{
 #endif
 
-#define COR_SAMPLES_PER_FRAME 576
+#define COR_SAMPLES_PER_FRAME 288
 
 #define Fs_Day (196l* 1000000l * 60l *60l * 24l) /*16934400000000l*/
 
@@ -81,14 +81,14 @@ typedef struct __CorFrameHeader{
 // COR frame as received
 typedef struct __CorFrame{
 	CorFrameHeader  header;
-	PackedSample64   samples[COR_SAMPLES_PER_FRAME];
+	ComplexType     samples[COR_SAMPLES_PER_FRAME];
 } __attribute__((packed)) CorFrame;
 // alias to the above
 typedef CorFrame	PackedCorFrame;
 
 typedef struct __UnpackedCorFrame{
 	CorFrameHeader  header;
-	UnpackedSample64  samples[COR_SAMPLES_PER_FRAME];
+	UnpackedSample  samples[COR_SAMPLES_PER_FRAME];
 } __attribute__((packed)) UnpackedCorFrame;
 
 
