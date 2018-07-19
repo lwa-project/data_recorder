@@ -58,19 +58,12 @@ DROS2-Spectrometer: $(OBJS) $(USER_OBJS)
 	g++ -pthread  -std=c++11   -march=native -rdynamic -p -pg -o "DROS2-Spectrometer" $(OBJS) $(USER_OBJS) $(LIBS)
 	@echo 'Finished building target: $@'
 	@echo ' '
-	$(MAKE) --no-print-directory post-build
 
 # Other Targets
 clean:
 	-$(RM) $(OBJS)$(C++_DEPS)$(C_DEPS)$(CC_DEPS)$(CPP_DEPS)$(EXECUTABLES)$(CXX_DEPS)$(C_UPPER_DEPS) DROS2-Spectrometer
 	-@echo ' '
 
-post-build:
-	-@echo 'Generate documentation using doxygen and push to server (lab-proxy)...'
-	-../doxygen.sh
-	-@echo ' '
-
 .PHONY: all clean dependents
-.SECONDARY: post-build
 
 -include ../makefile.targets

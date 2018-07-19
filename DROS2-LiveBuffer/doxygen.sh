@@ -1,5 +1,5 @@
 #!/bin/bash
-FILE=./doxyfile
+FILE=`dirname $0`/doxyfile
 echo "Generating documentation..."
 doxygen $FILE
 

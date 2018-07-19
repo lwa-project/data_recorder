@@ -6,7 +6,7 @@ PROJECT_NAME           = DROS2-LiveBuffer
 PROJECT_NUMBER         = 2.3.0.0
 PROJECT_BRIEF          = 
 PROJECT_LOGO           = 
-OUTPUT_DIRECTORY       = Docs
+OUTPUT_DIRECTORY       = ./DROS2-LiveBuffer/Docs
 CREATE_SUBDIRS         = YES
 OUTPUT_LANGUAGE        = English
 BRIEF_MEMBER_DESC      = YES
@@ -25,8 +25,8 @@ ABBREVIATE_BRIEF       = "The $name class" \
 ALWAYS_DETAILED_SEC    = NO
 INLINE_INHERITED_MEMB  = NO
 FULL_PATH_NAMES        = YES
-STRIP_FROM_PATH        = 
-STRIP_FROM_INC_PATH    = 
+STRIP_FROM_PATH        = ./DROS2-LiveBuffer/
+STRIP_FROM_INC_PATH    = ./DROS2-LiveBuffer/
 SHORT_NAMES            = NO
 JAVADOC_AUTOBRIEF      = NO
 QT_AUTOBRIEF           = NO
@@ -50,7 +50,6 @@ SUBGROUPING            = YES
 INLINE_GROUPED_CLASSES = NO
 INLINE_SIMPLE_STRUCTS  = NO
 TYPEDEF_HIDES_STRUCT   = NO
-SYMBOL_CACHE_SIZE      = 0
 LOOKUP_CACHE_SIZE      = 0
 
 #---------------------------------------------------------------------------
@@ -85,7 +84,6 @@ GENERATE_DEPRECATEDLIST= YES
 ENABLED_SECTIONS       = 
 MAX_INITIALIZER_LINES  = 30
 SHOW_USED_FILES        = YES
-SHOW_DIRECTORIES       = NO
 SHOW_FILES             = YES
 SHOW_NAMESPACES        = YES
 FILE_VERSION_FILTER    = 
@@ -106,7 +104,7 @@ WARN_LOGFILE           =
 #---------------------------------------------------------------------------
 # configuration options related to the input files
 #---------------------------------------------------------------------------
-INPUT                  = .
+INPUT                  = ./DROS2-LiveBuffer
 INPUT_ENCODING         = UTF-8
 FILE_PATTERNS          = *.c \
                          *.cc \
@@ -188,7 +186,6 @@ HTML_COLORSTYLE_HUE    = 220
 HTML_COLORSTYLE_SAT    = 100
 HTML_COLORSTYLE_GAMMA  = 80
 HTML_TIMESTAMP         = YES
-HTML_ALIGN_MEMBERS     = YES
 HTML_DYNAMIC_SECTIONS  = NO
 GENERATE_DOCSET        = NO
 DOCSET_FEEDNAME        = "Doxygen generated docs"
@@ -215,7 +212,6 @@ ECLIPSE_DOC_ID         = org.doxygen.Project
 DISABLE_INDEX          = NO
 GENERATE_TREEVIEW      = YES
 ENUM_VALUES_PER_LINE   = 4
-USE_INLINE_TREES       = NO
 TREEVIEW_WIDTH         = 250
 EXT_LINKS_IN_WINDOW    = NO
 FORMULA_FONTSIZE       = 10

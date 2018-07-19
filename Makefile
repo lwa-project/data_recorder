@@ -16,6 +16,8 @@ WORKSPACE=.
 INSTALL_LOCATION=/LWA
 FILES=.
 
+RM := rm -rf
+
 all:
 	make -j 6 -C $(WORKSPACE)/Msender/Release
 	make -j 6 -C $(WORKSPACE)/DataSource/Release
@@ -23,6 +25,10 @@ all:
 	make -j 6 -C $(WORKSPACE)/DROS2-LiveBuffer/Debug all
 	make -j 6 -C $(WORKSPACE)/DROS2-Spectrometer/Debug all
 	make -j 6 -C $(WORKSPACE)/SpectrogramViewer/Release
+
+docs:
+	$(WORKSPACE)/DROS2-LiveBuffer/doxygen.sh
+	$(WORKSPACE)/DROS2-Spectrometer/doxygen.sh
 
 deps:
 	sudo apt-get install build-essential libgdbm-dev libgdbm3 libfuse-dev libfuse2 lm-sensors smartmontools mdadm libboost-all-dev libfftw3-dev
@@ -85,5 +91,7 @@ clean:
 	make -C $(WORKSPACE)/DROS2-Spectrometer/Debug clean
 	make -C $(WORKSPACE)/DROS2-LiveBuffer/Debug clean
 	make -C $(WORKSPACE)/SpectrogramViewer/Release clean
+	-$(RM) $(WORKSPACE)/DROS2-LiveBuffer/Docs/*
+	-$(RM) $(WORKSPACE)/DROS2-Spectrometer/Docs/*
 
 
