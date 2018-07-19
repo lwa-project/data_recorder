@@ -83,20 +83,6 @@ typedef union __PackedSample8{
 	uint16_t packed;
 }__attribute__((packed)) PackedSample8;
 
-typedef union __PackedSample64{
-	struct {
-		int32_t w:22;
-		int32_t q:21;
-		int32_t i:21;
-	};
-	struct {
-		int32_t wt:22;
-		int32_t im:21;
-		int32_t re:21;
-	};
-	uint64_t packed;
-}__attribute__((packed)) PackedSample64;
-
 // define union type for an unpacked sample
 typedef union __UnpackedSample{
 	struct {
@@ -109,21 +95,6 @@ typedef union __UnpackedSample{
 	};
 	ComplexType packed;
 }__attribute__((packed)) UnpackedSample;
-
-// define union type for an unpacked 64-bit sample
-typedef union __UnpackedSample64{
-	struct {
-		int32_t i;
-		int32_t q;
-		int32_t w;
-	};
-	struct {
-		int32_t re;
-		int32_t im;
-		int32_t wt;
-	};
-	uint64_t packed;
-}__attribute__((packed)) UnpackedSample64;
 
 #ifdef __cplusplus
 }
