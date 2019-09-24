@@ -59,7 +59,6 @@ install: backup_config
 		$(FILES)/installStartupScript.sh \
 		$(FILES)/uninstallStartupScript.sh \
 		$(FILES)/StartDROS.sh \
-		$(FILES)/MultipartPostHandler.py \
 		$(FILES)/uploadLogfile.py \
 		$(FILES)/uploadLogfile.sh \
 		$(WORKSPACE)/DROS2-Spectrometer/Scripts/StorageControl.sh
