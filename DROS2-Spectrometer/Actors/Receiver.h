@@ -116,12 +116,13 @@
 
 class Receiver: public GenericThread {
 public:
-	Receiver(unsigned short _dataPort, TicketBuffer* _buf, bool _nonblocking=false):
+	Receiver(string _dataAddr, unsigned short _dataPort, TicketBuffer* _buf, bool _nonblocking=false):
 		GenericThread("Receiver", PG_IO, 0),
 		sd(-1),
 		local_adr(),
 		sd_flags(0),
 		sd_m_flags(0),
+		dataAddr(_dataAddr),
 		dataPort(_dataPort),
 		nonblocking(_nonblocking),
 		buf(_buf),
@@ -235,7 +236,7 @@ public:
 		bzero((void*)&sa, sizeof(struct sockaddr_storage));
 		sa.ss_family = AF_INET;
 		inet_pton(AF_INET,  "127.0.0.1", &(((struct sockaddr_in *)&sa)->sin_addr));
-		((struct sockaddr_in *)&sa)->sin_port = htons(CONF_GET(DataInPort));
+		((struct sockaddr_in *)&sa)->sin_port = htons(dataPort);
 		while (!_done){
 			sendto(burnsd,buf,0,MSG_DONTWAIT,(struct sockaddr*)&sa,(socklen_t)sizeof(struct sockaddr_storage));
 		}
@@ -557,6 +558,7 @@ private:
 	struct sockaddr_storage        local_adr;
 	int 				           sd_flags;   // indiv flags
 	int 				           sd_m_flags; // multi flags
+	string                         dataAddr;
 	unsigned short                 dataPort;
 	bool                           nonblocking;
 
@@ -590,7 +592,7 @@ private:
 		sd  					    					= -1;
 		(*((sockaddr_in*)&local_adr)).sin_family 		= AF_INET;
 		(*((sockaddr_in*)&local_adr)).sin_port			= htons(dataPort);
-		(*((sockaddr_in*)&local_adr)).sin_addr.s_addr 	= INADDR_ANY;
+        ::inet_pton(AF_INET, dataAddr.c_str(), &(((struct sockaddr_in *)&local_adr)->sin_addr));
 		memset((*((sockaddr_in*)&local_adr)).sin_zero, '\0', sizeof (*((sockaddr_in*)&local_adr)).sin_zero);
 		// create the socket
 		sd = socket(AF_INET, SOCK_DGRAM, 0);
@@ -599,15 +601,61 @@ private:
 			return false;
 		}
 
-		// bind the socket to localhost::port specified above
-		int result = ::bind(sd, (struct sockaddr *) &local_adr,	(socklen_t)sizeof(struct sockaddr_storage));
-		if (result != 0) {
-			close(sd);
-			LOGC(L_ERROR, "[Receiver] bind() error '" + string(strerror(errno)) + "'", ACTOR_ERROR_COLORS );
-			cout << "[SOCKET] Error: bind() error\n";
-			return false;
-		}
-
+		// Determine multicast status...
+        int multicast = 0;
+        sockaddr_in *sa4 = reinterpret_cast<sockaddr_in*>(&local_adr);
+        if( ((sa4->sin_addr.s_addr & 0xFF) >= 224) \
+            && ((sa4->sin_addr.s_addr & 0xFF) < 240) ) {
+            multicast = 1;
+        }
+        if( multicast ) {
+            LOGC(L_INFO, "[Receiver] multicast is requested on "+dataAddr, ACTOR_COLORS);
+            cout << "[Receiver] multicast is requested\n";
+        }
+        
+        // ... and work accordingly
+        int result = 1;
+        if( !multicast ) {
+            // Normal address
+            // bind the socket to localhost::port specified above
+            result = ::bind(sd, (struct sockaddr *) &local_adr, (socklen_t)sizeof(struct sockaddr_storage));
+            if (result != 0) {
+                close(sd);
+                LOGC(L_ERROR, "[Receiver] bind() error '" + string(strerror(errno)) + "'", ACTOR_ERROR_COLORS );
+                cout << "[SOCKET] Error: bind() error\n";
+                return false;
+            }
+        } else {
+            // Multicast address
+            // Setup the INADDR_ANY socket base to bind to
+            struct sockaddr_in base_address;
+            memset(&base_address, 0, sizeof(sockaddr_in));
+            base_address.sin_family      = AF_INET;
+            base_address.sin_port        = htons(dataPort);
+            base_address.sin_addr.s_addr = INADDR_ANY;
+            result = ::bind(sd, (struct sockaddr *) &local_adr, (socklen_t)sizeof(struct sockaddr_storage));
+            if (result != 0) {
+                close(sd);
+                LOGC(L_ERROR, "[Receiver] bind() error '" + string(strerror(errno)) + "'", ACTOR_ERROR_COLORS );
+                cout << "[SOCKET] Error: bind() error\n";
+                return false;
+            }
+            
+            // Deal with joining the multicast group
+            struct ip_mreq mreq;
+            memset(&mreq, 0, sizeof(ip_mreq));
+            mreq.imr_multiaddr.s_addr = reinterpret_cast<sockaddr_in*>(&local_adr)->sin_addr.s_addr;
+            mreq.imr_interface.s_addr = INADDR_ANY;
+            result = ::setsockopt(sd, IPPROTO_IP, IP_ADD_MEMBERSHIP, &mreq, sizeof(mreq));
+            if (result != 0) {
+                close(sd);
+                LOGC(L_ERROR, "[Receiver] setsockopt() error '" + string(strerror(errno)) + "'", ACTOR_ERROR_COLORS );
+                cout << "[SOCKET] Error: setsockopt() error\n";
+                return false;
+            }
+            LOGC(L_INFO, "[Receiver] multicast is done", ACTOR_COLORS);
+        }
+        
 		if (nonblocking){
 			//* set socket to be non-blocking
 			result = fcntl(sd, F_GETFL);
@@ -628,9 +676,6 @@ private:
 		} else {
 			sd_m_flags = MSG_WAITALL | MSG_TRUNC;
 		}
-
-
-
 
 		LOGC(L_INFO, "[Receiver] opened data socket on port " + LXS(dataPort), ACTOR_COLORS );
 

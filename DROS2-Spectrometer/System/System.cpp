@@ -195,7 +195,7 @@ void  System::__boot(){
 
 	LOGC(L_INFO, "[System] Initialize receiver...", SYSTEM_COLORS);
 	// start data receiver
-	rx=new Receiver(CONF_GET(DataInPort),rxbuf);
+	rx=new Receiver(CONF_GET(DataInIp),CONF_GET(DataInPort),rxbuf);
 	if (!rx){
 		LOGC(L_FATAL, "[System] Can't allocate receiver", FATAL_COLORS);
 		_fatal_error = true; return;

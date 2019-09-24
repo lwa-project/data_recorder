@@ -98,6 +98,7 @@ public:
 	SAFE_STATIC_GETTER(Config, string,          GETTER_NAME(ArraySelect),             "1");
 	SAFE_STATIC_GETTER(Config, unsigned short,  GETTER_NAME(MessageInPort),           0);
 	SAFE_STATIC_GETTER(Config, unsigned short,  GETTER_NAME(MessageOutPort),          0);
+    SAFE_STATIC_GETTER(Config, string,          GETTER_NAME(DataInIp),                "127.0.0.1");
 	SAFE_STATIC_GETTER(Config, unsigned short,  GETTER_NAME(DataInPort),              0);
 
 	SAFE_STATIC_SETTER(Config, string,          SETTER_NAME(MyReferenceDesignator));
@@ -107,6 +108,7 @@ public:
 	SAFE_STATIC_SETTER(Config, string,          SETTER_NAME(ArraySelect));
 	SAFE_STATIC_SETTER(Config, unsigned short,  SETTER_NAME(MessageInPort));
 	SAFE_STATIC_SETTER(Config, unsigned short,  SETTER_NAME(MessageOutPort));
+    SAFE_STATIC_SETTER(Config, string,          SETTER_NAME(DataInIp));
 	SAFE_STATIC_SETTER(Config, unsigned short,  SETTER_NAME(DataInPort));
 
 public:
@@ -121,6 +123,7 @@ public:
 	GETTER_AND_SETTER(ArraySelect,           string)
 	GETTER_AND_SETTER(MessageInPort,         unsigned short)
 	GETTER_AND_SETTER(MessageOutPort,        unsigned short)
+    GETTER_AND_SETTER(DataInIp,              string)
 	GETTER_AND_SETTER(DataInPort,            unsigned short)
 
 private:
@@ -141,6 +144,7 @@ private:
 	string ArraySelect;
 	unsigned short int MessageInPort;
 	unsigned short int MessageOutPort;
+    string DataInIp;
 	unsigned short int DataInPort;
 };
 

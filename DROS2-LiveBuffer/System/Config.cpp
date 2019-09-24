@@ -73,6 +73,7 @@ void  Config::readConfig(){
 		ADD_SPEC_DEF(ArraySelect,           "A", string,         "0",            "Startup DRSU Selection (Barcode or 0-based index)")
 		ADD_SPEC_DEF(MessageInPort,         "i", unsigned short, 5000,           "UDP Port to listen on for MCS messages")
 		ADD_SPEC_DEF(MessageOutPort,        "o", unsigned short, 5001,           "UDP Port to send responses to")
+        ADD_SPEC_DEF(DataInIp,              "I", string,         "10.1.1.21",    "Address to receive data on")
 		ADD_SPEC_DEF(DataInPort,            "d", unsigned short, 3000,           "UDP Port to receive data on")
 	;
 
@@ -93,6 +94,7 @@ void  Config::readConfig(){
 	DO_LOAD(ArraySelect,string,true);
 	DO_LOAD(MessageInPort,unsigned short,true);
 	DO_LOAD(MessageOutPort,unsigned short,true);
+    DO_LOAD(DataInIp,string,true);
 	DO_LOAD(DataInPort,unsigned short,true);
 	LOGC(L_INFO,"Configuration data loaded...", CONFIG_COLORS);
 	LOG_START_SESSION(L_DEBUG);
@@ -105,6 +107,7 @@ void  Config::readConfig(){
 	SHOW_CONFIG_VAL(TimeAuthority);
 	SHOW_CONFIG_VAL(SerialNumber);
 	SHOW_CONFIG_VAL(ArraySelect);
+    SHOW_CONFIG_VAL(DataInIp);
 	SHOW_CONFIG_VAL(DataInPort);
 
 	LOG_END_SESSION();
@@ -128,6 +131,7 @@ void  Config::writeConfig(){
 	DO_SAVE(fout, ArraySelect,           "Startup DRSU Selection (Barcode or 0-based index)");
 	DO_SAVE(fout, MessageInPort,         "UDP Port to listen on for MCS messages");
 	DO_SAVE(fout, MessageOutPort,        "UDP Port to send responses to");
+    DO_SAVE(fout, DataInIp,              "Address to receive data on");
 	DO_SAVE(fout, DataInPort,            "UDP Port to receive data on");
 	fout.flush();
 	fout.close();
