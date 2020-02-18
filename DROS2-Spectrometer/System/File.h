@@ -62,6 +62,7 @@
 #include <sys/types.h>
 #include <sys/xattr.h>
 #include <errno.h>
+#include <sys/uio.h>
 
 #include <linux/xattr.h>
 #include <linux/errno.h>
