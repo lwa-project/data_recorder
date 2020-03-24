@@ -1,0 +1,16 @@
+# Configuration files
+defaults_v2.cfg
+
+# Dependencies
+*.d
+
+# Object files
+*.o
+
+# Executables
+DROS2-LiveBuffer/Debug/DROS2-LiveBuffer
+DROS2-Spectrometer/Debug/DROS2-Spectrometer
+DataSource/Release/DataSource
+DataSource_v2/Debug/DataSource_v2
+Msender/Release/Msender
+SpectrogramViewer/Release/SpectrogramViewer
