@@ -74,17 +74,21 @@ enum SamplePolOrganization{ Interleaved, Noninterleaved};
 
 enum StokesProduct {
 	INVALID_STOKES = 0x00,
-	XX   = 0x01, XY       = 0x02, YX = 0x04, YY   = 0x08,
-	I    = 0x10, Q        = 0x20, U  = 0x40, V    = 0x80,
-	XXYY = 0x09, XXXYYXYY = 0x0F, IV = 0x90, IQUV = 0xF0
+	XX   = 0x01, CR   = 0x02, CI       = 0x04, YY = 0x08,
+	I    = 0x10, Q    = 0x20, U        = 0x40, V  = 0x80,
+	XXYY = 0x09, CRCI = 0x06, XXCRCIYY = 0x0F,
+	IV   = 0x90, IQUV = 0xF0
 }; // thanks Jake :)
 #define StokesSize(s) (__builtin_popcount(s))
 string stokesName(StokesProduct s);
 StokesProduct nameToStokes(string name);
 #define StokesSupported(s)\
-	((s==XXYY)||\
+	((s==XXCRCIYY)||\
+	 (s==XXYY)||\
+	 (s==CRCI)||\
 	 (s==IQUV)||\
-	 (s==IV)\
+	 (s==IV)||\
+	 (s==I)\
 	 /* more here as supported */\
 	)
 #define StokesTypeLegalOnInputType(s,p)\
@@ -95,40 +99,17 @@ StokesProduct nameToStokes(string name);
 	)
 
 
-
-enum CorrProduct{
-	cINVALID = 0x00,
-	cXY      = 0x02
-};
-#define CorrSize(c) (__builtin_popcount(c))
-string corrName(CorrProduct c);
-CorrProduct   nameToCorr(string name);
-#define CorrSupported(c)\
-	((c==cXY)\
-	 /* more here as supported */\
-	)
-#define CorrTypeLegalOnInputType(c,p)\
-	(\
-		((c==cXY)&&(p==XandY))\
-	)
-
-
 typedef struct __ProductType{
-	__ProductType(StokesProduct s):stokes(s),isCorr(false){};
-	__ProductType(CorrProduct c):corr(c),isCorr(true){};
-	StokesProduct toStokes(){             return isCorr ? INVALID_STOKES : stokes;}
-	CorrProduct   toCorr(){               return isCorr ? corr           : cINVALID;}
-	bool legalForInputType(PolType pin){  return isCorr ? (CorrTypeLegalOnInputType(corr, pin)) : (StokesTypeLegalOnInputType(stokes,pin));}
-	bool isSupported(){                   return isCorr ? (CorrSupported(corr))                 : (StokesSupported(stokes));}
-	size_t numberOutputProducts(){        return isCorr ? CorrSize(corr)                        : StokesSize(stokes);}
-	bool   outputProductsComplex(){       return isCorr;}
-	string name(){                        return isCorr ? corrName(corr) : stokesName(stokes);}
+	__ProductType(StokesProduct s):stokes(s){};
+	StokesProduct toStokes(){             return stokes;}
+	bool legalForInputType(PolType pin){  return StokesTypeLegalOnInputType(stokes,pin);}
+	bool isSupported(){                   return StokesSupported(stokes);}
+	size_t numberOutputProducts(){        return StokesSize(stokes);}
+	string name(){                        return stokesName(stokes);}
 	union{
 		StokesProduct stokes;
-		CorrProduct corr;
 		uint8_t byte;
 	};
-	bool isCorr;
 }ProductType;
 #define ProductSize(p) (__builtin_popcount(p.byte))
 
@@ -381,14 +362,10 @@ public:
 				for (size_t c=0; c<number_cells; c++){
 					size_t c_linear     = cellIndex(b,s,c);
 					size_t c_data_index = c_linear * samples_per_cell;
-					if (!outputType.isCorr){
-						plans[c_linear] = fftwf_plan_many_dft(
-								1, &k, l,
-								&idata[c_data_index], NULL, 1, k,
-								&odata[c_data_index], NULL, 1, k,
-								FFTW_FORWARD, FFTW_ESTIMATE
-						);
-					}
+					plans[c_linear] = fftwf_plan_many_dft(1, &k, l,
+																								&idata[c_data_index], NULL, 1, k,
+																								&odata[c_data_index], NULL, 1, k,
+																								FFTW_FORWARD, FFTW_ESTIMATE);
 					clearCellInput(c_linear);
 					clearCellOutput(c_linear);
 					clearCellCounters(c_linear);
@@ -420,9 +397,7 @@ public:
 				for (size_t s=0; s<number_streams; s++){
 					for (size_t c=0; c<number_cells; c++){
 						size_t c_linear     = cellIndex(b,s,c);
-						if (!outputType.isCorr){
-							fftwf_destroy_plan(plans[c_linear]);
-						}
+						fftwf_destroy_plan(plans[c_linear]);
 					}
 				}
 			}
@@ -498,15 +473,13 @@ public:
 		unsigned pIdx = threadIndex % number_cells;
 		unsigned cIdx = cellIndex(bIdx, sIdx, pIdx);
 		LOG_ASSERT(cIdx < total_cells);
-		if (!outputType.isCorr){
-			fftwf_execute(plans[cIdx]);
-			//clearCellInput(cIdx);
-			//clearCellOutput(cIdx);
-			//genTestXXYY(cIdx);
-			//if (barrierSyncRequired)
-			if(bInfo[bIdx].fftBarrier->wait()){
-				// nada
-			}
+		fftwf_execute(plans[cIdx]);
+		//clearCellInput(cIdx);
+		//clearCellOutput(cIdx);
+		//genTestXXYY(cIdx);
+		//if (barrierSyncRequired)
+		if(bInfo[bIdx].fftBarrier->wait()){
+			// nada
 		}
 		//bInfo[bIdx].fftBarrier->wait();
 		doAcc(bIdx, threadIndex);
@@ -546,35 +519,18 @@ public:
 	// accumulate results for the given block, assuming the cells have been calculated
 	void doAcc(unsigned bIdx,unsigned threadIndex){
 		LOG_ASSERT(bIdx < number_blocks);
-		if (outputType.isCorr){
-			switch (outputType.toCorr()){
-				case cXY:		doAcc_c_XY(bIdx,threadIndex); break;
-				default:		UNSUPPORTED_MODE(); break;
-			}
-		} else {
-			switch (outputType.stokes){
-				case XXYY:	    doAcc_XXYY(bIdx,threadIndex); break;
-				case IQUV:      doAcc_IQUV(bIdx,threadIndex); break;
-				case IV:		doAcc_IV(bIdx,threadIndex); break;
-				case XX: 		doAcc_XX(bIdx,threadIndex); break;
-				case XY: 		doAcc_XY(bIdx,threadIndex); break;
-				case YX: 		doAcc_YX(bIdx,threadIndex); break;
-				case YY: 		doAcc_YY(bIdx,threadIndex); break;
-				case XXXYYXYY:	doAcc_XXXYYXYY(bIdx,threadIndex); break;
-				case I:			doAcc_I(bIdx,threadIndex); break;
-				case Q:			doAcc_Q(bIdx,threadIndex); break;
-				case U:			doAcc_U(bIdx,threadIndex); break;
-				case V:			doAcc_V(bIdx,threadIndex); break;
-				default:		UNSUPPORTED_MODE(); break;
-			}
+		switch (outputType.stokes){
+			case XXYY:	    doAcc_XXYY(bIdx,threadIndex); break;
+			case CRCI:      doAcc_CRCI(bIdx,threadIndex); break;
+			case IQUV:      doAcc_IQUV(bIdx,threadIndex); break;
+			case IV:		    doAcc_IV(bIdx,threadIndex); break;
+			case XXCRCIYY:	doAcc_XXCRCIYY(bIdx,threadIndex); break;
+			case I:			    doAcc_I(bIdx,threadIndex); break;
+			default:		 		UNSUPPORTED_MODE(); break;
 		}
 
 	}
 
-	void doAcc_XX(       unsigned bIdx,unsigned threadIndex){ UNSUPPORTED_MODE(); }
-	void doAcc_XY(       unsigned bIdx,unsigned threadIndex){ UNSUPPORTED_MODE(); }
-	void doAcc_YX(       unsigned bIdx,unsigned threadIndex){ UNSUPPORTED_MODE(); }
-	void doAcc_YY(       unsigned bIdx,unsigned threadIndex){ UNSUPPORTED_MODE(); }
 	void doAcc_XXYY(     unsigned bIdx,unsigned threadIndex){
 		// input stepping
 		unsigned n_freqs_per_thread = k/number_threads;                  // units of complex
@@ -636,11 +592,237 @@ public:
 		} // loop on stream
 
 	}
-	void doAcc_XXXYYXYY( unsigned bIdx,unsigned threadIndex){ UNSUPPORTED_MODE(); }
-	void doAcc_I(        unsigned bIdx,unsigned threadIndex){ UNSUPPORTED_MODE(); }
-	void doAcc_Q(        unsigned bIdx,unsigned threadIndex){ UNSUPPORTED_MODE(); }
-	void doAcc_U(        unsigned bIdx,unsigned threadIndex){ UNSUPPORTED_MODE(); }
-	void doAcc_V(        unsigned bIdx,unsigned threadIndex){ UNSUPPORTED_MODE(); }
+	void doAcc_CRCI( unsigned bIdx,unsigned threadIndex){
+		// input stepping
+		unsigned n_freqs_per_thread = k/number_threads;                  // units of complex
+		unsigned startFreq          = threadIndex * n_freqs_per_thread;  // units of complex
+		unsigned stopFreq           = startFreq + n_freqs_per_thread;
+		unsigned intStep            = k;                                 // units of complex
+		// output stepping
+		unsigned fStep              = number_products;
+		for (unsigned cur_str=0; cur_str<number_streams; cur_str++){
+			// where is x starting from?
+			unsigned cIdx_x       = cellIndex(bIdx, cur_str, POL_X); //LOG_ASSERT(cIdx_x < total_cells);
+			fftwf_complex* x_base = getCellOdata(cIdx_x);
+			__v4sf* x             = (__v4sf*) x_base;
+
+			// where is y starting from?
+			unsigned cIdx_y       = cellIndex(bIdx, cur_str, POL_Y); //LOG_ASSERT(cIdx_y < total_cells);
+			fftwf_complex* y_base = getCellOdata(cIdx_y);
+			__v4sf* y             = (__v4sf*) y_base;
+
+			// where does data for the block go?
+			float* a_base = adata[bIdx];
+			float* a_str  = &a_base[k*number_products*cur_str];
+
+			// flip L-R
+			unsigned freq_mask = k>>1;
+
+			// pre-zero the accumulator
+			bzero((void*) &a_str[(startFreq ^ freq_mask)*fStep], n_freqs_per_thread*number_products*sizeof(float));
+
+			
+			size_t cr_index  = 0;
+			size_t ci_index  = 1;
+			
+			for (int cur_int=0; cur_int<l; cur_int++){
+				for (unsigned cur_freq = startFreq; cur_freq<stopFreq; cur_freq+=4){ // 4 at a time
+					size_t in_index1  = (((cur_int * intStep) + cur_freq)>>1); // v4s index
+					size_t in_index2  = in_index1 + 1;
+					size_t f_index_1 = ((cur_freq + 0) ^ freq_mask)*fStep;   // float index
+					size_t f_index_2 = ((cur_freq + 1) ^ freq_mask)*fStep;   // float index
+					size_t f_index_3 = ((cur_freq + 2) ^ freq_mask)*fStep;
+					size_t f_index_4 = ((cur_freq + 3) ^ freq_mask)*fStep;
+
+					__v4sf tmpx1 = __builtin_ia32_mulps( x[in_index1], y[in_index1]); // premult1             [ x0ry0r,  x0iy0i,  x1ry1r,  x1iy1i]
+					__v4sf tmpx2 = __builtin_ia32_mulps( x[in_index2], y[in_index2]); // premult2				      [ x2ry2r,  x2iy2i,  x3ry3r,  x3iy3i]
+					__v4sf _cr   = __builtin_ia32_haddps(tmpx1, tmpx2);               // add comps:           [] 
+					__v4sf tmpy1 = __builtin_ia32_shufps(x[in_index1],x[in_index1],_MM_SHUFFLE(2,3,0,1)); // swap real/imag (do this on x so that we can use hsub and the sign will work out)
+					__v4sf tmpy2 = __builtin_ia32_shufps(x[in_index2],x[in_index2],_MM_SHUFFLE(2,3,0,1)); // swap real/imag (do this on x so that we can use hsub and the sign will work out)
+					__v4sf tmpc1 = __builtin_ia32_mulps( tmpy1, y[in_index1]);        // premult3             [ x0iy0r,  x0ry0i,  x1iy1r,  x1ry1i]
+					__v4sf tmpc2 = __builtin_ia32_mulps( tmpy2, y[in_index2]);        // premult4             [ x2iy2r,  x2ry2i,  x3iy3r,  x3ry3i]
+					__v4sf _ci   = __builtin_ia32_hsubps(tmpc1, tmpc2);               // diff                 [  XY*0i,   XY*1i,   XY*2i,   XY*3i] <note: XY*_n, not XY * n>
+
+					// accumulate bin 1's XY (R) and XY (I)
+					a_str[f_index_1 + cr_index] += ((float*)&_cr  )[0];
+					a_str[f_index_1 + ci_index] += ((float*)&_ci  )[0];
+					
+					// accumulate bin 2's XY (R) and XY (I)
+					a_str[f_index_2 + cr_index] += ((float*)&_cr  )[1];
+					a_str[f_index_2 + ci_index] += ((float*)&_ci  )[1];
+					
+					// accumulate bin 3's XY (R) and XY (I)
+					a_str[f_index_3 + cr_index] += ((float*)&_cr  )[2];
+					a_str[f_index_3 + ci_index] += ((float*)&_ci  )[2];
+					
+					// accumulate bin 4's XY (R) and XY (I)
+					a_str[f_index_4 + cr_index] += ((float*)&_cr  )[3];
+					a_str[f_index_4 + ci_index] += ((float*)&_ci  )[3];
+				} // loop on frequency
+			} // loop on integration count
+		} // loop on stream
+
+	}
+	void doAcc_XXCRCIYY( unsigned bIdx,unsigned threadIndex){
+		// input stepping
+		unsigned n_freqs_per_thread = k/number_threads;                  // units of complex
+		unsigned startFreq          = threadIndex * n_freqs_per_thread;  // units of complex
+		unsigned stopFreq           = startFreq + n_freqs_per_thread;
+		unsigned intStep            = k;                                 // units of complex
+		// output stepping
+		unsigned fStep              = number_products;
+		for (unsigned cur_str=0; cur_str<number_streams; cur_str++){
+			// where is x starting from?
+			unsigned cIdx_x       = cellIndex(bIdx, cur_str, POL_X); //LOG_ASSERT(cIdx_x < total_cells);
+			fftwf_complex* x_base = getCellOdata(cIdx_x);
+			__v4sf* x             = (__v4sf*) x_base;
+
+			// where is y starting from?
+			unsigned cIdx_y       = cellIndex(bIdx, cur_str, POL_Y); //LOG_ASSERT(cIdx_y < total_cells);
+			fftwf_complex* y_base = getCellOdata(cIdx_y);
+			__v4sf* y             = (__v4sf*) y_base;
+
+			// where does data for the block go?
+			float* a_base = adata[bIdx];
+			float* a_str  = &a_base[k*number_products*cur_str];
+
+			// flip L-R
+			unsigned freq_mask = k>>1;
+
+			// pre-zero the accumulator
+			bzero((void*) &a_str[(startFreq ^ freq_mask)*fStep], n_freqs_per_thread*number_products*sizeof(float));
+
+			
+			size_t xx_index  = 0;
+			size_t cr_index  = 1;
+			size_t ci_index  = 2;
+			size_t yy_index  = 3;
+
+			for (int cur_int=0; cur_int<l; cur_int++){
+				for (unsigned cur_freq = startFreq; cur_freq<stopFreq; cur_freq+=4){ // 4 at a time
+					size_t in_index1  = (((cur_int * intStep) + cur_freq)>>1); // v4s index
+					size_t in_index2  = in_index1 + 1;
+					size_t f_index_1 = ((cur_freq + 0) ^ freq_mask)*fStep;   // float index
+					size_t f_index_2 = ((cur_freq + 1) ^ freq_mask)*fStep;   // float index
+					size_t f_index_3 = ((cur_freq + 2) ^ freq_mask)*fStep;
+					size_t f_index_4 = ((cur_freq + 3) ^ freq_mask)*fStep;
+
+					// first compute |X| and |Y| so we can use the space for in place computation
+					__v4sf tmpx1 = __builtin_ia32_mulps( x[in_index1], x[in_index1]); // square               [    x0r,     x0i,     x1r,     x1i]
+					__v4sf tmpx2 = __builtin_ia32_mulps( x[in_index2], x[in_index2]); // square               [    x2r,     x2i,     x3r,     x3i]
+					__v4sf tmpx3 = __builtin_ia32_haddps(tmpx1, tmpx2);               // add squared comps:   [ |X0|^2,  |X1|^2,  |X2|^2,  |X3|^2]
+					__v4sf tmpy1 = __builtin_ia32_mulps( y[in_index1], y[in_index1]); // square               [    y0r,     y0i,     y1r,     y1i]
+					__v4sf tmpy2 = __builtin_ia32_mulps( y[in_index2], y[in_index2]); // square               [    y2r,     y2i,     y3r,     y3i]
+					__v4sf tmpy3 = __builtin_ia32_haddps(tmpy1, tmpy2);               // add squared comps:   [ |y0|^2,  |X1|^2,  |X2|^2,  |X3|^2]
+					       tmpx1 = __builtin_ia32_mulps( x[in_index1], y[in_index1]); // premult1             [ x0ry0r,  x0iy0i,  x1ry1r,  x1iy1i]
+								 tmpx2 = __builtin_ia32_mulps( x[in_index2], y[in_index2]); // premult2				      [ x2ry2r,  x2iy2i,  x3ry3r,  x3iy3i]
+					__v4sf _cr   = __builtin_ia32_haddps(tmpx1, tmpx2);               // add comps:           [] 
+					       tmpy1 = __builtin_ia32_shufps(x[in_index1],x[in_index1],_MM_SHUFFLE(2,3,0,1)); // swap real/imag (do this on x so that we can use hsub and the sign will work out)
+					       tmpy2 = __builtin_ia32_shufps(x[in_index2],x[in_index2],_MM_SHUFFLE(2,3,0,1)); // swap real/imag (do this on x so that we can use hsub and the sign will work out)
+					__v4sf tmpc1 = __builtin_ia32_mulps( tmpy1, y[in_index1]);        // premult3             [ x0iy0r,  x0ry0i,  x1iy1r,  x1ry1i]
+					__v4sf tmpc2 = __builtin_ia32_mulps( tmpy2, y[in_index2]);        // premult4             [ x2iy2r,  x2ry2i,  x3iy3r,  x3ry3i]
+					__v4sf _ci   = __builtin_ia32_hsubps(tmpc1, tmpc2);               // diff                 [  XY*0i,   XY*1i,   XY*2i,   XY*3i] <note: XY*_n, not XY * n>
+
+					// accumulate bin 1's XX, XY (R), XY (I), and YY
+					a_str[f_index_1 + xx_index] += ((float*)&tmpx3)[0];
+					a_str[f_index_1 + cr_index] += ((float*)&_cr  )[0];
+					a_str[f_index_1 + ci_index] += ((float*)&_ci  )[0];
+					a_str[f_index_1 + yy_index] += ((float*)&tmpy3)[0];
+
+					// accumulate bin 2's XX, XY (R), XY (I), and YY
+					a_str[f_index_2 + xx_index] += ((float*)&tmpx3)[1];
+					a_str[f_index_2 + cr_index] += ((float*)&_cr  )[1];
+					a_str[f_index_2 + ci_index] += ((float*)&_ci  )[1];
+					a_str[f_index_2 + yy_index] += ((float*)&tmpy3)[1];
+
+					// accumulate bin 3's XX, XY (R), XY (I), and YY
+					a_str[f_index_3 + xx_index] += ((float*)&tmpx3)[2];
+					a_str[f_index_3 + cr_index] += ((float*)&_cr  )[2];
+					a_str[f_index_3 + ci_index] += ((float*)&_ci  )[2];
+					a_str[f_index_3 + yy_index] += ((float*)&tmpy3)[2];
+
+					// accumulate bin 4's XX, XY (R), XY (I), and YY
+					a_str[f_index_4 + xx_index] += ((float*)&tmpx3)[3];
+					a_str[f_index_4 + cr_index] += ((float*)&_cr  )[3];
+					a_str[f_index_4 + ci_index] += ((float*)&_ci  )[3];
+					a_str[f_index_4 + yy_index] += ((float*)&tmpy3)[3];
+				} // loop on frequency
+			} // loop on integration count
+		} // loop on stream
+
+	}
+	void doAcc_I(        unsigned bIdx,unsigned threadIndex){
+		// each thread computes all output products for
+		//      * (Nfreqs/Nthreads) frequencies,
+		//           for all streams,
+		//               integrating from 0 to Nints
+
+
+		// input stepping
+		unsigned n_freqs_per_thread = k/number_threads;                  // units of complex
+		unsigned startFreq          = threadIndex * n_freqs_per_thread;  // units of complex
+		unsigned stopFreq           = startFreq + n_freqs_per_thread;
+		unsigned intStep            = k;                                 // units of complex
+		// output stepping
+		unsigned fStep              = number_products;
+
+
+		for (unsigned cur_str=0; cur_str<number_streams; cur_str++){
+			// where is x starting from?
+			unsigned cIdx_x       = cellIndex(bIdx, cur_str, POL_X); //LOG_ASSERT(cIdx_x < total_cells);
+			fftwf_complex* x_base = getCellOdata(cIdx_x);
+			__v4sf* x             = (__v4sf*) x_base;
+
+			// where is y starting from?
+			unsigned cIdx_y       = cellIndex(bIdx, cur_str, POL_Y); //LOG_ASSERT(cIdx_y < total_cells);
+			fftwf_complex* y_base = getCellOdata(cIdx_y);
+			__v4sf* y             = (__v4sf*) y_base;
+
+			// where does data for the block go?
+			float* a_base = adata[bIdx];
+			float* a_str  = &a_base[k*number_products*cur_str];
+
+			unsigned freq_mask = k>>1;
+
+			// pre-zero the accumulator
+			bzero((void*) &a_str[(startFreq ^ freq_mask)*fStep], n_freqs_per_thread*number_products*sizeof(float));
+
+			for (int cur_int=0; cur_int<l; cur_int++){
+				for (unsigned cur_freq = startFreq; cur_freq<stopFreq; cur_freq+=4){ // 4 at a time
+					size_t in_index1  = (((cur_int * intStep) + cur_freq)>>1); // v4s index
+					size_t in_index2  = in_index1 + 1;
+					size_t f_index_1 = ((cur_freq + 0) ^ freq_mask)*fStep;   // float index
+					size_t f_index_2 = ((cur_freq + 1) ^ freq_mask)*fStep;   // float index
+					size_t f_index_3 = ((cur_freq + 2) ^ freq_mask)*fStep;
+					size_t f_index_4 = ((cur_freq + 3) ^ freq_mask)*fStep;
+
+					size_t i_index  = 0;
+					
+					// first compute |X| and |Y| so we can use the space for in place computation
+					__v4sf tmpx1 = __builtin_ia32_mulps( x[in_index1], x[in_index1]); // square               [    x0r,     x0i,     x1r,     x1i]
+					__v4sf tmpx2 = __builtin_ia32_mulps( x[in_index2], x[in_index2]); // square               [    x2r,     x2i,     x3r,     x3i]
+					__v4sf tmpx3 = __builtin_ia32_haddps(tmpx1, tmpx2);               // add squared comps:   [ |X0|^2,  |X1|^2,  |X2|^2,  |X3|^2]
+					__v4sf tmpy1 = __builtin_ia32_mulps( y[in_index1], y[in_index1]); // square               [    y0r,     y0i,     y1r,     y1i]
+					__v4sf tmpy2 = __builtin_ia32_mulps( y[in_index2], y[in_index2]); // square               [    y2r,     y2i,     y3r,     y3i]
+					__v4sf tmpy3 = __builtin_ia32_haddps(tmpy1, tmpy2);               // add squared comps:   [ |y0|^2,  |X1|^2,  |X2|^2,  |X3|^2]
+					__v4sf _i    = __builtin_ia32_addps(tmpx3,tmpy3);                 // SUM                  [     I0,      I1,      I2,      I3]
+					
+					// accumulate bin 1's I
+					a_str[f_index_1 + i_index] += ((float*)&_i)[0];
+					
+					// accumulate bin 2's I
+					a_str[f_index_2 + i_index] += ((float*)&_i)[1];
+
+					// accumulate bin 3's I
+					a_str[f_index_3 + i_index] += ((float*)&_i)[2];
+					
+					// accumulate bin 4's I
+					a_str[f_index_4 + i_index] += ((float*)&_i)[3];
+				} // loop on frequency
+			} // loop on integration count
+		} // loop on stream
+
+	}
 	void doAcc_IV(       unsigned bIdx,unsigned threadIndex){
 		// each thread computes all output products for
 		//      * (Nfreqs/Nthreads) frequencies,
@@ -918,89 +1100,6 @@ public:
 	}
 
 
-	void doAcc_c_XY(     unsigned bIdx,unsigned threadIndex){
-
-			// input stepping
-			unsigned n_samps_per_thread = k/number_threads;                  // units of complex
-			unsigned startSamp          = threadIndex * n_samps_per_thread;  // units of complex
-			unsigned stopSamp           = startSamp + n_samps_per_thread;
-			unsigned sampStep           = l;                                 // units of complex
-
-			// output stepping
-			unsigned pStep              = number_products;
-
-			LOG_ASSERT(number_products == 1);
-
-			for (unsigned cur_str=0; cur_str<number_streams; cur_str++){
-				// where is x starting from?
-				unsigned cIdx_x       = cellIndex(bIdx, cur_str, POL_X); //LOG_ASSERT(cIdx_x < total_cells);
-				fftwf_complex* x_base = getCellOdata(cIdx_x);
-				__v4sf* x             = (__v4sf*) x_base;
-
-				// where is y starting from?
-				unsigned cIdx_y       = cellIndex(bIdx, cur_str, POL_Y); //LOG_ASSERT(cIdx_y < total_cells);
-				fftwf_complex* y_base = getCellOdata(cIdx_y);
-				__v4sf* y             = (__v4sf*) y_base;
-
-				// where does data for the block go?
-				fftwf_complex* a_base = (fftwf_complex*) adata[bIdx];
-				fftwf_complex* a_str  = &a_base[k*number_products*cur_str]; // complex data
-
-				__v4sf zero; bzero((void*)&zero, sizeof(__v4sf));
-
-				// pre-zero the accumulator
-				bzero((void*) &a_str[startSamp*pStep], n_samps_per_thread*pStep*sizeof(fftwf_complex));
-
-				for (unsigned cur_samp = startSamp; cur_samp<stopSamp; cur_samp++){
-					for (int cur_int=0; cur_int<l; cur_int+=4){ // 4 at a time
-						size_t in_index1  = (((cur_samp * sampStep) + cur_int)>>1); // v4s index
-						size_t in_index2  = in_index1 + 1;
-
-						size_t out_index  = ((cur_samp * pStep)); // complex index
-
-						//size_t xx_index  = 0;
-						size_t xy_index  = 0;
-						//size_t yx_index  = 2;
-						//size_t yy_index  = 3;
-
-						__v4sf tmpxy_r_1  = __builtin_ia32_mulps( x[in_index1], y[in_index1]); // premult1             [ x0ry0r,  x0iy0i,  x1ry1r,  x1iy1i]
-						__v4sf tmpxy_r_2  = __builtin_ia32_mulps( x[in_index2], y[in_index2]); // premult2             [ x2ry2r,  x2iy2i,  x3ry3r,  x3iy3i]
-						__v4sf tmpxy_r    = __builtin_ia32_haddps(tmpxy_r_1, tmpxy_r_2);       // sum                  [  XY*0r,   XY*1r,   XY*2r,   XY*3r] <note: XY*_n, not XY * n>
-
-						__v4sf tmpxy_i_1  = __builtin_ia32_shufps(x[in_index1],x[in_index1],_MM_SHUFFLE(2,3,0,1)); // swap real/imag (do this on x so that we can use hsub and the sign will work out)
-						__v4sf tmpxy_i_2  = __builtin_ia32_shufps(x[in_index2],x[in_index2],_MM_SHUFFLE(2,3,0,1)); // swap real/imag (do this on x so that we can use hsub and the sign will work out)
-						__v4sf tmpxy_i_3  = __builtin_ia32_mulps( tmpxy_i_1, y[in_index1]);    // premult1             [ x0iy0r,  x0ry0i,  x1iy1r,  x1ry1i]
-						__v4sf tmpxy_i_4  = __builtin_ia32_mulps( tmpxy_i_2, y[in_index2]);    // premult2             [ x2iy2r,  x2ry2i,  x3iy3r,  x3ry3i]
-						__v4sf tmpxy_i    = __builtin_ia32_hsubps(tmpxy_i_3, tmpxy_i_4);       // diff                 [  XY*0i,   XY*1i,   XY*2i,   XY*3i] <note: XY*_n, not XY * n>
-						__v4sf tmpxy_x2   = __builtin_ia32_haddps(tmpxy_r,tmpxy_i);            // add first two        [ XY*01r,  XY*23r, XY*01i,   XY*23i]
-						__v4sf tmpxy_x4   = __builtin_ia32_haddps(tmpxy_x2,zero);              // add first two        [ XY*0123r,  XY*0123i, 0,   0]
-
-						// accumulate real and imaginary parts
-						a_str[out_index + xy_index][0] += ((float*)&tmpxy_x4)[0];
-						a_str[out_index + xy_index][1] += ((float*)&tmpxy_x4)[1];
-						//a_str[out_index + xy_index][0] = (out_index + xy_index);
-						//a_str[out_index + xy_index][1] = -(out_index + xy_index);
-
-
-					} // loop on integration count
-				} // loop on sample number of frame
-				// now we need to fix up magnitude to normalize by integration count
-
-				for (unsigned cur_samp = startSamp; cur_samp<stopSamp; cur_samp++){
-					size_t out_index   = ((cur_samp * pStep)); // complex index
-					size_t xy_index    = 0;
-					a_str[out_index + xy_index][0] /= l;
-					a_str[out_index + xy_index][1] /= l;
-				}
-
-			} // loop on stream
-
-		}
-
-
-
-
-
 	float* getAccAdata(unsigned bIdx){
 		return &adata[bIdx][0];
 	}
@@ -1023,6 +1122,7 @@ public:
 		LOG_ASSERT(cIdx < total_cells);
 		return &fills[cIdx];
 	}
+
 
 	size_t* getCellSatCounts(unsigned cIdx){
 		LOG_ASSERT(cIdx < total_cells);
@@ -1057,13 +1157,8 @@ public:
 	}
 
 
-
 	inline bool isValid() const {return valid;}
 	string getReason() const {return reason;}
-
-
-
-
 
 
 private:
@@ -1089,12 +1184,10 @@ private:
 	size_t samples_per_buf;
 
 	// accumulator geometry
-
 	size_t osamples_per_product;
 	size_t osamples_per_stream;
 	size_t osamples_per_block;
 	size_t osamples_per_buf;
-
 
 	fftwf_plan*       plans;
 	fftwf_complex*    idata;
@@ -1112,9 +1205,6 @@ private:
 };
 
 #endif /* SPECTROMETER_H_ */
-
-
-
 
 
 /*

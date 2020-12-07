@@ -615,8 +615,6 @@ Storage* Storage::getDeviceByMountPoint(string mountpoint, StorageType st){
 				if(folders[FT_GENERAL])      delete folders[FT_GENERAL];folders[FT_GENERAL]=NULL;
 				LOGC(L_INFO, "DOWN FT_SPECTROMETER", FATAL_COLORS);
 				if(folders[FT_SPECTROMETER]) delete folders[FT_SPECTROMETER];folders[FT_SPECTROMETER]=NULL;
-				LOGC(L_INFO, "DOWN FT_CORRELATION", FATAL_COLORS);
-				if(folders[FT_CORRELATION])  delete folders[FT_CORRELATION];folders[FT_CORRELATION]=NULL;
 				break;
 			case ST_EXTERNAL:
 				if(folders[FT_GENERAL])      delete folders[FT_GENERAL];folders[FT_GENERAL]=NULL;
@@ -709,7 +707,6 @@ Storage::Storage(string path, StorageType type, int id):
 	case ST_INTERNAL:
 		folders[FT_GENERAL]      = new Folder(path + "/DROS/Rec" ,  FT_GENERAL);
 		folders[FT_SPECTROMETER] = new Folder(path + "/DROS/Spec" , FT_SPECTROMETER);
-		folders[FT_CORRELATION]  = new Folder(path + "/DROS/Corr" , FT_CORRELATION);
 		break;
 	case ST_EXTERNAL:
 		folders[FT_GENERAL]      = new Folder(path + "/DROS/" , FT_GENERAL);

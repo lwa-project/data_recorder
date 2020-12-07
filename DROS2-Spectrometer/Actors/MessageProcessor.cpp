@@ -522,8 +522,6 @@ bool MessageProcessor::onDoReceive(Message& received){
 			typeOverride = FT_GENERAL;
 		} else if (!altInternalFileType.compare("Spectrometer")){
 			typeOverride = FT_SPECTROMETER;
-		} else if (!altInternalFileType.compare("Correlation")){
-			typeOverride = FT_CORRELATION;
 		}
 	}
 	///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -748,91 +746,6 @@ bool MessageProcessor::onDoReceive(Message& received){
 
 		SpectrometerOperation* op_spc = new SpectrometerOperation(received.getReference(),ts,buf,opFormat,tagfile,0, outputType,Nfreqs, NInts);
 		checkAndSchedule(sch, op_spc, accept, comment);
-		if (!accept){
-			s_internal->putFile(tagfile);
-			RESPOND(accept,comment);
-		} else {
-			RESPOND(accept,tag);
-		}
-
-	}
-	///////////////////////////////////////////////////////////////////////////////////////////////////
-	///////////////////////////////////////////////////////////////////////////////////////////////////
-	if (!type.compare("XCP")){
-		// parse as normal xcp command
-		sl = Utility::getMatches(re_spc,data);
-		if (sl.size() < 6){
-			int i=0;foreach(string s, sl){LOGC(L_DEBUG, "Match "+LXS(i++) + ": '"+s+"'",ACTOR_WARNING_COLORS);}
-			RESPOND( false, "Bad format: bad argument count ("+LXS(sl.size())+")");
-		}
-		size_t      startMJD   = strtoul(sl[1].c_str(),NULL,10);
-		size_t      startMPM   = strtoul(sl[2].c_str(),NULL,10);
-		size_t      duration   = strtoul(sl[3].c_str(),NULL,10);
-		size_t      Nspf       = strtoul(sl[4].c_str(),NULL,10);
-		size_t      NInts      = strtoul(sl[5].c_str(),NULL,10);
-		size_t     __attribute__ ((unused)) minfill; // ignored
-		size_t     __attribute__ ((unused)) highwater; // ignored
-		if (sl.size() >= 7)
-			minfill    = strtoul(sl[6].c_str(),NULL,10); // ignored
-		if (sl.size() >= 8)
-			highwater  = strtoul(sl[7].c_str(),NULL,10); // ignored
-
-		string corrModeString = received.getMetaValue("Corr");
-		if (corrModeString.empty()){
-			corrModeString = "XY";
-		}
-
-		CorrProduct outputType = nameToCorr(corrModeString);
-		if (outputType == cINVALID){
-			RESPOND( false, "Unknown Correlator output type '"+corrModeString+"'");
-		}
-
-		if (!CorrSupported(outputType)){
-			RESPOND( false, "Unsupported Correlator output type '"+corrModeString+"'");
-		}
-
-		if ((Nspf > 16384) || (Nspf<32)){
-			RESPOND( false, "Unsupported number of samples per frame: '"+LXS(Nspf)+"'");
-		}
-
-		if ((NInts > 24576) || (NInts<384)){
-			RESPOND( false, "Unsupported integration count: '"+LXS(NInts)+"'");
-		}
-
-		if (((Nspf*NInts)%DRX_SAMPLES_PER_FRAME) != 0){
-			RESPOND( false, "Unsupported geometry: 'Nspf x Ni  must be an integral multiple of DRX frame sizes'");
-		}
-
-		TimeSlot ts(__TimeStamp(startMJD, startMPM),duration);
-
-		ScheduledOperation* conflict;
-		if (!sch->isTimeSlotFree(ts, conflict)){
-			if (conflict != NULL){
-				RESPOND( false,  "Operation not scheduled due to time conflict with " + conflict->toString());
-			} else {
-				RESPOND( false, "Operation not scheduled due to bad pointer");
-			}
-		}
-
-		DataFormat opFormat=DataFormat::getFormatByName("DEFAULT_DRX");
-
-		char optag[20];
-		sprintf(optag, "%.6lu_%.9lu", startMJD, received.getReference());
-		string tag(optag);
-
-		TicketBuffer* buf;
-		SYSTEM_SAFE2(buf, getRxBuf(), NULL);
-		if (!buf){
-			RESPOND( false, "Subsystem unavailable: 'Receive buffer'");
-		}
-
-		openOut(s_internal, FT_CORRELATION, tag, tagfile, 0, accept,comment);
-		if (!accept){
-			RESPOND( false, "Cannot create output file, or file already exists");
-		}
-
-		CorrelatorOperation* op_xcp = new CorrelatorOperation(received.getReference(),ts,buf,opFormat,tagfile,0, outputType,Nspf, NInts);
-		checkAndSchedule(sch, op_xcp, accept, comment);
 		if (!accept){
 			s_internal->putFile(tagfile);
 			RESPOND(accept,comment);
@@ -1261,9 +1174,6 @@ const string MessageProcessor::re_rpt   =
 		if (strEqual(stype,"Spectrometer")){\
 			LOGC(L_DEBUG,"STO: Spectrometer", MESSAGING_ERROR_COLORS);\
 			ft = FT_SPECTROMETER;\
-		} else if (strEqual(stype,"Correlator")){\
-			LOGC(L_DEBUG,"STO: Correlator", MESSAGING_ERROR_COLORS);\
-			ft = FT_CORRELATION;\
 		} else if (strEqual(stype,"External")){\
 			LOGC(L_DEBUG,"STO: External", MESSAGING_ERROR_COLORS);\
 			ft = FT_GENERAL;\

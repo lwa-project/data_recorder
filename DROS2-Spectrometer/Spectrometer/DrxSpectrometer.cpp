@@ -78,7 +78,7 @@ TB_Geometry DrxSpectrometer::getDrxBufferSize(unsigned K, ProductType OutT){
 	TB_Geometry rv;
 	rv.size                 = 32ll * 1048576ll; /* 32 MiB */
 	size_t ideal_block_size = 256ll * 1024ll; /*256 KiB */
-	rv.framesize            = (OutT.numberOutputProducts() * (OutT.outputProductsComplex() ? 2 : 1) * K * DRX_TUNINGS * sizeof(float)) + sizeof(DrxSpectraHeader);
+	rv.framesize            = (OutT.numberOutputProducts() * K * DRX_TUNINGS * sizeof(float)) + sizeof(DrxSpectraHeader);
 	rv.framesPerTicket      = ideal_block_size/ rv.framesize;
 	size_t tsize            = rv.framesize * rv.framesPerTicket;
 	rv.size                 = (((rv.size / tsize)+1)*tsize)-tsize;
@@ -92,7 +92,7 @@ DrxSpectrometer::DrxSpectrometer(
 		ProductType _OutT,
 		TicketBuffer*& _source
 		):
-			Plugin((OutT.isCorr) ? "DrxCorrelator" : "DrxSpectrometer",_source, getDrxBufferSize(K,_OutT)),
+			Plugin("DrxSpectrometer",_source, getDrxBufferSize(K,_OutT)),
 			valid(false),
 			doneReceiving(false),
 			doneProducing(false),
@@ -116,7 +116,7 @@ DrxSpectrometer::DrxSpectrometer(
 			minTimeTag(0),
 			rptTimer(DRX_SPECTROMETER_REPORT_INTERVAL),
 			outputHeaderSize(sizeof(DrxSpectraHeader)),
-			outputDataSize(OutT.numberOutputProducts() * (OutT.outputProductsComplex() ? 2 : 1) * K * DRX_TUNINGS * sizeof(float)),
+			outputDataSize(OutT.numberOutputProducts() * K * DRX_TUNINGS * sizeof(float)),
 			outputBlockSize(outputHeaderSize+outputDataSize),
 
 			inputFramesPerCell((K * L) / DRX_SAMPLES_PER_FRAME),
@@ -398,15 +398,9 @@ void DrxSpectrometer::initSpectraHeader(DrxBlockSetup* bs, DrxSpectraHeader* dsh
 	dsh->satCount[2]   = *spc->getCellSatCounts(cell0index+2);
 	dsh->satCount[3]   = *spc->getCellSatCounts(cell0index+3);
 	dsh->spec_version  = 0x02;
-	if (OutT.isCorr){
-		dsh->flag_xcp      = 1;
-		dsh->xcp_format    = (uint8_t) OutT.toCorr();
-		dsh->nPerFrame     = freqCount_or_samp_per_frame;
-	} else {
-		dsh->flag_xcp      = 0;
-		dsh->stokes_format = (uint8_t) OutT.toStokes();
-		dsh->nFreqs        = freqCount_or_samp_per_frame;
-	}
+	dsh->flag_xcp      = 0;
+	dsh->stokes_format = (uint8_t) OutT.toStokes();
+	dsh->nFreqs        = freqCount_or_samp_per_frame;
 	dsh->timeOffset    = bs->timeOffset;
 	dsh->timeTag0      = bs->timeTag0;
 }
@@ -722,7 +716,7 @@ bool DrxSpectrometer::canInsert(ObjectBuffer<DrxBlockSetup*>* to){
 	return to->nextIn() != NULL;
 }
 string DrxSpectrometer::getObjName(){
-	return (OutT.isCorr) ? "DrxCorrelator" : "DrxSpectrometer";
+	return "DrxSpectrometer";
 }
 // checks if the head of 'from' is movable to the tail of 'to'
 bool DrxSpectrometer::canMove(ObjectBuffer<DrxBlockSetup*>* from, ObjectBuffer<DrxBlockSetup*>* to){
@@ -829,13 +823,8 @@ string DrxSpectrometer::specReport(){
 
 
 	ss << "==========================================================================================" << endl;
-	if (OutT.isCorr){
-		ss << "== Correlator Report:                                                                   ==" << endl;
-		ss << "==  Mode:  "<<setw(10)<<OutT.name()<<"         Samples/frame "<<setw(6)<<freqCount_or_samp_per_frame<<"   Integration count "<<setw(8)<<intCount<<"         ==" << endl;
-	}else{
-		ss << "== Spectrometer Report:                                                                 ==" << endl;
-		ss << "==  Mode:  "<<setw(10)<<OutT.name()<<"         Frequency Ch. "<<setw(6)<<freqCount_or_samp_per_frame<<"   Integration count "<<setw(8)<<intCount<<"         ==" << endl;
-	}
+        ss << "== Spectrometer Report:                                                                 ==" << endl;
+	ss << "==  Mode:  "<<setw(10)<<OutT.name()<<"         Frequency Ch. "<<setw(6)<<freqCount_or_samp_per_frame<<"   Integration count "<<setw(8)<<intCount<<"         ==" << endl;
 	ss << "==  Frames                                                                              ==" << endl;
 	ss << "==    "<<setw(9)<<counters.framesReceived<<"                                       (received)                        ==" << endl;
 	ss << "==    "<<setw(9)<<counters.framesInserted<<" / "<<setw(9)<<counters.framesInsertedNew<<" / "<<setw(9)<<counters.framesInsertedExisting<<"               (inserted / init / join)          ==" << endl;

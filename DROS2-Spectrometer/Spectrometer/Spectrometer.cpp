@@ -51,16 +51,10 @@
 
 string stokesName(StokesProduct s){
 	switch(s){
-		case XX:       return "XX";
-		case XY:       return "XY";
-		case YX:       return "YX";
-		case YY:       return "YY";
 		case XXYY:     return "XXYY";
-		case XXXYYXYY: return "XXXYYXYY";
+		case CRCI:     return "CRCI";
+		case XXCRCIYY: return "XXCRCIYY";
 		case I:        return "I";
-		case Q:        return "Q";
-		case U:        return "U";
-		case V:        return "V";
 		case IV:       return "IV";
 		case IQUV:     return "IQUV";
 		default:	   return "Unknown stokes mode";
@@ -68,32 +62,13 @@ string stokesName(StokesProduct s){
 }
 
 StokesProduct nameToStokes(string name){
-	if (!strcmp(name.c_str(),"XX"))       return XX;
-	if (!strcmp(name.c_str(),"XY"))       return XY;
-	if (!strcmp(name.c_str(),"YX"))       return YX;
-	if (!strcmp(name.c_str(),"YY"))       return YY;
 	if (!strcmp(name.c_str(),"XXYY"))     return XXYY;
-	if (!strcmp(name.c_str(),"XXXYYXYY")) return XXXYYXYY;
+	if (!strcmp(name.c_str(),"CRCI"))     return CRCI;
+	if (!strcmp(name.c_str(),"XXCRCIYY")) return XXCRCIYY;
 	if (!strcmp(name.c_str(),"I"))        return I;
-	if (!strcmp(name.c_str(),"Q"))        return Q;
-	if (!strcmp(name.c_str(),"U"))        return U;
-	if (!strcmp(name.c_str(),"V"))        return V;
 	if (!strcmp(name.c_str(),"IV"))       return IV;
 	if (!strcmp(name.c_str(),"IQUV"))     return IQUV;
 	return INVALID_STOKES;
-}
-
-string corrName(CorrProduct c){
-	switch(c){
-		case cXY: return "XY";
-		default:  return "Unknown correlator mode";
-	}
-}
-
-CorrProduct   nameToCorr(string name){
-	if (!strcmp(name.c_str(),"XY"))        return cXY;
-	if (!strcmp(name.c_str(),"XY*"))       return cXY;
-	return cINVALID;
 }
 
 void* __ThreadWrapper(ThreadInfo* td){

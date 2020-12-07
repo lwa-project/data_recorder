@@ -62,7 +62,6 @@ string fileTypeString(FileType ft){
 	switch (ft){
 		case FT_GENERAL:		return "General";
 		case FT_SPECTROMETER:	return "Spectrogram";
-		case FT_CORRELATION:	return "Correlation";
 		default :               return "Unknown";
 	}
 }
