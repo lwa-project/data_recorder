@@ -73,10 +73,7 @@ typedef struct __DrxSpectraHeader{
 	uint32_t			fills[4];
 	uint8_t				errors[4];
 	uint8_t 			beam;
-	union{
-		uint8_t         stokes_format;
-		uint8_t         xcp_format;
-	};
+	uint8_t         stokes_format;
 	uint8_t             spec_version;
 	union{
 		struct {

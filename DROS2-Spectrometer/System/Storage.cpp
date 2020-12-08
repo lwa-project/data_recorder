@@ -638,7 +638,7 @@ Storage::Storage(string path, StorageType type, int id):
 		driveCount(0),
 		__type(type),
 		valid(false),
-		folders((__type == ST_INTERNAL) ? 3 : 1),
+		folders((__type == ST_INTERNAL) ? 2 : 1),
 		activeFiles(){
 	// check path exists and is mount point
 	Result mp_vc = Shell::run("if mountpoint -q \""+path+"\"; then echo -n 'valid'; else echo -n 'invalid'; fi", false, 0);
@@ -746,7 +746,6 @@ void Storage::__createFileStructure(){
 		Shell::run("mkdir -p " + path + "/DROS", false,  0);
 		Shell::run("mkdir -p " + path + "/DROS/Rec", false,  0);
 		Shell::run("mkdir -p " + path + "/DROS/Spec", false, 0);
-		Shell::run("mkdir -p " + path + "/DROS/Corr", false, 0);
 		break;
 	case ST_EXTERNAL:
 		Shell::run("mkdir -p " + path + "/DROS", false,  0);
@@ -761,7 +760,6 @@ void Storage::__deleteAll(){
 	case ST_INTERNAL:
 		Shell::run("rm -rf " + path + "/DROS/Rec/*", false,  0);
 		Shell::run("rm -rf " + path + "/DROS/Spec/*", false, 0);
-		Shell::run("rm -rf " + path + "/DROS/Corr/*", false, 0);
 		break;
 	case ST_EXTERNAL:
 		Shell::run("rm -rf " + path + "/DROS/*", false,  0);

@@ -92,7 +92,6 @@ string resourceTypeString(StorageType st, FileType ft){
 		switch (ft){
 		case FT_GENERAL:      return "tag file"; break;
 		case FT_SPECTROMETER: return "spectrometer file"; break;
-		case FT_CORRELATION:  return "correlation file"; break;
 		default:              break;
 		}break;
 	case ST_EXTERNAL:
@@ -980,7 +979,7 @@ StringList MessageProcessor::commandNames = list_of
 
 
 		("RPT")// shortrun
-		("SPC")("XCP")// operations
+		("SPC")// operations
 		;
 
 ///////////////////////////
@@ -1035,7 +1034,6 @@ const string MessageProcessor::re_buf 	= "(([TI])([TI])([AN])([AB])([DHR]))" + r
 */
 const string MessageProcessor::re_syn 	= re_empty;
 const string MessageProcessor::re_spc 	= re_w_mjd + re_ws + re_w_mpm + re_ws + re_w_ms_dur + re_ws + re_w_fftl + re_ws + re_w_intcnt + __opt(re_ws + re_w_minfill +__opt(re_ws + re_w_hiwater ));
-const string MessageProcessor::re_xcp 	= re_spc;
 const string MessageProcessor::re_rec_n = re_w_mjd + re_ws + re_w_mpm + re_ws + re_w_ms_dur + re_ws + re_w_fmt_name;
 const string MessageProcessor::re_rec_s = re_w_mjd + re_ws + re_w_mpm + re_ws + re_w_ms_dur + re_ws + re_w_fmt_name + re_w_fftl + re_ws + re_w_intcnt + __opt(re_ws + re_w_minfill +__opt(re_ws + re_w_hiwater ));
 const string MessageProcessor::re_rec   = __or(re_rec_n, re_rec_s);
@@ -1083,7 +1081,6 @@ string MessageProcessor::getCommandFormatRegEx(string type){
 	if (!type.compare("SYN")) return re_syn;
 	if (!type.compare("REC")) return re_rec;
 	if (!type.compare("SPC")) return re_spc;
-	if (!type.compare("XCP")) return re_xcp;
 	if (!type.compare("GET")) return re_get;
 	if (!type.compare("CPY")) return re_cpy;
 	if (!type.compare("DMP")) return re_dmp;

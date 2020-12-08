@@ -54,8 +54,7 @@
 
 enum FileType {
 	FT_GENERAL=0, 					// recording or general purpose file
-	FT_SPECTROMETER, 				// spectrogram
-	FT_CORRELATION					// beam-correlation
+	FT_SPECTROMETER 				// spectrogram
 };
 
 enum StorageType {

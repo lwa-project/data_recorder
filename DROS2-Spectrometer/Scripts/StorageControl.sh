@@ -146,7 +146,6 @@ function doUp()
                         mkdir -p $mountpoint/DROS
                         mkdir -p $mountpoint/DROS/Rec
                         mkdir -p $mountpoint/DROS/Spec
-                        mkdir -p $mountpoint/DROS/Corr
                         N_INTERNAL=$((N_INTERNAL+1));
                 fi
         done
