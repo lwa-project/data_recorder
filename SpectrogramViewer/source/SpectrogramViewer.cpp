@@ -42,17 +42,21 @@ enum SamplePolOrganization{ Interleaved, Noninterleaved};
 
 enum StokesProduct {
 	INVALID_STOKES = 0x00,
-	XX   = 0x01, XY       = 0x02, YX = 0x04, YY   = 0x08,
-	I    = 0x10, Q        = 0x20, U  = 0x40, V    = 0x80,
-	XXYY = 0x09, XXXYYXYY = 0x0F, IV = 0x90, IQUV = 0xF0
+	XX   = 0x01, CR   = 0x02, CI       = 0x04, YY = 0x08,
+	I    = 0x10, Q    = 0x20, U        = 0x40, V  = 0x80,
+	XXYY = 0x09, CRCI = 0x06, XXCRCIYY = 0x0F,
+	IV   = 0x90, IQUV = 0xF0
 }; // thanks Jake :)
 #define StokesSize(s) (__builtin_popcount(s))
 string stokesName(StokesProduct s);
 StokesProduct nameToStokes(string name);
 #define StokesSupported(s)\
-	((s==XXYY)||\
+	((s==XXCRCIYY)||\
+	 (s==CRCI)||\
+	 (s==XXYY)||\
 	 (s==IQUV)||\
-	 (s==IV)\
+	 (s==IV)||\
+	 (s==I)\
 	 /* more here as supported */\
 	)
 #define StokesTypeLegalOnInputType(s,p)\
@@ -61,38 +65,18 @@ StokesProduct nameToStokes(string name);
 		(s==YY && (p!=X)) ||\
 		(p==XandY)\
 	)
-enum CorrProduct{
-	cINVALID = 0x00,
-	cXY      = 0x02
-};
-#define CorrSize(c) (__builtin_popcount(c))
-string corrName(CorrProduct c);
-CorrProduct   nameToCorr(string name);
-#define CorrSupported(c)\
-	((c==cXY)\
-	 /* more here as supported */\
-	)
-#define CorrTypeLegalOnInputType(c,p)\
-	(\
-		((c==cXY)&&(p==XandY))\
-	)
 typedef struct __ProductType{
-	__ProductType():stokes(INVALID_STOKES),isCorr(false){};
-	__ProductType(StokesProduct s):stokes(s),isCorr(false){};
-	__ProductType(CorrProduct c):corr(c),isCorr(true){};
-	StokesProduct toStokes(){             return isCorr ? INVALID_STOKES : stokes;}
-	CorrProduct   toCorr(){               return isCorr ? corr           : cINVALID;}
-	bool legalForInputType(PolType pin){  return isCorr ? (CorrTypeLegalOnInputType(corr, pin)) : (StokesTypeLegalOnInputType(stokes,pin));}
-	bool isSupported(){                   return isCorr ? (CorrSupported(corr))                 : (StokesSupported(stokes));}
-	size_t numberOutputProducts(){        return isCorr ? CorrSize(corr)                        : StokesSize(stokes);}
-	bool   outputProductsComplex(){       return isCorr;}
-	string name(){                        return isCorr ? corrName(corr) : stokesName(stokes);}
+	__ProductType():stokes(INVALID_STOKES){};
+	__ProductType(StokesProduct s):stokes(s){};
+	StokesProduct toStokes(){             return stokes;}
+	bool legalForInputType(PolType pin){  return StokesTypeLegalOnInputType(stokes,pin);}
+	bool isSupported(){                   return StokesSupported(stokes);}
+	size_t numberOutputProducts(){        return StokesSize(stokes);}
+	string name(){                        return stokesName(stokes);}
 	union{
 		StokesProduct stokes;
-		CorrProduct corr;
 		uint8_t byte;
 	};
-	bool isCorr;
 }ProductType;
 #define ProductSize(p) (__builtin_popcount(p.byte))
 
@@ -102,49 +86,25 @@ typedef struct __ProductType{
 string stokesName(StokesProduct s){
 
 	switch(s){
-		case XX:       return "XX";
-		case XY:       return "XY";
-		case YX:       return "YX";
-		case YY:       return "YY";
 		case XXYY:     return "XXYY";
-		case XXXYYXYY: return "XXXYYXYY";
+		case CRCI:     return "CRCI";
+		case XXCRCIYY: return "XXCRCIYY";
 		case I:        return "I";
-		case Q:        return "Q";
-		case U:        return "U";
-		case V:        return "V";
 		case IV:       return "IV";
 		case IQUV:     return "IQUV";
-		default:	   return "Unknown stokes mode";
-	}
-}
-string corrName(CorrProduct c){
-	switch(c){
-		case cXY: return "XY";
-		default:  return "Unknown correlator mode";
+		default:	     return "Unknown stokes mode";
 	}
 }
 
 StokesProduct toStokes(int x){
 	switch(x){
-		case 1:        return XX;
-		case 2:        return XY;
-		case 4:        return YX;
-		case 8:        return YY;
-		case 9:        return XXYY;
-		case 15:       return XXXYYXYY;
-		case 16:       return I;
-		case 32:       return Q;
-		case 64:       return U;
-		case 128:      return V;
-		case 144:      return IV;
-		case 240:      return IQUV;
-		default:	   return INVALID_STOKES;
-	}
-}
-CorrProduct toCorr(int x){
-	switch(x){
-		case 2:        return cXY;
-		default:	   return cINVALID;
+		case 6:   return CRCI;
+		case 9:   return XXYY;
+		case 15:  return XXCRCIYY;
+		case 16:  return I;
+		case 144: return IV;
+		case 240: return IQUV;
+		default:	return INVALID_STOKES;
 	}
 }
 
@@ -157,11 +117,8 @@ typedef struct __DrxSpectraHeader{
 	uint32_t			fills[4];
 	uint8_t				errors[4];
 	uint8_t 			beam;
-	union{
-		uint8_t         stokes_format;
-		uint8_t         xcp_format;
-	};
-	uint8_t             spec_version;
+	uint8_t       stokes_format;
+	uint8_t       spec_version;
 	union{
 		struct {
 			uint8_t     flag_xcp:1;
@@ -562,453 +519,26 @@ private:
 	size_t    numProducts;
 	uint64_t  initialTimeTag;
 };
-class CorrBuffer{
-public:
-	static double abs(double x){
-		if (x>=0.0)
-			return x;
-		else
-			return (-1.0*x);
-	}
-	CorrBuffer(size_t _numFrames, size_t _numTunings, size_t _numSamplesPerFrame, size_t _numProducts, size_t _numInts, bool _logScale):
-		logScale(_logScale),
-		headers(NULL),
-		fills(NULL),
-		satCounts(NULL),
-		errors(NULL),
-		data(NULL),
-		power(NULL),
-		angle(NULL),
-		timeTagTime(NULL),
-		fullTime(NULL),
-		numFrames(_numFrames),
-		numSamplesPerFrame(_numSamplesPerFrame),
-		numInts(_numInts),
-		numTunings(_numTunings),
-		numProducts(_numProducts),
-		initialTimeTag(0)
 
-	{
-		headers     = (DrxSpectraHeader*) MALLOC(numFrames * sizeof(DrxSpectraHeader));
-		data        = (double*)           MALLOC(numFrames * numSamplesPerFrame * numTunings * numProducts*sizeof(double)*2);
-		fills       = (double**)          MALLOC(NUM_STREAMS * sizeof(double*));
-		satCounts   = (double**)          MALLOC(NUM_STREAMS * sizeof(double*));
-		errors      = (float**)           MALLOC(NUM_STREAMS * sizeof(float*));
-		power       = (double***)         MALLOC(_numTunings * sizeof(double**));
-		angle       = (double***)         MALLOC(_numTunings * sizeof(double**));
-		timeTagTime = (double*)           MALLOC(numFrames * sizeof(double));
-		fullTime    = (double*)           MALLOC(numFrames * numSamplesPerFrame * sizeof(double));
-
-		for (size_t s=0; s<NUM_STREAMS; s++){
-			fills[s]     = allocTimeSeries<double>();
-			satCounts[s] = allocTimeSeries<double>();
-			errors[s]    = allocTimeSeries<float>();
-		}
-		for (size_t t=0; t<numTunings; t++){
-			power[t]      = (double**) MALLOC(numProducts * sizeof(double*));
-			angle[t]      = (double**) MALLOC(numProducts * sizeof(double*));
-			for (size_t p=0; p<numProducts; p++){
-				power[t][p]      = (double*) MALLOC(numFrames * numSamplesPerFrame * sizeof(double));
-				angle[t][p]      = (double*) MALLOC(numFrames * numSamplesPerFrame * sizeof(double));
-			}
-		}
-	}
-	virtual ~CorrBuffer(){
-		if (data)        free(data);
-		if (headers)     free(headers);
-		for (size_t s=0; s<NUM_STREAMS; s++){
-			if (fills[s])     free(fills[s]);
-			if (satCounts[s]) free(satCounts[s]);
-			if (errors[s])    free(errors[s]);
-		}
-		for (size_t t=0; t<numTunings; t++){
-			if (power[t]){
-				for (size_t p=0; p<numProducts; p++){
-					if (power[t][p])
-						free(power[t][p]);
-				}
-				free (power[t]);
-			}
-			if (angle[t]){
-				for (size_t p=0; p<numProducts; p++){
-					if (angle[t][p])
-						free(angle[t][p]);
-				}
-				free (angle[t]);
-			}
-		}
-		if (timeTagTime) free(timeTagTime);
-		if (fullTime)    free(fullTime);
-	}
-
-	inline double* where(size_t whichFrame, size_t whichTuning, size_t whichSample, size_t whichProduct, bool realPart){
-		size_t linindex =
-			(realPart ? 0 : numTunings * numSamplesPerFrame * numFrames* numProducts) +
-			(whichTuning  * numSamplesPerFrame * numFrames* numProducts)+
-			(whichProduct * numSamplesPerFrame * numFrames)+
-			(whichFrame * numSamplesPerFrame)+
-			(whichSample);
-		return &data[linindex];
-	}
-	inline bool checkCompatible(DrxSpectraHeader*hdr){
-		return
-			(
-					(hdr->MAGIC1 == 0xC0DEC0DE) &&
-					(hdr->MAGIC2 == 0xED0CED0C) &&
-					(CorrSize(toCorr(hdr->xcp_format)) == numProducts) &&
-					(hdr->nPerFrame == numSamplesPerFrame)
-			);
-	}
-	inline void unpack(size_t whichFrame, DrxSpectraHeader*hdr, float*fdata, bool findZeros){
-		assert(whichFrame < numFrames);
-
-		if (!whichFrame)
-			initialTimeTag = hdr->timeTag0;
-		timeTagTime[whichFrame] = ((double)(hdr->timeTag0 - initialTimeTag))/DP_BASE_FREQ_HZ;
-		for (size_t s=0; s<numSamplesPerFrame; s++){
-			fullTime[(whichFrame*numSamplesPerFrame) + s] = ((double)(hdr->timeTag0 - initialTimeTag + (numInts * hdr->decFactor * s)))/DP_BASE_FREQ_HZ;
-		}
-
-		memcpy((void*)&headers[whichFrame],(void*) hdr, sizeof(DrxSpectraHeader));
-		for (int s=0; s<NUM_STREAMS; s++){
-			fills[s][whichFrame]     = ((double)hdr->fills[s])/((double)numInts);
-			satCounts[s][whichFrame] = (double)hdr->satCount[s]/((double)numInts);
-			errors[s][whichFrame]    = (hdr->errors[s]!=0) ? 1.0 : 0.0;
-		}
-		size_t i=0;
-		for (size_t t=0; t<numTunings; t++){
-			cout << "###################################################################" << endl;
-			printSpectra(whichFrame, t, 0);
-			cout << "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << endl;
-			for (size_t s=0; s<numSamplesPerFrame; s++){
-				for (size_t p=0; p<numProducts; p++){
-					double re = (double) fdata[i];
-					double im = (double) fdata[i+1];
-					if (findZeros){
-						bool rez = (re==0);
-						bool imz = (im==0);
-						if (rez || imz){
-							cout << "ZEROFIND: Frame# " << std::dec << whichFrame << " Tuning# "<< std::dec <<t<<" Sample# " << std::dec << s  << " Product# " << std::dec << p << "::::" << (rez ? " [Real-part] ": "") << (imz ? " [Imaginary-part] ": "") << std::endl;
-						}
-					}
-					double pow = sqrt(re*re+im*im);
-					double angle = atan2(im,re);
-					if (logScale){
-						if (isnan(pow)){
-							cout << "NaN in input data.\n";
-						}
-						pow = abs(pow);
-						if (pow !=  0.0)
-							pow = 10.0 * log10(pow);
-						if (isnan(pow)){
-							cout << "NaN in output data.\n";
-						}
-					}
-					*where(whichFrame,t,s,p,true)  = re;
-					*where(whichFrame,t,s,p,false) = im;
-					*powPtr(t,p,whichFrame,s)      = pow;
-					*anglePtr(t,p,whichFrame,s)    = angle;
-					i += 2;
-				}
-			}
-		}
-	}
-	double getMaxTime(){
-		double rv = (-numeric_limits<double>::max());
-		for (size_t ws=0; ws<numFrames; ws++){
-			if (timeTagTime[ws]>rv)
-				rv=timeTagTime[ws];
-		}
-		return rv;
-	}
-	double getMinTime(){
-		double rv = (numeric_limits<double>::max());
-		for (size_t ws=0; ws<numFrames; ws++){
-			if (timeTagTime[ws]<rv)
-				rv=timeTagTime[ws];
-		}
-		return rv;
-	}
-	double getMaxFullTime(){
-		double rv = (-numeric_limits<double>::max());
-		for (size_t ws=0; ws<(numFrames*numSamplesPerFrame); ws++){
-			if (fullTime[ws]>rv)
-				rv=fullTime[ws];
-		}
-		return rv;
-	}
-	double getMinFullTime(){
-		double rv = (numeric_limits<double>::max());
-		for (size_t ws=0; ws<(numFrames*numSamplesPerFrame); ws++){
-			if (fullTime[ws]<rv)
-				rv=fullTime[ws];
-		}
-		return rv;
-	}
-
-	double getMinFill(size_t whichStream){
-		assert(whichStream < 4);
-		double rv = numeric_limits<double>::max();
-		for (size_t ws=0; ws<numFrames; ws++){
-			double fill=*fillPtr(ws, whichStream);
-			if (fill<rv)
-				rv=fill;
-		}
-		return rv;
-	}
-	double getMaxFill(size_t whichStream){
-		assert(whichStream < 4);
-		double rv = (-numeric_limits<double>::max());
-		for (size_t ws=0; ws<numFrames; ws++){
-			double fill=*fillPtr(ws, whichStream);
-			if (fill>rv)
-				rv=fill;
-		}
-		return rv;
-	}
-	double getMinSat (size_t whichStream){
-		assert(whichStream < 4);
-		double rv = numeric_limits<double>::max();
-		for (size_t ws=0; ws<numFrames; ws++){
-			double sat=*satPtr(ws, whichStream);
-			if (sat<rv)
-				rv=sat;
-		}
-		return rv;
-	}
-	double getMaxSat (size_t whichStream){
-		assert(whichStream < 4);
-		double rv = (-numeric_limits<double>::max());
-		for (size_t ws=0; ws<numFrames; ws++){
-			double sat=*satPtr(ws, whichStream);
-			if (sat>rv)
-				rv=sat;
-		}
-		return rv;
-	}
-	double getMinPwr (size_t whichTuning, size_t whichProduct){
-		assert(whichTuning < numTunings);
-		assert(whichProduct < numProducts);
-		double rv = numeric_limits<double>::max();
-		for (size_t ws=0; ws<numFrames; ws++){
-			for (size_t ws2=0; ws2<numSamplesPerFrame; ws2++){
-				double pwr=*powPtr(whichTuning, whichProduct, ws, ws2);
-				if (pwr<rv)
-					rv=pwr;
-			}
-		}
-		return rv;
-	}
-	double getMaxPwr (size_t whichTuning, size_t whichProduct){
-		assert(whichTuning < numTunings);
-		assert(whichProduct < numProducts);
-		double rv = (-numeric_limits<double>::max());
-		for (size_t ws=0; ws<numFrames; ws++){
-			for (size_t ws2=0; ws2<numSamplesPerFrame; ws2++){
-				double pwr=*powPtr(whichTuning, whichProduct, ws, ws2);
-				if (pwr>rv)
-					rv=pwr;
-			}
-		}
-		return rv;
-	}
-	double getMinReal (size_t whichTuning, size_t whichProduct){
-		assert(whichTuning < numTunings);
-		assert(whichProduct < numProducts);
-		double rv = numeric_limits<double>::max();
-		for (size_t ws=0; ws<numFrames; ws++){
-			for (size_t ws2=0; ws2<numSamplesPerFrame; ws2++){
-				double re=*where(ws, whichTuning, ws2, whichProduct, true);
-				if (re<rv)
-					rv=re;
-			}
-		}
-		return rv;
-	}
-	double getMaxReal (size_t whichTuning, size_t whichProduct){
-		assert(whichTuning < numTunings);
-		assert(whichProduct < numProducts);
-		double rv = (-numeric_limits<double>::max());
-		for (size_t ws=0; ws<numFrames; ws++){
-			for (size_t ws2=0; ws2<numSamplesPerFrame; ws2++){
-				double re=*where(ws, whichTuning, ws2, whichProduct, true);
-				if (re>rv)
-					rv=re;
-			}
-		}
-		return rv;
-	}
-	double getMinImag (size_t whichTuning, size_t whichProduct){
-		assert(whichTuning < numTunings);
-		assert(whichProduct < numProducts);
-		double rv = numeric_limits<double>::max();
-		for (size_t ws=0; ws<numFrames; ws++){
-			for (size_t ws2=0; ws2<numSamplesPerFrame; ws2++){
-				double im=*where(ws, whichTuning, ws2, whichProduct, false);
-				if (im<rv)
-					rv=im;
-			}
-		}
-		return rv;
-	}
-	double getMaxImag (size_t whichTuning, size_t whichProduct){
-		assert(whichTuning < numTunings);
-		assert(whichProduct < numProducts);
-		double rv = (-numeric_limits<double>::max());
-		for (size_t ws=0; ws<numFrames; ws++){
-			for (size_t ws2=0; ws2<numSamplesPerFrame; ws2++){
-				double im=*where(ws, whichTuning, ws2, whichProduct, false);
-				if (im>rv)
-					rv=im;
-			}
-		}
-		return rv;
-	}
-
-
-	double getMinAngle(){return -M_PIl * 2;}
-	double getMaxAngle(){return M_PIl * 2;}
-
-	inline double* timePtr(){
-		return timeTagTime;
-	}
-	inline double* timeFullPtr(){
-		return fullTime;
-	}
-	inline double* fillPtr(size_t whichFrame, size_t whichStream){
-		assert(whichStream < 4);
-		assert(whichFrame < numFrames);
-		return &fills[whichStream][whichFrame];
-	}
-	inline double* satPtr(size_t whichFrame, size_t whichStream){
-		assert(whichStream < 4);
-		assert(whichFrame < numFrames);
-		return &satCounts[whichStream][whichFrame];
-	}
-	inline float* errPtr(size_t whichFrame, size_t whichStream){
-		assert(whichStream < 4);
-		assert(whichFrame < numFrames);
-		return &errors[whichStream][whichFrame];
-	}
-
-	inline double* powPtr(size_t whichTuning, size_t whichProduct, size_t whichFrame, size_t whichSample){
-		assert(whichFrame < numFrames);
-		assert(whichProduct < numProducts);
-		assert(whichTuning < numTunings);
-		assert(whichSample < numSamplesPerFrame);
-		return &power[whichTuning][whichProduct][(whichFrame*numSamplesPerFrame)+whichSample];
-	}
-	inline double* anglePtr(size_t whichTuning, size_t whichProduct, size_t whichFrame, size_t whichSample){
-		assert(whichFrame < numFrames);
-		assert(whichProduct < numProducts);
-		assert(whichTuning < numTunings);
-		assert(whichSample < numSamplesPerFrame);
-		return &angle[whichTuning][whichProduct][(whichFrame*numSamplesPerFrame)+whichSample];
-	}
-
-	template <class T> inline T* allocTimeSeries(){
-		T* rv = (T*) malloc(numFrames * sizeof(T));
-		if (!rv){
-			cout << "Allocation failure\n";
-			exit(-1);
-		}
-		bzero((void*)rv, numFrames * sizeof(T));
-		return rv;
-	}
-	void printSpectra(size_t whichFrame, size_t whichTuning, size_t whichProduct){
-		assert(whichFrame < numFrames);
-		assert(whichProduct < numProducts);
-		assert(whichTuning < 4);
-		cout << "---------"<<setw(10) << whichFrame << "---------\n\t";
-		for (size_t s=0; s<numSamplesPerFrame; s++){
-			cout << *where(whichFrame, whichTuning, s, whichProduct, true)  << " + "
-				 << *where(whichFrame, whichTuning, s, whichProduct, false) << "i ";
-			if ((s&0x7) == 0x7) cout << "\n\t";
-		}
-		cout << endl;
-	}
-	void printSpectraHeader(DrxSpectraHeader* hdr){
-		cout << "=============================================\n";
-		cout << "MAGIC1         " << hex << hdr->MAGIC1            << endl;
-		cout << "VERSION        " << dec << (int)hdr->spec_version << endl;
-		cout << "stokes         " << stokesName(toStokes(hdr->stokes_format))    << endl;
-		cout << "timeTag0       " << dec << hdr->timeTag0          << endl;
-		cout << "timeOffset     " << dec << hdr->timeOffset        << endl;
-		cout << "decFactor      " << dec << hdr->decFactor         << endl;
-		cout << "freqCode[1]    " << dec << hdr->freqCode[0]       << endl;
-		cout << "freqCode[2]    " << dec << hdr->freqCode[1]       << endl;
-		cout << "fill[0,X]      " << dec << hdr->fills[0]          << endl;
-		cout << "fill[0,Y]      " << dec << hdr->fills[1]          << endl;
-		cout << "fill[1,X]      " << dec << hdr->fills[2]          << endl;
-		cout << "fill[1,Y]      " << dec << hdr->fills[3]          << endl;
-		cout << "sat count[0,X] " << dec << hdr->satCount[0]       << endl;
-		cout << "sat count[0,Y] " << dec << hdr->satCount[1]       << endl;
-		cout << "sat count[1,X] " << dec << hdr->satCount[2]       << endl;
-		cout << "sat count[1,Y] " << dec << hdr->satCount[3]       << endl;
-		cout << "error[0,X]     " << dec << (int) hdr->errors[0]   << endl;
-		cout << "error[0,Y]     " << dec << (int) hdr->errors[1]   << endl;
-		cout << "error[1,X]     " << dec << (int) hdr->errors[2]   << endl;
-		cout << "error[1,Y]     " << dec << (int) hdr->errors[3]   << endl;
-		cout << "beam           " << hex << (int) hdr->beam        << endl;
-		cout << "nFreqs         " << dec << hdr->nFreqs            << endl;
-		cout << "nInts          " << dec << hdr->nInts             << endl;
-		cout << "MAGIC2         " << hex << hdr->MAGIC2            << endl;
-		cout << "=============================================\n";
-	}
-
-
-
-
-private:
-	bool      logScale;
-	DrxSpectraHeader* headers;
-	double**  fills;
-	double**  satCounts;
-	float**   errors;
-	double*   data;
-	double*** power;
-	double*** angle;
-	double*   timeTagTime;
-	double*   fullTime;
-	size_t    numFrames;
-	size_t    numSamplesPerFrame;
-	size_t    numInts;
-	size_t    numTunings;
-	size_t    numProducts;
-	uint64_t  initialTimeTag;
-};
 
 string getProductName(ProductType pt, int p){
-	if (pt.isCorr){
-		switch(pt.toCorr()){
-		case cXY:      if (p==0) return "XY*"; else break;
-		default:	   return "Unknown correlator mode";
-		}
-
-	}else{
-		switch(pt.toStokes()){
-			case XX:        if (p==0) return "XX"; else break;
-			case XY:        if (p==0) return "XY"; else break;
-			case YX:        if (p==0) return "YX"; else break;
-			case YY:        if (p==0) return "YY"; else break;
-			case XXYY:      if (p==0) return "XX"; else
-							if (p==1) return "YY"; else break;
-			case XXXYYXYY:	if (p==0) return "XX"; else
-							if (p==1) return "XY"; else
-							if (p==2) return "YX"; else
-							if (p==3) return "YY"; else	break;
-			case I:         if (p==0) return "I";  else break;
-			case Q:         if (p==0) return "Q";  else break;
-			case U:         if (p==0) return "U";  else break;
-			case V:         if (p==0) return "V";  else break;
-			case IV:        if (p==0) return "I";  else
-							if (p==1) return "V";  else break;
-			case IQUV:     	if (p==0) return "I"; else
-							if (p==1) return "Q"; else
-							if (p==2) return "U"; else
-							if (p==3) return "V"; else break;
-			default:	   return "Unknown stokes mode";
-		}
+switch(pt.toStokes()){
+		case XXYY:      if (p==0) return "XX"; else
+										if (p==1) return "YY"; else break;
+		case CRCI:      if (p==0) return "CR"; else
+										if (p==1) return "CI"; else break;
+		case XXCRCIYY:	if (p==0) return "XX"; else
+										if (p==1) return "CR"; else
+										if (p==2) return "CI"; else
+										if (p==3) return "YY"; else	break;
+		case I:         if (p==0) return "I";  else break;
+		case IV:        if (p==0) return "I";  else
+										if (p==1) return "V";  else break;
+		case IQUV:     	if (p==0) return "I"; else
+										if (p==1) return "Q"; else
+										if (p==2) return "U"; else
+										if (p==3) return "V"; else break;
+		default:	   	return "Unknown stokes mode";
 	}
 	return "Bad index for this stokes mode";
 
@@ -1028,13 +558,12 @@ public:
 
 		logScale		  = _logScale;
 
-		isCorr            = temp_header.flag_xcp == 1;
-		type              = isCorr ? ProductType((CorrProduct)temp_header.xcp_format) : ProductType((StokesProduct)temp_header.stokes_format);
-		numFreqsOrSpf     = isCorr ? temp_header.nPerFrame : temp_header.nFreqs;
+		type              = ProductType((StokesProduct)temp_header.stokes_format);
+		numFreqsOrSpf     = temp_header.nFreqs;
 		numInts           = temp_header.nInts;
 		numTunings        = 2;
 		numProducts       = type.numberOutputProducts();
-		spectra_data_size = numProducts * numTunings * numFreqsOrSpf * sizeof(float) * (isCorr ? 2 : 1);
+		spectra_data_size = numProducts * numTunings * numFreqsOrSpf * sizeof(float);
 		spectra_size      = sizeof(DrxSpectraHeader) + spectra_data_size;
 		numSpectraPresent = getFileSize() / (sizeof(DrxSpectraHeader) + spectra_data_size);
 		tuning1CenterFreq = ((double)temp_header.freqCode[0]) * FREQ_CODE_FACTOR;
@@ -1054,21 +583,12 @@ public:
 		}
 		start = startSpectra;
 
-		if (isCorr){
-			cbuf = new CorrBuffer(numSpectraUsed,numTunings,numFreqsOrSpf,numProducts,numInts,logScale);
-			if (!cbuf){
-				cout << "Allocation failure.\n";
-				exit(-1);
-			}
-			cbuf->printSpectraHeader(&temp_header);
-		} else {
-			sbuf = new SpectraBuffer(numSpectraUsed,numTunings,numFreqsOrSpf,numProducts,numInts,logScale);
-			if (!sbuf){
-				cout << "Allocation failure.\n";
-				exit(-1);
-			}
-			sbuf->printSpectraHeader(&temp_header);
+		sbuf = new SpectraBuffer(numSpectraUsed,numTunings,numFreqsOrSpf,numProducts,numInts,logScale);
+		if (!sbuf){
+			cout << "Allocation failure.\n";
+			exit(-1);
 		}
+		sbuf->printSpectraHeader(&temp_header);
 
 
 
@@ -1079,32 +599,17 @@ public:
 			if (! findZeros) cout << "Reading frame " << i << std::endl;
 			readHeader();
 			//buf->printSpectraHeader(&temp_header);
-			if (isCorr){
-				if (cbuf->checkCompatible(&temp_header)){
-					readData();
-					cbuf->unpack(i,&temp_header,temp_data,findZeros);
-				} else {
-					cout << "\n========================================================\n";
-					report();
-					cout << "========================================================\n";
-					cbuf->printSpectraHeader(&temp_header);
-					cout << "========================================================\n";
-					cout << "Frame geometry/type/etc changed at frame index "<<(start+i)<<"\n";
-					exit(-1);
-				}
+			if (sbuf->checkCompatible(&temp_header)){
+				readData();
+				sbuf->unpack(i,&temp_header,temp_data,findZeros);
 			} else {
-				if (sbuf->checkCompatible(&temp_header)){
-					readData();
-					sbuf->unpack(i,&temp_header,temp_data,findZeros);
-				} else {
-					cout << "\n========================================================\n";
-					report();
-					cout << "========================================================\n";
-					sbuf->printSpectraHeader(&temp_header);
-					cout << "========================================================\n";
-					cout << "Frame geometry/type/etc changed at frame index "<<(start+i)<<"\n";
-					exit(-1);
-				}
+				cout << "\n========================================================\n";
+				report();
+				cout << "========================================================\n";
+				sbuf->printSpectraHeader(&temp_header);
+				cout << "========================================================\n";
+				cout << "Frame geometry/type/etc changed at frame index "<<(start+i)<<"\n";
+				exit(-1);
 			}
 		}
 		//exit(-1);
@@ -1114,9 +619,6 @@ public:
 	}
 	SpectraBuffer*   getSBuf(){
 		return sbuf;
-	}
-	CorrBuffer*      getCBuf(){
-		return cbuf;
 	}
 	size_t getFileSize(){
 		struct stat buf;
@@ -1150,7 +652,7 @@ public:
 	void report(){
 		cout << "spectra_data_size: " << spectra_data_size << endl;
 		cout << "spectra_size:      " << spectra_size << endl;
-		cout << "type:              " << (isCorr ? ("Correlation:"+type.name()) : ("Spectrogram:"+type.name())) << endl;
+		cout << "type:              " << ("Spectrogram:"+type.name()) << endl;
 		cout << "start:             " << start << endl;
 		cout << "numSpectraPresent: " << numSpectraPresent << endl;
 		cout << "numSpectraUsed:    " << numSpectraUsed << endl;
@@ -1177,13 +679,11 @@ public:
 	double           getTuning1CenterFreq(){return tuning1CenterFreq;}
 	double           getTuning2CenterFreq(){return tuning2CenterFreq;}
 	double           getBandwidth(){return bandwidth;}
-	bool             isCorrelation(){return isCorr;}
 private:
 	bool             findZeros;
 	bool             logScale;
 	int              fd;
 	SpectraBuffer*   sbuf;
-	CorrBuffer*      cbuf;
 	DrxSpectraHeader temp_header;
 	float*           temp_data;
 	size_t           spectra_data_size;
@@ -1199,7 +699,6 @@ private:
 	double           tuning1CenterFreq;
 	double           tuning2CenterFreq;
 	double           bandwidth;
-	bool             isCorr;
 
 };
 
@@ -1649,537 +1148,324 @@ int main(int argc, char* argv[])
 		cout << "FINDZEROS: done...\n";
 		exit(0);
 	}
-	if (sr.isCorrelation()){
-		string powerAxisLabel = logScale ? "Power (dB)" : "Power (linear)";
-
-		double numFrames = sr.getNumSpectraUsed();
-		size_t nS        = sr.getNumSpectraUsed();
-		double numSpf    = sr.getNumFreqsOrSpf();
-		size_t nSpf      = sr.getNumFreqsOrSpf();
-
-		size_t nTime     = nS;
-		size_t nTimeFull = nS * nSpf;
-
-		double numInts  = sr.getNumInts();
-		double centerFreq[2];
 
 
-		centerFreq[0]=sr.getTuning1CenterFreq()/MHz;
-		centerFreq[1]=sr.getTuning2CenterFreq()/MHz;
+	string powerAxisLabel = logScale ? "Power (dB)" : "Power (linear)";
 
-		double* times = sr.getCBuf()->timePtr();
-		double* timesFull = sr.getCBuf()->timeFullPtr();
-		double timeMin  = 0;
-		double timeMax  = sr.getCBuf()->getMaxTime();
+	//double numSpecs = sr.getNumSpectraUsed();
+	size_t nS = sr.getNumSpectraUsed();
+	double numFreqs = sr.getNumFreqsOrSpf();
+	size_t nF = sr.getNumFreqsOrSpf();
 
+	//double numInts  = sr.getNumInts();
+	double centerFreq[2];
+	double bw = sr.getBandwidth();
 
+	double frange = (2*bw/numFreqs)/MHz;
+	double minfreq[2];
+	double maxfreq[2];
 
-		CorrProduct type = sr.getType().toCorr();
-		string tnames[2];
-		tnames[0]="Tuning 0";
-		tnames[1]="Tuning 1";
+	centerFreq[0]=sr.getTuning1CenterFreq()/MHz;
+	centerFreq[1]=sr.getTuning2CenterFreq()/MHz;
+	minfreq[0] = centerFreq[0] - frange * (numFreqs/2);
+	minfreq[1] = centerFreq[1] - frange * (numFreqs/2);
+	maxfreq[0] = centerFreq[0] + frange * ((numFreqs/2)-1);
+	maxfreq[1] = centerFreq[1] + frange * ((numFreqs/2)-1);
 
-		string filename = string(argv[1]);
-		string basename = filename;
-		size_t n;
-		while ((n = basename.find('/')) != string::npos){
-			//cout << basename << endl;
-			basename = basename.erase(0,n+1);
-		}
-		string titlePrefix = "SpectrogramViewer ("+basename+") --- ";
-		string groupTitle;
-
-
-		//           ____________
-		//           |real, imag|
-		// format is |pow, angle|, 1 for each product
-		//           |__________|
-		for(size_t p=0; p<sr.getNumProducts();p++){
-			for (size_t t =0; t<sr.getNumTunings(); t++){
-				groupTitle = titlePrefix + tnames[t] + " " +getProductName(type,p);
+	//double timestep = ((numFreqs * numInts)/bw);
+	double* times = sr.getSBuf()->timePtr();
+	double timeMin  = 0;
+	double timeMax  = sr.getSBuf()->getMaxTime();
 
 
-				// time axis limits
-				double mxt = sr.getCBuf()->getMaxFullTime();
-				double mnt = sr.getCBuf()->getMinFullTime();
 
+	StokesProduct type = sr.getType().toStokes();
+	string tnames[2];
+	tnames[0]="Tuning 0";
+	tnames[1]="Tuning 1";
 
-				// power range
-				double mxp = sr.getCBuf()->getMaxPwr(t,p);
-				double mnp = sr.getCBuf()->getMinPwr(t,p);
-				if (!mnp && !mxp){mnp=-1; mxp=1;}
-				if (mnp==mxp){mxp=1.05*mnp;}
-
-				// angle range
-				double mxa = sr.getCBuf()->getMaxAngle();
-				double mna = sr.getCBuf()->getMinAngle();
-
-
-				// real range
-				double mxr = sr.getCBuf()->getMaxReal(t,p);
-				double mnr = sr.getCBuf()->getMinReal(t,p);
-				if (!mnr && !mxr){mnr=-1; mxr=1;}
-				if (mnr==mxr){mxr=1.05*mnr;}
-
-				// imag range
-				double mxi = sr.getCBuf()->getMaxImag(t,p);
-				double mni = sr.getCBuf()->getMinImag(t,p);
-				if (!mni && !mxi){mni=-1; mxi=1;}
-				if (mni==mxi){mxi=1.05*mni;}
-
-				string titles[4] = {
-					tnames[t] + " Re["+getProductName(type,p)+"]",
-					tnames[t] + " Im["+getProductName(type,p)+"]",
-					tnames[t] + " |"+getProductName(type,p)+"|",
-					tnames[t] + " phase("+getProductName(type,p)+")"
-				};
-				double ymin[4] = { mnr, mni, mnp, mna};
-				double ymax[4] = { mxr, mxi, mxp, mxa};
-				double* data[4]={
-						sr.getCBuf()->where(0,t,0,p,true),
-						sr.getCBuf()->where(0,t,0,p,false),
-						sr.getCBuf()->powPtr(t,p,0,0),
-						sr.getCBuf()->anglePtr(t,p,0,0)
-				};
-
-				string ylabels[4] = {
-						"Avg Real (linear, arb.)",
-						"Avg Imag (linear, arb.)",
-						powerAxisLabel,
-						"Phase (radians)"
-				};
-				plotQuadSeriesXY2(
-					groupTitle, titles, "Time (s)", ylabels,
-					nTimeFull,
-					timesFull, mnt,  mxt,
-					data,      ymin, ymax
-				);
-			}
-		}
-
-		if (showTimeTags){
-			groupTitle  =  titlePrefix + "Time Tags";
-			// plot time tags
-			double mnt_ = sr.getCBuf()->getMinTime();
-			double mxt_ = sr.getCBuf()->getMaxTime();
-			plotSeries(
+	string filename = string(argv[1]);
+	string basename = filename;
+	size_t n;
+	while ((n = basename.find('/')) != string::npos){
+		//cout << basename << endl;
+		basename = basename.erase(0,n+1);
+	}
+	string titlePrefix = "SpectrogramViewer ("+basename+") --- ";
+	string groupTitle;
+	if(showWaterfalls){
+		groupTitle  =  titlePrefix + "Spectrogram";
+		// plot base spectra waterfalls
+		for (size_t t =0; t<sr.getNumTunings(); t++){
+			switch(type){
+			case I:
+			  plotWaterfall(
 					groupTitle,
-					"Time tags ",
-					"Frame index", "Timetag",
-					times,
-					nS,
-					(double)0,(double)(nS-1),
-					mnt_,mxt_
-			);
-		}
-
-		if (showFills){
-			groupTitle  =  titlePrefix + "Fill Counts";
-
-			// plot fills
-			double mnf[4];
-			double mxf[4];
-			double mnf_ = numeric_limits<double>::max();
-			double mxf_ = (-numeric_limits<double>::max());
-			for (size_t s =0; s<4; s++){
-				mnf[s] = sr.getCBuf()->getMinFill(s);
-				if (mnf[s] < mnf_) mnf_ = mnf[s];
-				mxf[s] = sr.getCBuf()->getMaxFill(s);
-				if (mxf[s] > mxf_) mxf_ = mxf[s];
-			}
-			if ((mxf_ - mnf_) < numeric_limits<double>::epsilon()){
-				mnf_ = 0;
-				mxf_ = 1;
-			}
-			mnf_=min(0.0,mnf_);
-			mxf_=max(1.1,mxf_);
-			plotQuadSeriesXY(
-					groupTitle,
-					"Fills: " + tnames[0] + " X",
-					"Fills: " + tnames[0] + " Y",
-					"Fills: " + tnames[1] + " X",
-					"Fills: " + tnames[1] + " Y",
-					"Time (s)", "Fill (count)",
-					nS,
-					times,
-					timeMin,timeMax,
-					sr.getCBuf()->fillPtr(0,0),
-					sr.getCBuf()->fillPtr(0,1),
-					sr.getCBuf()->fillPtr(0,2),
-					sr.getCBuf()->fillPtr(0,3),
-					mnf_,mxf_
-			);
-		}
-
-		if (showSats){
-			groupTitle  =  titlePrefix + "Saturation Counts";
-			// plot sat counts
-			double mns[4];
-			double mxs[4];
-			double mns_ = numeric_limits<double>::max();
-			double mxs_ = (-numeric_limits<double>::max());
-			for (size_t s =0; s<4; s++){
-				mns[s] = sr.getCBuf()->getMinSat(s);
-				if (mns[s] < mns_) mns_ = mns[s];
-				mxs[s] = sr.getCBuf()->getMaxSat(s);
-				if (mxs[s] > mxs_) mxs_ = mxs[s];
-			}
-			if ((mxs_ - mns_) < numeric_limits<double>::epsilon()){
-				mns_ = 0;
-				mxs_ = 1;
-			}
-			mns_=min(0.0,mns_);
-			mxs_=max(1.1,mxs_);
-			plotQuadSeriesXY(
-					groupTitle,
-					"Saturation Count: " + tnames[0] + " X",
-					"Saturation Count: " + tnames[0] + " Y",
-					"Saturation Count: " + tnames[1] + " X",
-					"Saturation Count: " + tnames[1] + " Y",
-					"Time (s)", "Saturation Count (count)",
-					nS,
-					times,
-					timeMin,timeMax,
-					sr.getCBuf()->satPtr(0,0),
-					sr.getCBuf()->satPtr(0,1),
-					sr.getCBuf()->satPtr(0,2),
-					sr.getCBuf()->satPtr(0,3),
-					mns_,mxs_
-			);
-		}
-
-		if (showErr){
-			groupTitle  =  titlePrefix + "Errors";
-			// plot errors
-			float mne_ = -0.1;
-			float mxe_ = 1;
-			plotQuadSeriesXY(
-					groupTitle,
-					"Error Flag: " + tnames[0] + " X",
-					"Error Flag: " + tnames[0] + " Y",
-					"Error Flag: " + tnames[1] + " X",
-					"Error Flag: " + tnames[1] + " Y",
-					"Time (s)", "Error Flag (true/false)",
-					nS,
-					times,
-					timeMin,timeMax,
-					sr.getCBuf()->errPtr(0,0),
-					sr.getCBuf()->errPtr(0,1),
-					sr.getCBuf()->errPtr(0,2),
-					sr.getCBuf()->errPtr(0,3),
-					mne_,mxe_
-			);
-		}
-
-	} else {
-
-
-		string powerAxisLabel = logScale ? "Power (dB)" : "Power (linear)";
-
-		//double numSpecs = sr.getNumSpectraUsed();
-		size_t nS = sr.getNumSpectraUsed();
-		double numFreqs = sr.getNumFreqsOrSpf();
-		size_t nF = sr.getNumFreqsOrSpf();
-
-		//double numInts  = sr.getNumInts();
-		double centerFreq[2];
-		double bw = sr.getBandwidth();
-
-		double frange = (2*bw/numFreqs)/MHz;
-		double minfreq[2];
-		double maxfreq[2];
-
-		centerFreq[0]=sr.getTuning1CenterFreq()/MHz;
-		centerFreq[1]=sr.getTuning2CenterFreq()/MHz;
-		minfreq[0] = centerFreq[0] - frange * (numFreqs/2);
-		minfreq[1] = centerFreq[1] - frange * (numFreqs/2);
-		maxfreq[0] = centerFreq[0] + frange * ((numFreqs/2)-1);
-		maxfreq[1] = centerFreq[1] + frange * ((numFreqs/2)-1);
-
-		//double timestep = ((numFreqs * numInts)/bw);
-		double* times = sr.getSBuf()->timePtr();
-		double timeMin  = 0;
-		double timeMax  = sr.getSBuf()->getMaxTime();
-
-
-
-		StokesProduct type = sr.getType().toStokes();
-		string tnames[2];
-		tnames[0]="Tuning 0";
-		tnames[1]="Tuning 1";
-
-		string filename = string(argv[1]);
-		string basename = filename;
-		size_t n;
-		while ((n = basename.find('/')) != string::npos){
-			//cout << basename << endl;
-			basename = basename.erase(0,n+1);
-		}
-		string titlePrefix = "SpectrogramViewer ("+basename+") --- ";
-		string groupTitle;
-		if(showWaterfalls){
-			groupTitle  =  titlePrefix + "Spectrogram";
-			// plot base spectra waterfalls
-			for (size_t t =0; t<sr.getNumTunings(); t++){
-				switch(type){
-				case IV:
-				case XXYY:
-					plotDualWaterfall(
-							groupTitle,
-							tnames[t]+" " + getProductName(type,0),
-							tnames[t]+" " + getProductName(type,1),
-							"Frequency (MHz)", "Time (s)", powerAxisLabel,
-							sr.getSBuf()->where(0,t,0,0),
-							sr.getSBuf()->where(0,t,0,1),
-							nF,minfreq[t],maxfreq[t],
-							nS,timeMin,timeMax
-					); break;
-				case IQUV:
-					plotQuadWaterfall(
-							groupTitle,
-							tnames[t]+" " + getProductName(type,0),
-							tnames[t]+" " + getProductName(type,1),
-							tnames[t]+" " + getProductName(type,2),
-							tnames[t]+" " + getProductName(type,3),
-							"Frequency (MHz)", "Time (s)", powerAxisLabel,
-							sr.getSBuf()->where(0,t,0,0),
-							sr.getSBuf()->where(0,t,0,1),
-							sr.getSBuf()->where(0,t,0,2),
-							sr.getSBuf()->where(0,t,0,3),
-							nF,minfreq[t],maxfreq[t],
-							nS,timeMin,timeMax
-					); break;
-				default:
-					cout << "unsupported stokes type" << endl;
-					exit(-1);
-				}
+					tnames[t]+" " + getProductName(type,0),
+					"Frequency (MHz)", "Time (s)", powerAxisLabel,
+					sr.getSBuf()->where(0,t,0,0),
+					nF,minfreq[t],maxfreq[t],
+					nS,timeMin,timeMax
+			  ); break;
+			case IV:
+			case XXYY:
+			case CRCI:
+				plotDualWaterfall(
+						groupTitle,
+						tnames[t]+" " + getProductName(type,0),
+						tnames[t]+" " + getProductName(type,1),
+						"Frequency (MHz)", "Time (s)", powerAxisLabel,
+						sr.getSBuf()->where(0,t,0,0),
+						sr.getSBuf()->where(0,t,0,1),
+						nF,minfreq[t],maxfreq[t],
+						nS,timeMin,timeMax
+				); break;
+			case IQUV:
+			case XXCRCIYY:
+				plotQuadWaterfall(
+						groupTitle,
+						tnames[t]+" " + getProductName(type,0),
+						tnames[t]+" " + getProductName(type,1),
+						tnames[t]+" " + getProductName(type,2),
+						tnames[t]+" " + getProductName(type,3),
+						"Frequency (MHz)", "Time (s)", powerAxisLabel,
+						sr.getSBuf()->where(0,t,0,0),
+						sr.getSBuf()->where(0,t,0,1),
+						sr.getSBuf()->where(0,t,0,2),
+						sr.getSBuf()->where(0,t,0,3),
+						nF,minfreq[t],maxfreq[t],
+						nS,timeMin,timeMax
+				); break;
+			default:
+				cout << "unsupported stokes type" << endl;
+				exit(-1);
 			}
 		}
+	}
 
-		if(showIntSpec){
-			groupTitle  =  titlePrefix + "Integrated Spectra";
-			// plot integrated spectra
-			for (size_t t =0; t<sr.getNumTunings(); t++){
-				double mxi[4];
-				double mni[4];
-				double mni_ = numeric_limits<double>::max();
-				double mxi_ = (-numeric_limits<double>::max());
-				for(size_t p=0; p<sr.getNumProducts();p++){
-					mxi[p]= sr.getSBuf()->getMaxInt(t,p);
-					if (mxi[p] > mxi_) mxi_ = mxi[p];
-					mni[p]= sr.getSBuf()->getMinInt(t,p);
-					if (mni[p] < mni_) mni_ = mni[p];
-				}
-				if ((mxi_ - mni_) < numeric_limits<double>::epsilon()){
-					mni_ = 0;
-					mxi_ = 1;
-				}
+	if(showIntSpec){
+		groupTitle  =  titlePrefix + "Integrated Spectra";
+		// plot integrated spectra
+		for (size_t t =0; t<sr.getNumTunings(); t++){
+			double mxi[4];
+			double mni[4];
+			double mni_ = numeric_limits<double>::max();
+			double mxi_ = (-numeric_limits<double>::max());
+			for(size_t p=0; p<sr.getNumProducts();p++){
+				mxi[p]= sr.getSBuf()->getMaxInt(t,p);
+				if (mxi[p] > mxi_) mxi_ = mxi[p];
+				mni[p]= sr.getSBuf()->getMinInt(t,p);
+				if (mni[p] < mni_) mni_ = mni[p];
+			}
+			if ((mxi_ - mni_) < numeric_limits<double>::epsilon()){
+				mni_ = 0;
+				mxi_ = 1;
+			}
 
-				switch(type){
-				case IV:
-				case XXYY:
-					plotDualSeries(
-							groupTitle,
-							"Integrated Spectra for " + tnames[t]+" " + getProductName(type,0),
-							"Integrated Spectra for " + tnames[t]+" " + getProductName(type,1),
-							"Frequency (MHz)", powerAxisLabel,
-							sr.getSBuf()->intPtr(t,0,0),
-							sr.getSBuf()->intPtr(t,1,0),
-							nF,minfreq[t],maxfreq[t],
-							mni_,mxi_
-					); break;
-				case IQUV:
-					plotQuadSeries(
-							groupTitle,
-							"Integrated Spectra for " + tnames[t]+" " + getProductName(type,0),
-							"Integrated Spectra for " + tnames[t]+" " + getProductName(type,1),
-							"Integrated Spectra for " + tnames[t]+" " + getProductName(type,2),
-							"Integrated Spectra for " + tnames[t]+" " + getProductName(type,3),
-							"Frequency (MHz)", powerAxisLabel,
-							sr.getSBuf()->intPtr(t,0,0),
-							sr.getSBuf()->intPtr(t,1,0),
-							sr.getSBuf()->intPtr(t,2,0),
-							sr.getSBuf()->intPtr(t,3,0),
-							nF,minfreq[t],maxfreq[t],
-							mni_,mxi_
-					); break;
-				default:
-					cout << "unsupported stokes type" << endl;
-					exit(-1);
-				}
+			switch(type){
+			case IV:
+			case XXYY:
+				plotDualSeries(
+						groupTitle,
+						"Integrated Spectra for " + tnames[t]+" " + getProductName(type,0),
+						"Integrated Spectra for " + tnames[t]+" " + getProductName(type,1),
+						"Frequency (MHz)", powerAxisLabel,
+						sr.getSBuf()->intPtr(t,0,0),
+						sr.getSBuf()->intPtr(t,1,0),
+						nF,minfreq[t],maxfreq[t],
+						mni_,mxi_
+				); break;
+			case IQUV:
+				plotQuadSeries(
+						groupTitle,
+						"Integrated Spectra for " + tnames[t]+" " + getProductName(type,0),
+						"Integrated Spectra for " + tnames[t]+" " + getProductName(type,1),
+						"Integrated Spectra for " + tnames[t]+" " + getProductName(type,2),
+						"Integrated Spectra for " + tnames[t]+" " + getProductName(type,3),
+						"Frequency (MHz)", powerAxisLabel,
+						sr.getSBuf()->intPtr(t,0,0),
+						sr.getSBuf()->intPtr(t,1,0),
+						sr.getSBuf()->intPtr(t,2,0),
+						sr.getSBuf()->intPtr(t,3,0),
+						nF,minfreq[t],maxfreq[t],
+						mni_,mxi_
+				); break;
+			default:
+				cout << "unsupported stokes type" << endl;
+				exit(-1);
 			}
 		}
+	}
 
-		if (showPower){
-			groupTitle  =  titlePrefix + "Time Series Total Power";
-			// plot time series total power
-			for (size_t t =0; t<sr.getNumTunings(); t++){
-				double mxp[4];
-				double mnp[4];
-				double mnp_ = numeric_limits<double>::max();
-				double mxp_ = (-numeric_limits<double>::max());
-				for(size_t p=0; p<sr.getNumProducts();p++){
-					mxp[p]= sr.getSBuf()->getMaxPwr(t,p);
-					if (mxp[p] > mxp_) mxp_ = mxp[p];
-					mnp[p]= sr.getSBuf()->getMinPwr(t,p);
-					if (mnp[p] < mnp_) mnp_ = mnp[p];
-				}
-				if ((mxp_ - mnp_) < numeric_limits<double>::epsilon()){
-					mnp_ = 0;
-					mxp_ = 1;
-				}
+	if (showPower){
+		groupTitle  =  titlePrefix + "Time Series Total Power";
+		// plot time series total power
+		for (size_t t =0; t<sr.getNumTunings(); t++){
+			double mxp[4];
+			double mnp[4];
+			double mnp_ = numeric_limits<double>::max();
+			double mxp_ = (-numeric_limits<double>::max());
+			for(size_t p=0; p<sr.getNumProducts();p++){
+				mxp[p]= sr.getSBuf()->getMaxPwr(t,p);
+				if (mxp[p] > mxp_) mxp_ = mxp[p];
+				mnp[p]= sr.getSBuf()->getMinPwr(t,p);
+				if (mnp[p] < mnp_) mnp_ = mnp[p];
+			}
+			if ((mxp_ - mnp_) < numeric_limits<double>::epsilon()){
+				mnp_ = 0;
+				mxp_ = 1;
+			}
 
-				switch(type){
-				case IV:
-				case XXYY:
-					plotDualSeriesXY(
-							groupTitle,
-							"Total Power for " + tnames[t]+" " + getProductName(type,0),
-							"Total Power for " + tnames[t]+" " + getProductName(type,1),
-							"Frequency (MHz)", powerAxisLabel,
-							nS,
-							times,
-							timeMin,timeMax,
-							sr.getSBuf()->powPtr(t,0,0),
-							sr.getSBuf()->powPtr(t,1,0),
-							mnp_,mxp_
-					); break;
-				case IQUV:
-					plotQuadSeriesXY(
-							groupTitle,
-							"Total Power for " + tnames[t]+" " + getProductName(type,0),
-							"Total Power for " + tnames[t]+" " + getProductName(type,1),
-							"Total Power for " + tnames[t]+" " + getProductName(type,2),
-							"Total Power for " + tnames[t]+" " + getProductName(type,3),
-							"Time (s)", powerAxisLabel,
-							nS,
-							times,
-							timeMin,timeMax,
-							sr.getSBuf()->powPtr(t,0,0),
-							sr.getSBuf()->powPtr(t,1,0),
-							sr.getSBuf()->powPtr(t,2,0),
-							sr.getSBuf()->powPtr(t,3,0),
-							mnp_,mxp_
-					); break;
-				default:
-					cout << "unsupported stokes type" << endl;
-					exit(-1);
-				}
+			switch(type){
+			case IV:
+			case XXYY:
+				plotDualSeriesXY(
+						groupTitle,
+						"Total Power for " + tnames[t]+" " + getProductName(type,0),
+						"Total Power for " + tnames[t]+" " + getProductName(type,1),
+						"Frequency (MHz)", powerAxisLabel,
+						nS,
+						times,
+						timeMin,timeMax,
+						sr.getSBuf()->powPtr(t,0,0),
+						sr.getSBuf()->powPtr(t,1,0),
+						mnp_,mxp_
+				); break;
+			case IQUV:
+				plotQuadSeriesXY(
+						groupTitle,
+						"Total Power for " + tnames[t]+" " + getProductName(type,0),
+						"Total Power for " + tnames[t]+" " + getProductName(type,1),
+						"Total Power for " + tnames[t]+" " + getProductName(type,2),
+						"Total Power for " + tnames[t]+" " + getProductName(type,3),
+						"Time (s)", powerAxisLabel,
+						nS,
+						times,
+						timeMin,timeMax,
+						sr.getSBuf()->powPtr(t,0,0),
+						sr.getSBuf()->powPtr(t,1,0),
+						sr.getSBuf()->powPtr(t,2,0),
+						sr.getSBuf()->powPtr(t,3,0),
+						mnp_,mxp_
+				); break;
+			default:
+				cout << "unsupported stokes type" << endl;
+				exit(-1);
 			}
 		}
-		if (showTimeTags){
-			groupTitle  =  titlePrefix + "Time Tags";
-			// plot time tags
-			double mnt_ = sr.getSBuf()->getMinTime();
-			double mxt_ = sr.getSBuf()->getMaxTime();
-			plotSeries(
-					groupTitle,
-					"Time tags ",
-					"Frame index", "Timetag",
-					times,
-					nS,
-					(double)0,(double)(nS-1),
-					mnt_,mxt_
-			);
-		}
+	}
+	if (showTimeTags){
+		groupTitle  =  titlePrefix + "Time Tags";
+		// plot time tags
+		double mnt_ = sr.getSBuf()->getMinTime();
+		double mxt_ = sr.getSBuf()->getMaxTime();
+		plotSeries(
+				groupTitle,
+				"Time tags ",
+				"Frame index", "Timetag",
+				times,
+				nS,
+				(double)0,(double)(nS-1),
+				mnt_,mxt_
+		);
+	}
 
-		if (showFills){
-			groupTitle  =  titlePrefix + "Fill Counts";
+	if (showFills){
+		groupTitle  =  titlePrefix + "Fill Counts";
 
-			// plot fills
-			double mnf[4];
-			double mxf[4];
-			double mnf_ = numeric_limits<double>::max();
-			double mxf_ = (-numeric_limits<double>::max());
-			for (size_t s =0; s<4; s++){
-				mnf[s] = sr.getSBuf()->getMinFill(s);
-				if (mnf[s] < mnf_) mnf_ = mnf[s];
-				mxf[s] = sr.getSBuf()->getMaxFill(s);
-				if (mxf[s] > mxf_) mxf_ = mxf[s];
-			}
-			if ((mxf_ - mnf_) < numeric_limits<double>::epsilon()){
-				mnf_ = 0;
-				mxf_ = 1;
-			}
-			mnf_=min(0.0,mnf_);
-			mxf_=max(1.1,mxf_);
-			plotQuadSeriesXY(
-					groupTitle,
-					"Fills: " + tnames[0] + " X",
-					"Fills: " + tnames[0] + " Y",
-					"Fills: " + tnames[1] + " X",
-					"Fills: " + tnames[1] + " Y",
-					"Time (s)", "Fill (count)",
-					nS,
-					times,
-					timeMin,timeMax,
-					sr.getSBuf()->fillPtr(0,0),
-					sr.getSBuf()->fillPtr(0,1),
-					sr.getSBuf()->fillPtr(0,2),
-					sr.getSBuf()->fillPtr(0,3),
-					mnf_,mxf_
-			);
+		// plot fills
+		double mnf[4];
+		double mxf[4];
+		double mnf_ = numeric_limits<double>::max();
+		double mxf_ = (-numeric_limits<double>::max());
+		for (size_t s =0; s<4; s++){
+			mnf[s] = sr.getSBuf()->getMinFill(s);
+			if (mnf[s] < mnf_) mnf_ = mnf[s];
+			mxf[s] = sr.getSBuf()->getMaxFill(s);
+			if (mxf[s] > mxf_) mxf_ = mxf[s];
 		}
+		if ((mxf_ - mnf_) < numeric_limits<double>::epsilon()){
+			mnf_ = 0;
+			mxf_ = 1;
+		}
+		mnf_=min(0.0,mnf_);
+		mxf_=max(1.1,mxf_);
+		plotQuadSeriesXY(
+				groupTitle,
+				"Fills: " + tnames[0] + " X",
+				"Fills: " + tnames[0] + " Y",
+				"Fills: " + tnames[1] + " X",
+				"Fills: " + tnames[1] + " Y",
+				"Time (s)", "Fill (count)",
+				nS,
+				times,
+				timeMin,timeMax,
+				sr.getSBuf()->fillPtr(0,0),
+				sr.getSBuf()->fillPtr(0,1),
+				sr.getSBuf()->fillPtr(0,2),
+				sr.getSBuf()->fillPtr(0,3),
+				mnf_,mxf_
+		);
+	}
 
-		if (showSats){
-			groupTitle  =  titlePrefix + "Saturation Counts";
-			// plot sat counts
-			double mns[4];
-			double mxs[4];
-			double mns_ = numeric_limits<double>::max();
-			double mxs_ = (-numeric_limits<double>::max());
-			for (size_t s =0; s<4; s++){
-				mns[s] = sr.getSBuf()->getMinSat(s);
-				if (mns[s] < mns_) mns_ = mns[s];
-				mxs[s] = sr.getSBuf()->getMaxSat(s);
-				if (mxs[s] > mxs_) mxs_ = mxs[s];
-			}
-			if ((mxs_ - mns_) < numeric_limits<double>::epsilon()){
-				mns_ = 0;
-				mxs_ = 1;
-			}
-			mns_=min(0.0,mns_);
-			mxs_=max(1.1,mxs_);
-			plotQuadSeriesXY(
-					groupTitle,
-					"Saturation Count: " + tnames[0] + " X",
-					"Saturation Count: " + tnames[0] + " Y",
-					"Saturation Count: " + tnames[1] + " X",
-					"Saturation Count: " + tnames[1] + " Y",
-					"Time (s)", "Saturation Count (count)",
-					nS,
-					times,
-					timeMin,timeMax,
-					sr.getSBuf()->satPtr(0,0),
-					sr.getSBuf()->satPtr(0,1),
-					sr.getSBuf()->satPtr(0,2),
-					sr.getSBuf()->satPtr(0,3),
-					mns_,mxs_
-			);
+	if (showSats){
+		groupTitle  =  titlePrefix + "Saturation Counts";
+		// plot sat counts
+		double mns[4];
+		double mxs[4];
+		double mns_ = numeric_limits<double>::max();
+		double mxs_ = (-numeric_limits<double>::max());
+		for (size_t s =0; s<4; s++){
+			mns[s] = sr.getSBuf()->getMinSat(s);
+			if (mns[s] < mns_) mns_ = mns[s];
+			mxs[s] = sr.getSBuf()->getMaxSat(s);
+			if (mxs[s] > mxs_) mxs_ = mxs[s];
 		}
+		if ((mxs_ - mns_) < numeric_limits<double>::epsilon()){
+			mns_ = 0;
+			mxs_ = 1;
+		}
+		mns_=min(0.0,mns_);
+		mxs_=max(1.1,mxs_);
+		plotQuadSeriesXY(
+				groupTitle,
+				"Saturation Count: " + tnames[0] + " X",
+				"Saturation Count: " + tnames[0] + " Y",
+				"Saturation Count: " + tnames[1] + " X",
+				"Saturation Count: " + tnames[1] + " Y",
+				"Time (s)", "Saturation Count (count)",
+				nS,
+				times,
+				timeMin,timeMax,
+				sr.getSBuf()->satPtr(0,0),
+				sr.getSBuf()->satPtr(0,1),
+				sr.getSBuf()->satPtr(0,2),
+				sr.getSBuf()->satPtr(0,3),
+				mns_,mxs_
+		);
+	}
 
-		if (showErr){
-			groupTitle  =  titlePrefix + "Errors";
-			// plot errors
-			float mne_ = -0.1;
-			float mxe_ = 1;
-			plotQuadSeriesXY(
-					groupTitle,
-					"Error Flag: " + tnames[0] + " X",
-					"Error Flag: " + tnames[0] + " Y",
-					"Error Flag: " + tnames[1] + " X",
-					"Error Flag: " + tnames[1] + " Y",
-					"Time (s)", "Error Flag (true/false)",
-					nS,
-					times,
-					timeMin,timeMax,
-					sr.getSBuf()->errPtr(0,0),
-					sr.getSBuf()->errPtr(0,1),
-					sr.getSBuf()->errPtr(0,2),
-					sr.getSBuf()->errPtr(0,3),
-					mne_,mxe_
-			);
-		}
+	if (showErr){
+		groupTitle  =  titlePrefix + "Errors";
+		// plot errors
+		float mne_ = -0.1;
+		float mxe_ = 1;
+		plotQuadSeriesXY(
+				groupTitle,
+				"Error Flag: " + tnames[0] + " X",
+				"Error Flag: " + tnames[0] + " Y",
+				"Error Flag: " + tnames[1] + " X",
+				"Error Flag: " + tnames[1] + " Y",
+				"Time (s)", "Error Flag (true/false)",
+				nS,
+				times,
+				timeMin,timeMax,
+				sr.getSBuf()->errPtr(0,0),
+				sr.getSBuf()->errPtr(0,1),
+				sr.getSBuf()->errPtr(0,2),
+				sr.getSBuf()->errPtr(0,3),
+				mne_,mxe_
+		);
 	}
 
 
