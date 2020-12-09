@@ -615,8 +615,6 @@ Storage* Storage::getDeviceByMountPoint(string mountpoint, StorageType st){
 				if(folders[FT_GENERAL])      delete folders[FT_GENERAL];folders[FT_GENERAL]=NULL;
 				LOGC(L_INFO, "DOWN FT_SPECTROMETER", FATAL_COLORS);
 				if(folders[FT_SPECTROMETER]) delete folders[FT_SPECTROMETER];folders[FT_SPECTROMETER]=NULL;
-				LOGC(L_INFO, "DOWN FT_CORRELATION", FATAL_COLORS);
-				if(folders[FT_CORRELATION])  delete folders[FT_CORRELATION];folders[FT_CORRELATION]=NULL;
 				break;
 			case ST_EXTERNAL:
 				if(folders[FT_GENERAL])      delete folders[FT_GENERAL];folders[FT_GENERAL]=NULL;
@@ -640,7 +638,7 @@ Storage::Storage(string path, StorageType type, int id):
 		driveCount(0),
 		__type(type),
 		valid(false),
-		folders((__type == ST_INTERNAL) ? 3 : 1),
+		folders((__type == ST_INTERNAL) ? 2 : 1),
 		activeFiles(){
 	// check path exists and is mount point
 	Result mp_vc = Shell::run("if mountpoint -q \""+path+"\"; then echo -n 'valid'; else echo -n 'invalid'; fi", false, 0);
@@ -709,7 +707,6 @@ Storage::Storage(string path, StorageType type, int id):
 	case ST_INTERNAL:
 		folders[FT_GENERAL]      = new Folder(path + "/DROS/Rec" ,  FT_GENERAL);
 		folders[FT_SPECTROMETER] = new Folder(path + "/DROS/Spec" , FT_SPECTROMETER);
-		folders[FT_CORRELATION]  = new Folder(path + "/DROS/Corr" , FT_CORRELATION);
 		break;
 	case ST_EXTERNAL:
 		folders[FT_GENERAL]      = new Folder(path + "/DROS/" , FT_GENERAL);
@@ -749,7 +746,6 @@ void Storage::__createFileStructure(){
 		Shell::run("mkdir -p " + path + "/DROS", false,  0);
 		Shell::run("mkdir -p " + path + "/DROS/Rec", false,  0);
 		Shell::run("mkdir -p " + path + "/DROS/Spec", false, 0);
-		Shell::run("mkdir -p " + path + "/DROS/Corr", false, 0);
 		break;
 	case ST_EXTERNAL:
 		Shell::run("mkdir -p " + path + "/DROS", false,  0);
@@ -764,7 +760,6 @@ void Storage::__deleteAll(){
 	case ST_INTERNAL:
 		Shell::run("rm -rf " + path + "/DROS/Rec/*", false,  0);
 		Shell::run("rm -rf " + path + "/DROS/Spec/*", false, 0);
-		Shell::run("rm -rf " + path + "/DROS/Corr/*", false, 0);
 		break;
 	case ST_EXTERNAL:
 		Shell::run("rm -rf " + path + "/DROS/*", false,  0);
