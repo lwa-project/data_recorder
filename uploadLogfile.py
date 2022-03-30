@@ -18,7 +18,9 @@ TYPE = "SSLOG"
 
 # Send the update to lwalab
 r = os.path.realpath(sys.argv[1])
-f = requests.post(URL, data={'key': KEY, 'site': SITE, 'type': TYPE, 'subsystem': SUBSYSTEM}, files={'file': open(r)})
+f = requests.post(URL,
+                  data={'key': KEY, 'site': SITE, 'type': TYPE, 'subsystem': SUBSYSTEM},
+                  files={'file': open(r)},
+                  verify=False) # We don't have a certiticate for lda10g.unm.edu
 print(f.text)
 f.close()
-
