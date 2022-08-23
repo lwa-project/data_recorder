@@ -65,8 +65,8 @@ mdadm -As
 
 # determine the storage path from Config.h
 CONFIG_PATH=`dirname $0`
-STORAGE_PATH=`grep DEFAULT_STORAGE_DIR ${CONFIG_PATH}/Config.h | grep define`
-STORAGE_PATH=`echo ${STORAGE_PATH} | awk '{print $3}'`
+CONFIG_PATH=`echo ${CONFIG_PATH}/Config.sh`
+source ${CONFIG_PATH}
 
 
 
