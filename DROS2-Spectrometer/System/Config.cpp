@@ -111,7 +111,7 @@ void  Config::readConfig(){
 	SHOW_CONFIG_VAL(DataInPort);
 
   static ofstream* configfile;
-  configfile = new ofstream(DEFAULT_SCRIPT_DIR#"/Config.sh", ios::out);
+  configfile = new ofstream(DEFAULT_SCRIPT_DIR"/Config.sh", ios::out);
 	(*configfile) << "CONFIG_FILE=\"" << DEFAULT_CONFIG_FILE << "\"" << endl;
 	(*configfile) << "TUNING_FILE=\"" << DEFAULT_TUNING_FILE << "\"" << endl;
 	(*configfile) << "LOG_FILE=\"" << DEFAULT_LOG_FILE << "\"" << endl;
