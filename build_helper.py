@@ -25,7 +25,7 @@ else:
         ### Build directory that we copy things into
         if not os.path.exists(f"build_{dr}"):
             os.mkdir(f"build_{dr}")
-        os.system(f"rsync -avH --exclude build_* --exclude .git . build_{dr}")
+        os.system(f"rsync -avH --exclude build_* --exclude .git* . build_{dr}")
         
         ### Move into that build directory
         os.chdir(f"build_{dr}")
@@ -39,10 +39,33 @@ else:
                         line = f"INSTALL_LOCATION?=/LWA/{dr}\n"
                     elif line.startswith('STORAGE_LOCATION'):
                         line = f"STORAGE_LOCATION?=/LWA_STORAGE/{dr}\n"
+                    line = line.replace("StartDROS.sh", f"StartDROS_{dr}.sh")
                     om.write(line)
         os.unlink("Makefile")
         os.rename(f"Makefile.{dr}", "Makefile")
-                    
+        
+        ### StartDROS.sh update
+        with open("StartDROS.sh", 'r') as im:
+            with open(f"StartDROS_{dr}.sh", 'w') as om:
+                for line in im:
+                    if line.startswith('### END INIT INFO'):
+                        line += "\n"
+                        line += "\n"
+                        line += "# determine the storage path from Config.h\n"
+                        line += f"CONFIG_PATH=/LWA/{dr}/Config.sh\n"
+                        line += "source ${CONFIG_PATH}\n"
+                        line += "\n"
+                    elif line.find('/LWA/') != -1:
+                        line = line.replace("/LWA/", f"/LWA/{dr}/")
+                    elif line.find('/LWA_UPGRADES/') != -1:
+                        line = line.replace("/LWA_UPGRADES/", f"/LWA_UPGRADES/{dr}/")
+                    elif line.find("StartDROS") != -1:
+                        line = line.replace("StartDROS", f"StartDROS_{dr}")
+                    elif line.find(' DROS') != -1:
+                        line = line.replace(" DROS", f" DROS - {dr}")
+                    om.write(line)
+        os.unlink("StartDROS.sh")
+        
         ### Build flags
         flags  = f" -DDEFAULT_CONFIG_FILE='\\\"/LWA/{dr}/config/defaults_v2.cfg\\\"'"
         flags += f" -DDEFAULT_LOG_FILE='\\\"/LWA/{dr}/runtime/runtime.log\\\"'"

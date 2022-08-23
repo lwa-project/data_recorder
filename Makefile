@@ -60,7 +60,7 @@ install: backup_config
 	install -b -g root -o root -m 544 -t $(INSTALL_LOCATION)/scripts \
 		$(FILES)/installStartupScript.sh \
 		$(FILES)/uninstallStartupScript.sh \
-		$(FILES)/StartDROS.sh \
+		$(FILES)/StartDROS*.sh \
 		$(FILES)/uploadLogfile.py \
 		$(FILES)/uploadLogfile.sh \
 		$(WORKSPACE)/DROS2-Spectrometer/Scripts/StorageControl.sh
