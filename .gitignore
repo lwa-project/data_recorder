@@ -14,3 +14,6 @@ DataSource/Release/DataSource
 DataSource_v2/Debug/DataSource_v2
 Msender/Release/Msender
 SpectrogramViewer/Release/SpectrogramViewer
+
+# Multi-DR build environments
+build_DR*
