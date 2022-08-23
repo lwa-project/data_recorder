@@ -74,9 +74,9 @@ source ${CONFIG_PATH}
 # determine the root partition (always)
 ROOT_PARTITION=`df -a | nawk '/\/$/{print $1}'`
 
-# get a list of ext2/3/4 volumes, less our root partition and any partitions listed in ${STORAGE_PATH}/StorageExceptionList
-if [ -f ${STORAGE_PATH}/StorageExceptionList ]; then
-	EXCEPT=`cat ${STORAGE_PATH}/StorageExceptionList`;
+# get a list of ext2/3/4 volumes, less our root partition and any partitions listed in ${STORAGE_DIR}/StorageExceptionList
+if [ -f ${STORAGE_DIR}/StorageExceptionList ]; then
+	EXCEPT=`cat ${STORAGE_DIR}/StorageExceptionList`;
 	CANDIDATES=`blkid | grep 'TYPE=\"ext' | grep -v "$EXCEPT" | grep -v "$ROOT_PARTITION" | sed 's/:.*$/ /' | tr -d '\n' | sed 's/\s*$//'`
 else
 	CANDIDATES=`blkid | grep 'TYPE=\"ext' | grep -v "$ROOT_PARTITION" | sed 's/:.*$/ /' | tr -d '\n' | sed 's/\s*$//'`
@@ -88,17 +88,17 @@ function doDown()
         # use the lazy option to disconnect the moun in the background 
         # (so files amy finish writing if there are pending writes
         LAZY=-l
-        if [ -d ${STORAGE_PATH} ]; then
-                if [ -d ${STORAGE_PATH}/External ]; then
-                        for x in ${STORAGE_PATH}/External/*; do
+        if [ -d ${STORAGE_DIR} ]; then
+                if [ -d ${STORAGE_DIR}/External ]; then
+                        for x in ${STORAGE_DIR}/External/*; do
                                 if mountpoint -q $x; then 
                                         umount $LAZY $x
                                 fi
                                 rm -rf $x;
                         done
                 fi
-                if [ -d ${STORAGE_PATH}/Internal ]; then
-                        for x in ${STORAGE_PATH}/Internal/*; do
+                if [ -d ${STORAGE_DIR}/Internal ]; then
+                        for x in ${STORAGE_DIR}/Internal/*; do
                                 if mountpoint -q $x; then 
                                         umount $LAZY $x
                                 fi
@@ -141,14 +141,14 @@ function doUp()
 		check $x
                 if [[ $prohibited == yes ]]; then
                         #mount the drive as an external device
-                        mountpoint=${STORAGE_PATH}/External/$N_EXTERNAL
+                        mountpoint=${STORAGE_DIR}/External/$N_EXTERNAL
 			echo "Non-DRSU volume: '$x' mounted at '$mountpoint'"
                         mkdir -p $mountpoint;
                         mount -t ext4 $x $mountpoint;
                         N_EXTERNAL=$((N_EXTERNAL+1));
                 else
                         #mount the drive as a DRSU
-                        mountpoint=${STORAGE_PATH}/Internal/$N_INTERNAL
+                        mountpoint=${STORAGE_DIR}/Internal/$N_INTERNAL
 			echo "DRSU volume: '$x' mounted at '$mountpoint'"
                         mkdir -p $mountpoint;
                         mount -t ext4 -o defaults,noatime,barrier=0 $x $mountpoint
