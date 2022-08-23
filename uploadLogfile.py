@@ -18,6 +18,8 @@ TYPE = "SSLOG"
 
 # Send the update to lwalab
 r = os.path.realpath(sys.argv[1])
+if r.find('/LWA/DR') != -1:
+    SUBSYSTEM = r.split('/')[2].upper()
 f = requests.post(URL,
                   data={'key': KEY, 'site': SITE, 'type': TYPE, 'subsystem': SUBSYSTEM},
                   files={'file': open(r)},

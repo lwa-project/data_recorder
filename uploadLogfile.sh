@@ -1,6 +1,6 @@
 #!/bin/bash
 
-ls /LWA/runtime/runtime.log.* | xargs -n1 ~mcsdr/uploadLogfile.py
+ls /LWA/*/runtime/runtime.log.* | xargs -n1 ~mcsdr/uploadLogfile.py
 
 #dir=`mktemp -d `
 #cd ${dir}
@@ -18,4 +18,3 @@ ls /LWA/runtime/runtime.log.* | xargs -n1 ~mcsdr/uploadLogfile.py
 #
 #cd /tmp
 #rm -rf ${dir}
-
