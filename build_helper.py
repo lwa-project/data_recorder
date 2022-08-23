@@ -25,7 +25,7 @@ else:
         ### Build directory that we copy things into
         if not os.path.exists(f"build_{dr}"):
             os.mkdir(f"build_{dr}")
-        os.system(f"rsync -avH --exclude build_* . build_{dr}")
+        os.system(f"rsync -avH --exclude build_* --exclude .git . build_{dr}")
         
         ### Move into that build directory
         os.chdir(f"build_{dr}")
