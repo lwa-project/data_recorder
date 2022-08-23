@@ -94,4 +94,4 @@ clean:
 	make -C $(WORKSPACE)/SpectrogramViewer/Release clean
 	-$(RM) $(WORKSPACE)/DROS2-LiveBuffer/Docs/*
 	-$(RM) $(WORKSPACE)/DROS2-Spectrometer/Docs/*
-	-$(RM) $(WORKSPACE)/build_*
+	-$(RM) $(WORKSPACE)/build_DR*
