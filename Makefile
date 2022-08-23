@@ -14,6 +14,7 @@
 WORKSPACE=.
 #WORKSPACE=/home/chwolfe2/workspace-2013
 INSTALL_LOCATION?=/LWA
+STORAGE_LOCATION?=/LWA_STORAGE
 FILES=.
 
 RM := rm -rf
@@ -39,7 +40,7 @@ backup_config:
 install: backup_config
 #	cp $(INSTALL_LOCATION)/config/formats.cfg ./formats.cfg
 #	install -b -g root -o root -d /LWADATA	
-	install -b -g root -o root -d /LWA_STORAGE
+	install -b -g root -o root -d $(STORAGE_LOCATION)
 	rm -fr $(INSTALL_LOCATION) 
 	install -b -g root -o root -d $(INSTALL_LOCATION)/bin
 	install -b -g root -o root -d $(INSTALL_LOCATION)/config
@@ -61,6 +62,7 @@ install: backup_config
 		$(FILES)/StartDROS.sh \
 		$(FILES)/uploadLogfile.py \
 		$(FILES)/uploadLogfile.sh \
+		$(WORKSPACE)/DROS2-Spectrometer/System/Config.h \
 		$(WORKSPACE)/DROS2-Spectrometer/Scripts/StorageControl.sh
 	@if [ -f "/BACKUP.defaults_v2.cfg" ]; then echo "Restoring current configuration..."; cp /BACKUP.defaults_v2.cfg $(INSTALL_LOCATION)/config/defaults_v2.cfg; fi
 	@echo 

@@ -62,12 +62,21 @@ mdadm -As
 
 
 
+
+# determine the storage path from Config.h
+CONFIG_PATH=`dirname $0`
+STORAGE_PATH=`grep DEFAULT_STORAGE_DIR ${CONFIG_PATH}/Config.h | grep define`
+STORAGE_PATH=`echo ${STORAGE_PATH} | awk '{print $3}'`
+
+
+
+
 # determine the root partition (always)
 ROOT_PARTITION=`df -a | nawk '/\/$/{print $1}'`
 
-# get a list of ext2/3/4 volumes, less our root partition and any partitions listed in /LWA_STORAGE/StorageExceptionList
-if [ -f /LWA_STORAGE/StorageExceptionList ]; then
-	EXCEPT=`cat /LWA_STORAGE/StorageExceptionList`;
+# get a list of ext2/3/4 volumes, less our root partition and any partitions listed in ${STORAGE_PATH}/StorageExceptionList
+if [ -f ${STORAGE_PATH}/StorageExceptionList ]; then
+	EXCEPT=`cat ${STORAGE_PATH}/StorageExceptionList`;
 	CANDIDATES=`blkid | grep 'TYPE=\"ext' | grep -v "$EXCEPT" | grep -v "$ROOT_PARTITION" | sed 's/:.*$/ /' | tr -d '\n' | sed 's/\s*$//'`
 else
 	CANDIDATES=`blkid | grep 'TYPE=\"ext' | grep -v "$ROOT_PARTITION" | sed 's/:.*$/ /' | tr -d '\n' | sed 's/\s*$//'`
@@ -80,16 +89,16 @@ function doDown()
         # (so files amy finish writing if there are pending writes
         LAZY=-l
         if [ -d /LWA_STORAGE ]; then
-                if [ -d /LWA_STORAGE/External ]; then
-                        for x in /LWA_STORAGE/External/*; do
+                if [ -d ${STORAGE_PATH}/External ]; then
+                        for x in ${STORAGE_PATH}/External/*; do
                                 if mountpoint -q $x; then 
                                         umount $LAZY $x
                                 fi
                                 rm -rf $x;
                         done
                 fi
-                if [ -d /LWA_STORAGE/Internal ]; then
-                        for x in /LWA_STORAGE/Internal/*; do
+                if [ -d ${STORAGE_PATH}/Internal ]; then
+                        for x in ${STORAGE_PATH}/Internal/*; do
                                 if mountpoint -q $x; then 
                                         umount $LAZY $x
                                 fi
@@ -132,14 +141,14 @@ function doUp()
 		check $x
                 if [[ $prohibited == yes ]]; then
                         #mount the drive as an external device
-                        mountpoint=/LWA_STORAGE/External/$N_EXTERNAL
+                        mountpoint=${STORAGE_PATH}/External/$N_EXTERNAL
 			echo "Non-DRSU volume: '$x' mounted at '$mountpoint'"
                         mkdir -p $mountpoint;
                         mount -t ext4 $x $mountpoint;
                         N_EXTERNAL=$((N_EXTERNAL+1));
                 else
                         #mount the drive as a DRSU
-                        mountpoint=/LWA_STORAGE/Internal/$N_INTERNAL
+                        mountpoint=${STORAGE_PATH}/Internal/$N_INTERNAL
 			echo "DRSU volume: '$x' mounted at '$mountpoint'"
                         mkdir -p $mountpoint;
                         mount -t ext4 -o defaults,noatime,barrier=0 $x $mountpoint
@@ -239,5 +248,3 @@ case "$1" in
 	echo -e "\t$(basename $0) check device \n\t\tVerify device is formatted suitably for use as DRSU\n"
 ;;
 esac
-
-
