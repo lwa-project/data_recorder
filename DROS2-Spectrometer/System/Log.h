@@ -56,9 +56,9 @@
 #include "../Threading/LockHelper.h"
 #include <unistd.h>
 #include <sys/syscall.h>
-#include"../Threading/ThreadManager.h"
+#include "../Threading/ThreadManager.h"
+#include "Config.h"
 
-#define LOGFILE            "/LWA/runtime/runtime.log"
 #define MAX_LOG_FILES      10
 #define MAX_LOG_SIZE_BYTES 10485760 /* 10 MiB */
 #define MAX_LOG_LINES      25
@@ -237,18 +237,18 @@ private:
 			closeLogFile();
 		}
 		for (int i=(MAX_LOG_FILES-1); i>=0; i--){
-			fn      = LOGFILE + string(".") + LXS(i);
-			fn_next = LOGFILE + string(".") + LXS(i+1);
+			fn      = DEFAULT_LOG_FILE + string(".") + LXS(i);
+			fn_next = DEFAULT_LOG_FILE + string(".") + LXS(i+1);
 			if (fs::exists(fn)){
 				::rename(fn.c_str(),fn_next.c_str());
 			}
 		}
-		fn = LOGFILE + string(".") + LXS(MAX_LOG_FILES);
+		fn = DEFAULT_LOG_FILE + string(".") + LXS(MAX_LOG_FILES);
 		if (fs::exists(fn)){
 			::remove(fn.c_str());
 		}
-		fn      = LOGFILE;
-		fn_next = LOGFILE + string(".") + LXS(0);
+		fn      = DEFAULT_LOG_FILE;
+		fn_next = DEFAULT_LOG_FILE + string(".") + LXS(0);
 		if (fs::exists(fn)){
 			if (createDump){
 				string dateStr = Time::filenameSuitable(Time::now());
@@ -273,7 +273,7 @@ private:
 			cout << ANSI::hl("Program error: Tried to reopen logfile.",bold,yellow,red) << endl;
 			return;
 		}
-		logfile = new ofstream(LOGFILE,ios::out | ios::app);
+		logfile = new ofstream(DEFAULT_LOG_FILE,ios::out | ios::app);
 		if (!logfile){
 			cout << ANSI::hl("Can't allocate storage for logfile.",bold,yellow,red) << endl;
 		} else {

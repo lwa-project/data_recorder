@@ -13,7 +13,7 @@
 
 WORKSPACE=.
 #WORKSPACE=/home/chwolfe2/workspace-2013
-INSTALL_LOCATION=/LWA
+INSTALL_LOCATION?=/LWA
 FILES=.
 
 RM := rm -rf
@@ -92,5 +92,3 @@ clean:
 	make -C $(WORKSPACE)/SpectrogramViewer/Release clean
 	-$(RM) $(WORKSPACE)/DROS2-LiveBuffer/Docs/*
 	-$(RM) $(WORKSPACE)/DROS2-Spectrometer/Docs/*
-
-

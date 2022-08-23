@@ -193,17 +193,17 @@ void Storage::__doUp(bool rescan){
 
 
 	if (rescan)
-		Shell::run("/LWA/scripts/StorageControl.sh up",false,0);
+		Shell::run(DEFAULT_SCRIPT_DIR#"/StorageControl.sh up",false,0);
 
 	// scan for internal drives
-	Result res_int = Shell::run("ls /LWA_STORAGE/Internal | sed 's/\\s*$//'");
-	LOGC(L_DEBUG, "ls /LWA_STORAGE/Internal:\n" + res_int.output + "'", OBJECT_COLORS);
+	Result res_int = Shell::run("ls "#DEFAULT_SCRIPT_DIR#"/Internal | sed 's/\\s*$//'");
+	LOGC(L_DEBUG, "ls "#DEFAULT_SCRIPT_DIR#"/Internal:\n" + res_int.output + "'", OBJECT_COLORS);
 	vector<string> int_paths;
 	boost::split(int_paths,res_int.output,boost::is_any_of("\n\t "));
 	foreach(string path, int_paths){
 		if (!path.empty()){
-			LOGC(L_DEBUG, "Examining '/LWA_STORAGE/Internal/" + path + "'", OBJECT_COLORS);
-			Storage* i = new Storage("/LWA_STORAGE/Internal/" + path, ST_INTERNAL, n_internal);
+			LOGC(L_DEBUG, "Examining '"#DEFAULT_SCRIPT_DIR#"/Internal/" + path + "'", OBJECT_COLORS);
+			Storage* i = new Storage(DEFAULT_SCRIPT_DIR#"/Internal/" + path, ST_INTERNAL, n_internal);
 			if (i != NULL){
 				if (i->isValid()){
 					internal.push_back(i);
@@ -215,15 +215,15 @@ void Storage::__doUp(bool rescan){
 		}
 	}
 	// scan for external drives
-	Result res_ext = Shell::run("ls /LWA_STORAGE/External | sed 's/\\s*$//'");
-	//LOGC(L_DEBUG, "ls /LWA_STORAGE/Internal:\n" + res_ext.output + "'", OBJECT_COLORS);
+	Result res_ext = Shell::run("ls "#DEFAULT_SCRIPT_DIR#"/External | sed 's/\\s*$//'");
+	//LOGC(L_DEBUG, "ls "DEFAULT_SCRIPT_DIR#"/External:\n" + res_ext.output + "'", OBJECT_COLORS);
 
 	vector<string> ext_paths;
 	boost::split(ext_paths,res_ext.output,boost::is_any_of("\n\t "));
 	foreach(string path, ext_paths){
 		if (!path.empty()){
-			LOGC(L_DEBUG, "Examining '/LWA_STORAGE/External/" + path + "'", OBJECT_COLORS);
-			Storage* i = new Storage("/LWA_STORAGE/External/" + path, ST_EXTERNAL, n_external);
+			LOGC(L_DEBUG, "Examining '"#DEFAULT_SCRIPT_DIR#"/External/" + path + "'", OBJECT_COLORS);
+			Storage* i = new Storage(DEFAULT_SCRIPT_DIR#"/External/" + path, ST_EXTERNAL, n_external);
 			if (i != NULL){
 				if (i->isValid()){
 					external.push_back(i);
@@ -268,7 +268,7 @@ void Storage::__doDown(bool rescan){
 
 
 	if (rescan)
-		Shell::run("/LWA/scripts/StorageControl.sh down",false,0);
+		Shell::run(DEFAULT_SCRIPT_DIR#"/StorageControl.sh down",false,0);
 
 	if (asynchInProgress){
 		SERIALIZE_ACCESS_ST();
@@ -667,7 +667,7 @@ Storage::Storage(string path, StorageType type, int id):
 
 	// re-validate formatting options for internal storage
 	if (__type == ST_INTERNAL){
-		Result doublecheck = Shell::run("/LWA/scripts/StorageControl.sh check " + partition , false, 0);
+		Result doublecheck = Shell::run(DEFAULT_SCRIPT_DIR#"/StorageControl.sh check " + partition , false, 0);
 		if (!doublecheck.output.compare("invalid")){
 			// either doesn't exist or is not a block device or is not formatted correctly
 			LOG_START_SESSION(L_DEBUG);
