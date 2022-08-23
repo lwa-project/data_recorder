@@ -55,7 +55,7 @@ all: DROS2-Spectrometer
 DROS2-Spectrometer: $(OBJS) $(USER_OBJS)
 	@echo 'Building target: $@'
 	@echo 'Invoking: GCC C++ Linker'
-	g++ -pthread  -std=c++11   -march=native -rdynamic -p -pg -o "DROS2-Spectrometer" $(OBJS) $(USER_OBJS) $(LIBS)
+	g++ $(CPPFLAGS) -pthread  -std=c++11   -march=native -rdynamic -p -pg -o "DROS2-Spectrometer" $(OBJS) $(USER_OBJS) $(LIBS)
 	@echo 'Finished building target: $@'
 	@echo ' '
 
