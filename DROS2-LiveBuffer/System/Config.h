@@ -74,10 +74,24 @@
 using namespace boost::program_options;
 using namespace boost::assign;
 
+#ifndef DEFAULT_CONFIG_FILE
+#define DEFAULT_CONFIG_FILE "/LWA/config/defaults_v2.cfg"
+#endif
+
+#ifndef DEFAULT_TUNING_FILE
+#define DEFAULT_TUNING_FILE "/LWA/config/netperformance.sysctl.conf"
+#endif
+
+#ifndef DEFAULT_SCRIPT_DIR
+#define DEFAULT_SCRIPT_DIR "/LWA/scripts"
+#endif
+
+#ifndef DEFAULT_STORAGE_DIR
+#define DEFAULT_STORAGE_DIR "/LWA_STORAGE"
+#endif
 
 //#define TEST_OP_SPEC_OR_DIE(X) if (!vm.count(X)) {cout << "Error: missing configuration option '"<<X<<"'\n"; exit(-1);}
 //#define ASSIGN_FROM_MAP(v,t) v=vm[#v].as<t>()
-#define DEFAULT_CONFIG_FILE "/LWA/config/defaults_v2.cfg"
 #define GETTER_NAME(var) BOOST_PP_CAT(get,var)
 #define SETTER_NAME(var) BOOST_PP_CAT(set,var)
 #define MAKE_GETTER(var,type) const type get##var(){SERIALIZE_ACCESS(); return var;}

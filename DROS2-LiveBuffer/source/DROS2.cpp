@@ -73,7 +73,7 @@ int main(int argc, char* argv[]) {
 	Log::setLogLevel(L_DEBUG);
 	CpuInfo::getCpuCount();                                             // trigger module loading
 	HddInfo::getDeviceCount();                                          // pre-cache device/directory info
-	Shell::run("sysctl -e -p /LWA/config/netperformance.sysctl.conf");  // network tuning
+	Shell::run("sysctl -e -p "DEFAULT_TUNING_FILE);  // network tuning
 	ThreadManager::getInstance()->announceSelf("System");
 	signal(SIGTERM, signalHandler);
 	signal(SIGUSR1, signalHandler);

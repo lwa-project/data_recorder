@@ -107,9 +107,22 @@ void  Config::readConfig(){
 	SHOW_CONFIG_VAL(TimeAuthority);
 	SHOW_CONFIG_VAL(SerialNumber);
 	SHOW_CONFIG_VAL(ArraySelect);
-    SHOW_CONFIG_VAL(DataInIp);
+	SHOW_CONFIG_VAL(DataInIp);
 	SHOW_CONFIG_VAL(DataInPort);
 
+
+	static ofstream* configfile;
+  configfile = new ofstream(DEFAULT_SCRIPT_DIR"/Config.sh", ios::out);
+	(*configfile) << "CONFIG_FILE=\"" << DEFAULT_CONFIG_FILE << "\"" << endl;
+	(*configfile) << "TUNING_FILE=\"" << DEFAULT_TUNING_FILE << "\"" << endl;
+	(*configfile) << "LOG_FILE=\"" << DEFAULT_LOG_FILE << "\"" << endl;
+	(*configfile) << "SCRIPT_DIR=\"" << DEFAULT_SCRIPT_DIR << "\"" << endl;
+	(*configfile) << "STORAGE_DIR=\"" << DEFAULT_STORAGE_DIR << "\"" << endl;
+	configfile->flush();
+	configfile->close();
+	delete configfile;
+	
+	
 	LOG_END_SESSION();
 
 
@@ -137,4 +150,3 @@ void  Config::writeConfig(){
 	fout.close();
 	LOGC(L_INFO,"Configuration data saved...",CONFIG_COLORS);
 }
-
