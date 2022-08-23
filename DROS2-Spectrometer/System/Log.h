@@ -57,7 +57,10 @@
 #include <unistd.h>
 #include <sys/syscall.h>
 #include "../Threading/ThreadManager.h"
-#include "Config.h"
+
+#ifndef DEFAULT_LOG_FILE
+#define DEFAULT_LOG_FILE "/LWA/runtime/runtime.log"
+#endif
 
 #define MAX_LOG_FILES      10
 #define MAX_LOG_SIZE_BYTES 10485760 /* 10 MiB */
