@@ -26,10 +26,10 @@ else:
                         line = f"STORAGE_LOCATION?=/LWA_STORAGE/{dr}\n"
                     om.write(line)
                     
-        flags  = f" -DDEFAULT_CONFIG_FILE=\"/LWA/{dr}/config/defaults_v2.cfg\""
-        flags += f" -DDEFAULT_TUNING_FILE=\"/LWA/{dr}/config/netperformance.sysctl.conf\""
-        flags += f" -DDEFAULT_SCRIPT_DIR=\"/LWA/{dr}/scripts\""
-        flags += f" -DDEFAULT_STORAGE_DIR=\"/LWA_STORAGE/{dr}\""
+        flags  = f" -DDEFAULT_CONFIG_FILE='/LWA/{dr}/config/defaults_v2.cfg'"
+        flags += f" -DDEFAULT_TUNING_FILE='/LWA/{dr}/config/netperformance.sysctl.conf'"
+        flags += f" -DDEFAULT_SCRIPT_DIR='/LWA/{dr}/scripts'"
+        flags += f" -DDEFAULT_STORAGE_DIR='/LWA_STORAGE/{dr}'"
         
         os.system("make clean")
-        os.system(f"CPPFLAGS='{flags}' make -j all -f Makefile.{dr}")
+        os.system(f"CPPFLAGS=\"{flags}\" make -j all -f Makefile.{dr}")
