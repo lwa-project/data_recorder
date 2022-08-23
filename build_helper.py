@@ -27,6 +27,7 @@ else:
                     om.write(line)
                     
         flags  = f" -DDEFAULT_CONFIG_FILE='\\\"/LWA/{dr}/config/defaults_v2.cfg\\\"'"
+        flags += f" -DDEFAULT_LOG_FILE='\\\"/LWA/{dr}/runtime/runtime.log\\\"'"
         flags += f" -DDEFAULT_TUNING_FILE='\\\"/LWA/{dr}/config/netperformance.sysctl.conf\\\"'"
         flags += f" -DDEFAULT_SCRIPT_DIR='\\\"/LWA/{dr}/scripts\\\"'"
         flags += f" -DDEFAULT_STORAGE_DIR='\\\"/LWA_STORAGE/{dr}\\\"'"
