@@ -88,7 +88,7 @@ function doDown()
         # use the lazy option to disconnect the moun in the background 
         # (so files amy finish writing if there are pending writes
         LAZY=-l
-        if [ -d /LWA_STORAGE ]; then
+        if [ -d ${STORAGE_DIR} ]; then
                 if [ -d ${STORAGE_DIR}/External ]; then
                         for x in ${STORAGE_DIR}/External/*; do
                                 if mountpoint -q $x; then 
