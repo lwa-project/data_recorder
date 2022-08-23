@@ -18,7 +18,7 @@ else:
             
         os.system(f"rm -rf Makefile.{dr}")
         with open("Makefile", 'r') as im:
-            with open(f"Makefile.{dr}", w) as om:
+            with open(f"Makefile.{dr}", 'w') as om:
                 for line in im:
                     if line.startswith('INSTALL_LOCATION'):
                         line = f"INSTALL_LOCATION?=/LWA/{dr}\n"
