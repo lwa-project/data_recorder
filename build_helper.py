@@ -64,6 +64,9 @@ else:
                     elif line.find(' DROS') != -1:
                         line = line.replace(" DROS", f" DROS - {dr}")
                     om.write(line)
+        st = os.stat("StartDROS.sh")
+        os.chown(f"StartDROS_{dr}.sh", st.st_uid, st.st_gid)
+        os.chmod(f"StartDROS_{dr}.sh", st.st_mode)
         os.unlink("StartDROS.sh")
         
         ### Build flags
