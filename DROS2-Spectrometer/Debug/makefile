@@ -16,6 +16,7 @@ RM := rm -rf
 -include Primitives/subdir.mk
 -include Miscellaneous/subdir.mk
 -include Messaging/subdir.mk
+-include LiveBuffer/subdir.mk
 -include Data/subdir.mk
 -include Common/subdir.mk
 -include Buffers/subdir.mk
@@ -49,19 +50,26 @@ endif
 # Add inputs and outputs from these tool invocations to the build variables 
 
 # All Target
-all: DROS2-Spectrometer
+all: DROS2-LiveBuffer DROS2-Spectrometer
 
 # Tool invocations
-DROS2-Spectrometer: $(OBJS) $(USER_OBJS)
+DROS2-LiveBuffer: $(OBJS_L) $(USER_OBJS)
 	@echo 'Building target: $@'
 	@echo 'Invoking: GCC C++ Linker'
-	g++ $(CPPFLAGS) -pthread  -std=c++11   -march=native -rdynamic -p -pg -o "DROS2-Spectrometer" $(OBJS) $(USER_OBJS) $(LIBS)
+	g++ $(CPPFLAGS) -DDROS_LIVE_BUFFER -pthread -std=c++11 -march=native -rdynamic -p -pg -o "DROS2-LiveBuffer" $(OBJS_L) $(USER_OBJS) $(LIBS)
+	@echo 'Finished building target: $@'
+	@echo ' '
+
+DROS2-Spectrometer: $(OBJS_S) $(USER_OBJS)
+	@echo 'Building target: $@'
+	@echo 'Invoking: GCC C++ Linker'
+	g++ $(CPPFLAGS) -pthread -std=c++11 -march=native -rdynamic -p -pg -o "DROS2-Spectrometer" $(OBJS_S) $(USER_OBJS) $(LIBS)
 	@echo 'Finished building target: $@'
 	@echo ' '
 
 # Other Targets
 clean:
-	-$(RM) $(OBJS)$(C++_DEPS)$(C_DEPS)$(CC_DEPS)$(CPP_DEPS)$(EXECUTABLES)$(CXX_DEPS)$(C_UPPER_DEPS) DROS2-Spectrometer
+	-$(RM) $(OBJS_L)$(OBJS_S)$(C++_DEPS)$(C_DEPS)$(CC_DEPS)$(CPP_DEPS)$(EXECUTABLES)$(CXX_DEPS)$(C_UPPER_DEPS) DROS2-LiveBuffer DROS2-Spectrometer
 	-@echo ' '
 
 .PHONY: all clean dependents

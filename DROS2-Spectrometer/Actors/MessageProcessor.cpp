@@ -57,8 +57,11 @@
 #include "../Operations/Operations.h"
 #include "../Data/DataFormat.h"
 #include "../Actors/Receiver.h"
-#include "../Spectrometer/DrxSpectrometer.h"
-//#include "../LiveBuffer/LiveBuffer.h"
+#ifdef DROS_LIVE_BUFFER
+  #include "../LiveBuffer/LiveBuffer.h"
+#else
+  #include "../Spectrometer/DrxSpectrometer.h"
+#endif
 
 using namespace boost::assign;
 
@@ -339,7 +342,7 @@ bool MessageProcessor::onDoReceive(Message& received){
 	}
 	///////////////////////////////////////////////////////////////////////////////////////////////////
 	///////////////////////////////////////////////////////////////////////////////////////////////////
-/*
+#ifdef DROS_LIVE_BUFFER
 	if (!type.compare("BUF")){
 
 
@@ -379,7 +382,7 @@ bool MessageProcessor::onDoReceive(Message& received){
 			mt_period_spec     		||
 			mt_hold_spec       		||
 			mt_auto_trigger_spec	||
-			mt_vampire_spec    	/ *	||	mt_source_spec * /
+			mt_vampire_spec    	/*	||	mt_source_spec */
 		);
 
 		bool   mt_gr_receiver = (
@@ -401,7 +404,7 @@ bool MessageProcessor::onDoReceive(Message& received){
 					mt_hold_spec       		&&
 					mt_auto_trigger_spec	&&
 					mt_vampire_spec    	/* &&
-					mt_source_spec * /
+					mt_source_spec */
 				)){
 			RESPOND( false, "Capture configuration metatag group member not supplied." );
 		}
@@ -490,7 +493,8 @@ bool MessageProcessor::onDoReceive(Message& received){
 			RESPOND( true, msg);
 		}
 	}
-*/
+#endif
+
 	///////////////////////////////////////////////////////////////////////////////////////////////////
 	///////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -632,6 +636,7 @@ bool MessageProcessor::onDoReceive(Message& received){
 	}
 	///////////////////////////////////////////////////////////////////////////////////////////////////
 	///////////////////////////////////////////////////////////////////////////////////////////////////
+#ifndef DROS_LIVE_BUFFER
 	if (
 			(!type.compare("REC") && Utility::reMatch(re_rec_s,data)) ||
 			(!type.compare("SPC"))
@@ -647,7 +652,6 @@ bool MessageProcessor::onDoReceive(Message& received){
 		size_t      NInts;
 		size_t     __attribute__ ((unused)) minfill; // ignored
 		size_t     __attribute__ ((unused)) highwater; // ignored
-
 
 		//*************************************************************************
 		// parse differs dep. on whether REC syntax of SPC syntax
@@ -753,6 +757,7 @@ bool MessageProcessor::onDoReceive(Message& received){
 		}
 
 	}
+  #endif
 	///////////////////////////////////////////////////////////////////////////////////////////////////
 	///////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -974,12 +979,13 @@ StringList MessageProcessor::commandNames = list_of
 		("CPY")
 		("DMP")
 		("REC")
-		/*("BUF")*/
-
-
-
+#ifdef DROS_LIVE_BUFFER
+		("BUF")
+#endif
 		("RPT")// shortrun
+#ifndef DROS_LIVE_BUFFER
 		("SPC")// operations
+#endif
 		;
 
 ///////////////////////////
@@ -1026,7 +1032,9 @@ const string MessageProcessor::re_up  	= re_empty;
 const string MessageProcessor::re_dwn 	= re_empty;
 const string MessageProcessor::re_sel 	= "(?:(?:\\d{1,2})|(?:[\\)\\]\\}]"+re_w_barcode+"))";
 const string MessageProcessor::re_svn 	= re_w_barcode;
-//const string MessageProcessor::re_buf   = re_empty;
+#ifdef DROS_LIVE_BUFFER
+const string MessageProcessor::re_buf   = re_empty;
+#endif
 
 /*
  * old form; deprecated
@@ -1080,7 +1088,9 @@ string MessageProcessor::getCommandFormatRegEx(string type){
 	if (!type.compare("STP")) return re_stp;
 	if (!type.compare("SYN")) return re_syn;
 	if (!type.compare("REC")) return re_rec;
+#ifndef DROS_LIVE_BUFFER
 	if (!type.compare("SPC")) return re_spc;
+#endif
 	if (!type.compare("GET")) return re_get;
 	if (!type.compare("CPY")) return re_cpy;
 	if (!type.compare("DMP")) return re_dmp;
@@ -1095,7 +1105,9 @@ string MessageProcessor::getCommandFormatRegEx(string type){
 	if (!type.compare("ECH")) return re_ech;
 	if (!type.compare("TST")) return re_tst;
 	if (!type.compare("SRP")) return re_srp;
-	/*if (!type.compare("BUF")) return re_buf;*/
+#ifdef DROS_LIVE_BUFFER
+  if (!type.compare("BUF")) return re_buf;
+#endif
 
 
 	return re_match_nothing;
@@ -1126,7 +1138,9 @@ const string MessageProcessor::re_rpt   =
 		"(?:(HDD)-(?:(COUNT)|(?:(TEMP)-([0-9]+))))"                                               "|"
 		"(?:(FORMAT)-(?:(COUNT)|(?:(NAME)-([0-9]+))|(?:(PAYLOAD)-([0-9]+))|(?:(RATE)-([0-9]+))))" "|"
 		"(?:(LOG)-(?:(COUNT)|(?:(ENTRY)-(-?[0-9]+))))"                                            "|"
-/*		"(?:(BUFFER)(?:-(RESTRICT))?)"                                                            "|"*/
+#ifdef DROS_LIVE_BUFFER
+		"(?:(BUFFER)(?:-(RESTRICT))?)"                                                            "|"
+#endif
 		"(?:(DRSU)-(?:(COUNT)|(SELECTED)|(BARCODE)|(?:(INFO)-([0-9]+))))"                         "|"
 		"(?:(TT-LAG)(?:-(INITIAL))?)"
 		")";
@@ -1435,13 +1449,15 @@ void MessageProcessor::getMib(Message& received, bool& accept, string& comment){
 					MIB_RESPOND(true,LXS(df.getDataRate()));
 				}
 			}
-/*		} else if isGroup("BUFFER") {
+#ifdef DROS_LIVE_BUFFER
+		} else if isGroup("BUFFER") {
 			if isSubGroup("RESTRICT") {
 				MIB_RESPOND(false,"<MIB-ENTRY DEPRECATED>");
 			} else {
 				MIB_RESPOND(false,"<MIB-ENTRY DEPRECATED>");
 			}
-*/		} else if isGroup("LOG") {
+#endif
+		} else if isGroup("LOG") {
 			int count = Log::logCount();
 			if isSubGroup("COUNT") {
 				MIB_RESPOND(true,LXS(count));

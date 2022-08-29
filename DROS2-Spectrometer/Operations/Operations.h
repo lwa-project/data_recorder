@@ -65,7 +65,9 @@
 #include "CopyOperation.h"
 #include "DumpOperation.h"
 #include "RecordOperation.h"
-#include "SpectrometerOperation.h"
+#ifndef DROS_LIVE_BUFFER
+  #include "SpectrometerOperation.h"
+#endif
 
 // pseudo-operation
 #include "OpIdle.h"

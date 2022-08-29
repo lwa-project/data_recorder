@@ -8,10 +8,10 @@ CPP_SRCS += \
 ../Spectrometer/Spectrometer.cpp \
 ../Spectrometer/TestPattern.cpp 
 
-OBJS += \
-./Spectrometer/DrxSpectrometer.o \
-./Spectrometer/Spectrometer.o \
-./Spectrometer/TestPattern.o 
+OBJS_S += \
+./Spectrometer/DrxSpectrometer_S.o \
+./Spectrometer/Spectrometer_S.o \
+./Spectrometer/TestPattern_S.o 
 
 CPP_DEPS += \
 ./Spectrometer/DrxSpectrometer.d \
@@ -20,7 +20,7 @@ CPP_DEPS += \
 
 
 # Each subdirectory must supply rules for building sources it contributes
-Spectrometer/%.o: ../Spectrometer/%.cpp
+Spectrometer/%_S.o: ../Spectrometer/%.cpp
 	@echo 'Building file: $<'
 	@echo 'Invoking: GCC C++ Compiler'
 	g++ $(CPPFLAGS) -D__SSE3__ -O0 -g3 -p -pg -Wall -c -fmessage-length=0 -pthread -march=native -msse3 -rdynamic -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@:%.o=%.d)" -o "$@" "$<"

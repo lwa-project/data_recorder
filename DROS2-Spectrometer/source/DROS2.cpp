@@ -56,7 +56,9 @@
 #include "../Common/Common.h"
 #include "../Common/Actors.h"
 #include "../Common/Primitives.h"
-#include "../Spectrometer/Spectrometer.h"
+#ifndef DROS_LIVE_BUFFER
+  #include "../Spectrometer/Spectrometer.h"
+#endif
 #include "../System/Config.h"
 
 

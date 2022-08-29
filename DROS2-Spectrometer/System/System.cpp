@@ -63,8 +63,11 @@
 #include "../Common/Actors.h"
 #include "../Streaming/TicketBuffer.h"
 #include "../Actors/Receiver.h"
-#include "../Spectrometer/DrxSpectrometer.h"
-//#include "../LiveBuffer/LiveBuffer.h"
+#ifdef DROS_LIVE_BUFFER
+  #include "../LiveBuffer/LiveBuffer.h"
+#else
+  #include "../Spectrometer/DrxSpectrometer.h"
+#endif
 
 ///////////////////////////////////////////////////////////////////
 // static interface
@@ -208,7 +211,15 @@ void  System::__boot(){
 		_fatal_error = true; return;
 	}
 
-
+#ifdef DROS_LIVE_BUFFER
+	// start the live buffer
+	live_buf=new LiveBuffer(rxbuf);
+	if (!live_buf){
+		LOGC(L_FATAL, "[System] Can't allocate live buffer", FATAL_COLORS);
+		_fatal_error = true; return;
+	}
+	live_buf -> start();
+#endif
 
 	LOGC(L_INFO, "[System] Start messaging responder...", SYSTEM_COLORS);
 	// start response sender
@@ -334,11 +345,13 @@ void  System::__shutdown(){
 
 	/* >>> system state undefined here <<<*/
 	// stop data receiver
-/*
+
+#ifdef DROS_LIVE_BUFFER
 	LOGC(L_INFO, "[System] Shutting down live buffer...", SYSTEM_COLORS);
 	live_buf->doAbort();
 	live_buf->stop();
-*/
+#endif
+
 	LOGC(L_INFO, "[System] Shutting down receiver...", SYSTEM_COLORS);
 	rx->doAbort();
 	rx->packetBurn();

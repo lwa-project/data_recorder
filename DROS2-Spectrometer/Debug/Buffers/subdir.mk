@@ -9,11 +9,17 @@ CPP_SRCS += \
 ../Buffers/ParcelQueue.cpp \
 ../Buffers/SimpleRingBuffer.cpp 
 
-OBJS += \
-./Buffers/GenericBuffer.o \
-./Buffers/ParcelMemQueue.o \
-./Buffers/ParcelQueue.o \
-./Buffers/SimpleRingBuffer.o 
+OBJS_L += \
+./Buffers/GenericBuffer_L.o \
+./Buffers/ParcelMemQueue_L.o \
+./Buffers/ParcelQueue_L.o \
+./Buffers/SimpleRingBuffer_L.o 
+
+OBJS_S += \
+./Buffers/GenericBuffer_S.o \
+./Buffers/ParcelMemQueue_S.o \
+./Buffers/ParcelQueue_S.o \
+./Buffers/SimpleRingBuffer_S.o 
 
 CPP_DEPS += \
 ./Buffers/GenericBuffer.d \
@@ -23,7 +29,14 @@ CPP_DEPS += \
 
 
 # Each subdirectory must supply rules for building sources it contributes
-Buffers/%.o: ../Buffers/%.cpp
+Buffers/%_L.o: ../Buffers/%.cpp
+	@echo 'Building file: $<'
+	@echo 'Invoking: GCC C++ Compiler'
+	g++ $(CPPFLAGS) -DDROS_LIVE_BUFFER -D__SSE3__ -O0 -g3 -p -pg -Wall -c -fmessage-length=0 -pthread -march=native -msse3 -rdynamic -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@:%.o=%.d)" -o "$@" "$<"
+	@echo 'Finished building: $<'
+	@echo ' '
+
+Buffers/%_S.o: ../Buffers/%.cpp
 	@echo 'Building file: $<'
 	@echo 'Invoking: GCC C++ Compiler'
 	g++ $(CPPFLAGS) -D__SSE3__ -O0 -g3 -p -pg -Wall -c -fmessage-length=0 -pthread -march=native -msse3 -rdynamic -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@:%.o=%.d)" -o "$@" "$<"

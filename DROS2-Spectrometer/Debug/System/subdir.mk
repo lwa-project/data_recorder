@@ -13,15 +13,25 @@ CPP_SRCS += \
 ../System/System.cpp \
 ../System/Time.cpp 
 
-OBJS += \
-./System/Config.o \
-./System/CpuInfo.o \
-./System/HddInfo.o \
-./System/Log.o \
-./System/Shell.o \
-./System/Storage.o \
-./System/System.o \
-./System/Time.o 
+OBJS_L += \
+./System/Config_L.o \
+./System/CpuInfo_L.o \
+./System/HddInfo_L.o \
+./System/Log_L.o \
+./System/Shell_L.o \
+./System/Storage_L.o \
+./System/System_L.o \
+./System/Time_L.o 
+
+OBJS_S += \
+./System/Config_S.o \
+./System/CpuInfo_S.o \
+./System/HddInfo_S.o \
+./System/Log_S.o \
+./System/Shell_S.o \
+./System/Storage_S.o \
+./System/System_S.o \
+./System/Time_S.o 
 
 CPP_DEPS += \
 ./System/Config.d \
@@ -35,7 +45,14 @@ CPP_DEPS += \
 
 
 # Each subdirectory must supply rules for building sources it contributes
-System/%.o: ../System/%.cpp
+System/%_L.o: ../System/%.cpp
+	@echo 'Building file: $<'
+	@echo 'Invoking: GCC C++ Compiler'
+	g++ $(CPPFLAGS) -DDROS_LIVE_BUFFER -D__SSE3__ -O0 -g3 -p -pg -Wall -c -fmessage-length=0 -pthread -march=native -msse3 -rdynamic -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@:%.o=%.d)" -o "$@" "$<"
+	@echo 'Finished building: $<'
+	@echo ' '
+
+System/%_S.o: ../System/%.cpp
 	@echo 'Building file: $<'
 	@echo 'Invoking: GCC C++ Compiler'
 	g++ $(CPPFLAGS) -D__SSE3__ -O0 -g3 -p -pg -Wall -c -fmessage-length=0 -pthread -march=native -msse3 -rdynamic -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@:%.o=%.d)" -o "$@" "$<"
