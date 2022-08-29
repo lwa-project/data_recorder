@@ -2,11 +2,11 @@
 # Project related configuration options
 #---------------------------------------------------------------------------
 DOXYFILE_ENCODING      = UTF-8
-PROJECT_NAME           = DROS2-Spectrometer
+PROJECT_NAME           = DROS2
 PROJECT_NUMBER         = 2.3.0.0
 PROJECT_BRIEF          = 
 PROJECT_LOGO           = 
-OUTPUT_DIRECTORY       = ./DROS2-Spectrometer/Docs
+OUTPUT_DIRECTORY       = ./DROS2/Docs
 CREATE_SUBDIRS         = YES
 OUTPUT_LANGUAGE        = English
 BRIEF_MEMBER_DESC      = YES
@@ -25,8 +25,8 @@ ABBREVIATE_BRIEF       = "The $name class" \
 ALWAYS_DETAILED_SEC    = NO
 INLINE_INHERITED_MEMB  = NO
 FULL_PATH_NAMES        = YES
-STRIP_FROM_PATH        = ./DROS2-Spectrometer/
-STRIP_FROM_INC_PATH    = ./DROS2-Spectrometer/
+STRIP_FROM_PATH        = ./DROS2/
+STRIP_FROM_INC_PATH    = ./DROS2/
 SHORT_NAMES            = NO
 JAVADOC_AUTOBRIEF      = NO
 QT_AUTOBRIEF           = NO
@@ -104,7 +104,7 @@ WARN_LOGFILE           =
 #---------------------------------------------------------------------------
 # configuration options related to the input files
 #---------------------------------------------------------------------------
-INPUT                  = ./DROS2-Spectrometer
+INPUT                  = ./DROS2
 INPUT_ENCODING         = UTF-8
 FILE_PATTERNS          = *.c \
                          *.cc \
