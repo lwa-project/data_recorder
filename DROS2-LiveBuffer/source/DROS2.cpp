@@ -57,6 +57,7 @@
 #include "../Common/Actors.h"
 #include "../Common/Primitives.h"
 //#include "../Spectrometer/Spectrometer.h"
+#include "../System/Config.h"
 
 
 

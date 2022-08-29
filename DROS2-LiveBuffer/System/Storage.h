@@ -68,6 +68,7 @@
 #include "../Common/Common.h"
 #include "../Common/Primitives.h"
 #include "../Primitives/Patterns.h"
+#include "Config.h"
 
 #include "Folder.h"
 #include "File.h"
