@@ -1,7 +1,5 @@
-
-		========================================
-		Quick Start User's guide for MCS-DR/DRSU
-		========================================
+Quick Start User's guide for MCS-DR/DRSU
+========================================
 
 ====================================================================================
 Version: DROS-2.3.0.1-RELEASE
@@ -10,12 +8,12 @@ Author:  Christopher Wolfe
 ====================================================================================
 
 DROS Versions and ICD Version
-=============================
+-----------------------------
   This quick start applies to DROS-2.3.0.1-RELEASE. For additional information about versions and 
   features, please refer to the extended user's guide 'ExtendedUsersGuide.txt'.
 
 Prerequisites
-=============
+-------------
   1) MCS-DR PC with x86_64 Ubuntu 12.04 
   2) the following packages are installed: libgdbm3, libgdbm-dev, libfuse2, 
       libfuse-dev, lmsensors, smartmontools, mdadm, libfftw3-dev, fftw3,
@@ -26,7 +24,7 @@ Prerequisites
 
 
 Files and Organization
-======================
+----------------------
   The top level of this tar-ball contains this file 'QuickStart.txt', an extended user's 
   guide 'ExtendedUsersGuide.txt', and a 'build' folder.  Each folder under 'build' contains 
   the source and makefile for each of the binaries included in this tar-ball. For more 
@@ -34,7 +32,7 @@ Files and Organization
 
 
 Step 0: Root Access
-===================
+-------------------
   You must be root for most of the tasks outlined here. The DROS software needs 
   root permission to work directly with partitions, so 'sudo su' before doing 
   anything is easiest. Note that building the software can be done in user space, 
@@ -55,7 +53,7 @@ Step 0: Root Access
 
 
 Step 1: Installation
-====================
+--------------------
   Note: Building the 'install' target will overwrite all files in the /LWA folder,
         so be sure to backup configuration files before building.
 
@@ -88,7 +86,7 @@ Step 1: Installation
 
 
 Step 2: System Configuration
-============================
+----------------------------
   A) Determine which linux device is the 10Gbe Adapter, and which is 1GbE
 	>cat /etc/udev/rules.d/70-persistent-net.rules:
      The device with module name 'myri10Ge' is the 10GbE adapter, others are 1GbE
@@ -101,7 +99,7 @@ Step 2: System Configuration
      as machine reference designator, serial number, etc.
 
 Step 3: DRSU preparation
-========================
+------------------------
   This command will create a DRSU array for the most likely partition naming. For
   more complete description, see the extended user's guide.
   A) Create the array:
@@ -119,6 +117,7 @@ Step 3: DRSU preparation
    	>/LWA/scripts/StorageControl.sh format /dev/md0 MyDrsuBarcode
 
      You should see something similar to:
+		 
 	mke2fs 1.42 (29-Nov-2011)
 	Filesystem label='myDrsuBarcode'
 	OS type: Linux
@@ -145,13 +144,14 @@ Step 3: DRSU preparation
 
 
 Step 4: First Run
-=================
+-----------------
   Normally, the DROS binary is launched from a rc.d script, but the first
   time it is run, I recommend launching it directly. 
   So, at the command line type:
 	>/LWA/bin/DROS
 
   The following will be displayed:
+	
 	  ========================== Logfile rotated ==========================
 	  ========================== Logfile opened ==========================
 	  FATAL: Error inserting f71882fg (/lib/modules/3.2.0-30-generic/kernel/drivers/hwmon/f71882fg.ko): No such device
@@ -186,7 +186,7 @@ Step 4: First Run
 	  2012-11-09 23:10:23.589 [I] [System          ] [System] Booting Complete
 
 Step 5: Test Messaging
-======================
+----------------------
   At this point, the system is up and listening for command messages. 
   To test messaging, use the included Msender utility. 
 
@@ -245,7 +245,7 @@ Step 6: Exit First Run
 
  
 Step 7: Normal operation mode
-=============================
+-----------------------------
   To install the DROS software to start on system boot, execute the following:
 	>cd /LWA/scripts	
 	>./installStartupScript.sh StartDROS.sh
@@ -270,7 +270,7 @@ Step 7: Normal operation mode
 
 
 Step 8: Scheduling a recording
-==============================
+------------------------------
   The format of scheduling a recording is as follows:
   	>/LWA/bin/Msender 
 		-Source MCS 
@@ -312,6 +312,7 @@ Step 8: Scheduling a recording
   be used to hold the data.	
 
   In '/LWA/runtime/runtime.log', you should see:
+	
 	2012-11-09 23:54:23.979 [I] [MessageListener ] >> Message(56240:86063978, MCS, DR1, 4, REC, 34, '056240 086066978 30000 DEFAULT_TBN' ) 127.0.0.1:47029
 	2012-11-09 23:54:23.980 [D] [Folder Watcher  ] Watched folder '/LWA_STORAGE/Internal/0/DROS/Rec' select returned 1
 	2012-11-09 23:54:23.980 [D] [Folder Watcher  ] Watched folder re-read '/LWA_STORAGE/Internal/0/DROS/Rec'
@@ -364,35 +365,32 @@ Step 8: Scheduling a recording
 
 
 Step 8: Retrieving recorded data
-================================
+--------------------------------
   The get command takes arguments "<File name> <Start position> <length>", and length must 
   fit within the the data field of a response message, so about 8000 bytes or less at a a time. 
   Obviously, retrieving data this way is not going to be as fast as the recording rate. The 
-  following is an example of retrieving data for visual inspection using the Msender utility:
+  following is an example of retrieving data for visual inspection using the `Msender` utility:
 
 	>/LWA/bin/Msender -s MCS -d DR1 -r 4 -I 127.0.0.1 -po 5000 -pi 5001 -v -t "GET" -D "065240_000000004 000000000 4096"
 	
 
   This would retrieve the 4096 bytes starting at position 0 from the file 056240_000000001.
   Note: Recording file names are constructed automatically from the MJD and reference number of 
-  the REC command. The -v flag tells Msender to display both the outgoing message and response. 
+  the REC command. The -v flag tells `Msender` to display both the outgoing message and response. 
   In our example, no data was recorded, so MCS-DR will respond with an 'Invalid range' because
   while the file exists, it has a 0 length (length is updated to reflect the actual recorded amount
   of data when a recording completes). Had there been any recorded data, this would show the
   message/response session and the data from the recording would be returned in the response's 
-  data field -- and consequently displayed in hex by the Msender utility. 
+  data field -- and consequently displayed in hex by the `Msender` utility. 
  
   Additional methods of accessing data are outlined in the extended user's guide.
  
 
 
 Additional Testing and trouble-shooting
-=======================================
-  The extended user's guide contains more informaiton on setting up tests to capture real data,
+---------------------------------------
+  The extended user's guide contains more information on setting up tests to capture real data,
   as well as trouble shooting tips and suggestions. For anything not covered by these two 
   documents, please feel free to contact me directly by email chwolfe2@vt.edu.
 	  
 	
-
-
-
