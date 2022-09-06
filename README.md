@@ -45,7 +45,9 @@ Step 0: Root Access
   on earlier machines (first PC on-site at LWA1 and PC sent to JPL)
   
   At the bash prompt, type:
+	
 	>sudo su
+	
   and enter the appropriate password.
   
   For any additional terminals you open, repeat this step.
@@ -58,6 +60,7 @@ Step 1: Installation
         so be sure to backup configuration files before building.
 
   At the bash prompt, type:
+	
 	>tar -xvf <tar-ball-file-name>
 	>cd <tar-ball-file-name-minus-'.tar.gz'>/build
 	>make all && make install
@@ -88,12 +91,14 @@ Step 1: Installation
 Step 2: System Configuration
 ----------------------------
   A) Determine which linux device is the 10Gbe Adapter, and which is 1GbE
+	
 	>cat /etc/udev/rules.d/70-persistent-net.rules:
      The device with module name 'myri10Ge' is the 10GbE adapter, others are 1GbE
      
   B) Edit /etc/network/interfaces and /etc/resolv.conf to suit site network environment.
+	
   	>nano /etc/network/interfaces
-	>nano /etc/resolv.conf
+	  >nano /etc/resolv.conf
 
   C) Edit /LWA/config/defaults_v2.cfg to reflect configuraiton in step 2 section B (above), as well.
      as machine reference designator, serial number, etc.
@@ -104,16 +109,20 @@ Step 3: DRSU preparation
   more complete description, see the extended user's guide.
   A) Create the array:
      Note: where b-f are your root partitions to add to the array.
+		 
 	>sudo mdadm -C /dev/md0 -C 256 -l 0 -n 5 /dev/sd{b,c,d,e,f}     
      
      You should see something along the lines of 
+		 
 	mdadm: /dev/md0 has been started with 5 drives.
      
      Next:
+		 
 	>cp /etc/mdadm/mdadm.conf /etc/mdadm/mdadm.conf.QS.bak
   	>mdadm --examine --scan > /etc/mdadm.conf
   
   B) Format the DRSU
+	
    	>/LWA/scripts/StorageControl.sh format /dev/md0 MyDrsuBarcode
 
      You should see something similar to:
@@ -189,7 +198,7 @@ Step 4: First Run
 Step 5: Test Messaging
 ----------------------
   At this point, the system is up and listening for command messages. 
-  To test messaging, use the included Msender utility. 
+  To test messaging, use the included `Msender` utility. 
 
   In a new terminal:
 	
@@ -337,7 +346,9 @@ Step 8: Scheduling a recording
 	2012-11-09 23:54:24.478 [D] [FileWriter:/ ...] [TicketBuffer:MasterReceiveBuffer] <SUBSCRIBE:FileWriter:/LWA_STORAGE/Internal/0/DROS/Rec/056240_000000004>
 	2012-11-09 23:54:26.978 [I] [Schedule        ] [Schedule] execution start current operation: Record      000000004 056240 086066978  056240 086096978  DEFAULT_TBN                     
 	2012-11-09 23:54:26.978 [I] [FileWriter:/ ...] [RECORD] FileWriter record started
+	
   Sometime later you should see:
+	
 	2012-11-09 23:54:50.924 [I] [Receiver        ] [Receiver] Buffer usage: [________________________________________] (  0%)
 	2012-11-09 23:54:50.925 [I] [Receiver        ] [Receiver] Receive rate: [________________________________________] (  0%)  0.00000 B/s  
 	2012-11-09 23:54:50.925 [I] [Receiver        ] [Receiver] Subscribers 1
