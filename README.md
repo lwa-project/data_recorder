@@ -148,6 +148,7 @@ Step 4: First Run
   Normally, the DROS binary is launched from a rc.d script, but the first
   time it is run, I recommend launching it directly. 
   So, at the command line type:
+	
 	>/LWA/bin/DROS
 
   The following will be displayed:
@@ -177,7 +178,7 @@ Step 4: First Run
 
 < will pause here for a few minutes >
 	  
-...
+    ...
 	  2012-11-09 23:10:23.589 [D] [System          ] [WaitQueueManager] Registered queue 'MessageProcessor'.
 	  2012-11-09 23:10:23.589 [I] [System          ] [System] Start message receiver...
 	  2012-11-09 23:10:23.589 [I] [System          ] [MessageListener] : Messaging socket opened on port5000
@@ -191,13 +192,16 @@ Step 5: Test Messaging
   To test messaging, use the included Msender utility. 
 
   In a new terminal:
+	
 	>/LWA/bin/Msender -v -Source "MCS" -Destination "DR1" -Type "PNG" -ReferenceNumber 0 -DestinationIpAddress localhost -DestinationPort 5001 -ResponseListenPort 5000    
 
   On the original terminal you should see:
+	
 	  2012-11-09 23:16:03.934 [I] [MessageListener ] >> Message(56240:83763934, MCS, DR1, 1, PNG, 0, '' ) 127.0.0.1:39352
 	  2012-11-09 23:16:03.935 [I] [ResponseSender  ] << Response(56240:83763935, DR1, MCS, 1, PNG, 8, Accept, NORMAL , '', '' ) 127.0.0.1:5001
 
   On the new terminal you should see:
+	
 	[send]Message :
 	[send]	Sender:                     MCS
 	[send]	Destination:                DR1
@@ -207,7 +211,6 @@ Step 5: Test Messaging
 	[send]	Milliseconds Past Midnight: 83763934
 	[send]	Data Length:                0
 	[send]	Data:                       No Data Specified
-
 	[recv]Response :
 	[recv]	Sender:                     DR1
 	[recv]	Destination:                MCS
@@ -225,8 +228,11 @@ Step 5: Test Messaging
 Step 6: Exit First Run
 ======================
   In the new terminal from step 5:
-	>/LWA/bin/Msender -v -Source "MCS" -Destination "DR1" -Type "SHT" -ReferenceNumber 0 -DestinationIpAddress localhost -DestinationPort 5001 -ResponseListenPort 5000    
+	
+	>/LWA/bin/Msender -v -Source "MCS" -Destination "DR1" -Type "SHT" -ReferenceNumber 0 -DestinationIpAddress localhost -DestinationPort 5001 -ResponseListenPort 5000   
+	 
   In the DROS terminal you should see 
+	
 	...
 	2012-11-09 23:22:42.869 [I] message originating in      ../System/Storage.cpp:142
 				[I] [System          ] ============================================================
@@ -247,10 +253,12 @@ Step 6: Exit First Run
 Step 7: Normal operation mode
 -----------------------------
   To install the DROS software to start on system boot, execute the following:
+	
 	>cd /LWA/scripts	
 	>./installStartupScript.sh StartDROS.sh
 
   Terminal output should be as follows:
+	
 	update-rc.d: warning: /etc/init.d/StartDROS.sh missing LSB information
 	update-rc.d: see <http://wiki.debian.org/LSBInitScripts>
 	 Adding system startup for /etc/init.d/StartDROS.sh ...
@@ -294,9 +302,11 @@ Step 8: Scheduling a recording
   Note the FFFFFFFFFFFFFF...FFF values are defined in 'formats.cfg'
 
   In the new window from step 5, enter the following* (line breaks added for clarity):
+	
 	>/LWA/bin/Msender -s MCS -d DR1 -r 4 -I 127.0.0.1 -po 5000 -pi 5001 -v -t "REC" -D "MJD MPM+3000 30000 DEFAULT_TBN"
   
   In the second terminal, you should see:
+	
 	...
 	[recv]	Modified Julian Day:        56240
 	[recv]	Milliseconds Past Midnight: 13276752
@@ -351,9 +361,11 @@ Step 8: Scheduling a recording
 
 
   Now, to verify that the recording was made, issue a DIRECTORY-ENTRY-X MIB request:
+	
 	>/LWA/bin/Msender -s MCS -d DR1 -r 4 -I 127.0.0.1 -po 5000 -pi 5001 -v -t "RPT" -D "DIRECTORY-ENTRY-1"
 
   On the second terminal you should see:
+	
 	...
 	[recv]	Modified Julian Day:        56240
 	[recv]	Milliseconds Past Midnight: 15455364
