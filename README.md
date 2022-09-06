@@ -12,13 +12,13 @@ features, please refer to the extended user's guide 'ExtendedUsersGuide.txt'.
 
 Prerequisites
 -------------
- 1) MCS-DR PC with x86_64 Ubuntu 12.04 
- 2) the following packages are installed: libgdbm3, libgdbm-dev, libfuse2, 
+ 1. MCS-DR PC with x86_64 Ubuntu 12.04 
+ 2. the following packages are installed: libgdbm3, libgdbm-dev, libfuse2, 
     libfuse-dev, lmsensors, smartmontools, mdadm, libfftw3-dev, fftw3,
     libboost-all-dev, gnuplot
- 3) gnu C/C++ compiler (stdlib, pthreads, librt)
- 4) DRSU (assembled IAW "LWA Engineering Memo MCS0019")
- 5) Drivers for the Myricom 10GbE adapter have been built and installed
+ 3. gnu C/C++ compiler (stdlib, pthreads, librt)
+ 4. DRSU (assembled IAW "LWA Engineering Memo MCS0019")
+ 5. Drivers for the Myricom 10GbE adapter have been built and installed
 
 
 Files and Organization
@@ -86,18 +86,18 @@ This should generate a lot of output ending with:
 
 Step 2: System Configuration
 ----------------------------
- a) Determine which linux device is the 10Gbe Adapter, and which is 1GbE
+ 1. Determine which linux device is the 10Gbe Adapter, and which is 1GbE
 
 			>cat /etc/udev/rules.d/70-persistent-net.rules:
 
     The device with module name 'myri10Ge' is the 10GbE adapter, others are 1GbE
    
- b) Edit /etc/network/interfaces and /etc/resolv.conf to suit site network environment.
+ 2. Edit /etc/network/interfaces and /etc/resolv.conf to suit site network environment.
 
 			>nano /etc/network/interfaces
 			>nano /etc/resolv.conf
 
- c) Edit /LWA/config/defaults_v2.cfg to reflect configuraiton in step 2 section B (above), as well.
+ 3. Edit /LWA/config/defaults_v2.cfg to reflect configuraiton in step 2 section B (above), as well.
     as machine reference designator, serial number, etc.
 
 
@@ -106,22 +106,22 @@ Step 3: DRSU preparation
 This command will create a DRSU array for the most likely partition naming. For
 more complete description, see the extended user's guide.
 
- a) Create the array:
-   Note: where b-f are your root partitions to add to the array.
+ 1. Create the array:
+    Note: where b-f are your root partitions to add to the array.
 		 
-		>sudo mdadm -C /dev/md0 -C 256 -l 0 -n 5 /dev/sd{b,c,d,e,f}     
+		  >sudo mdadm -C /dev/md0 -C 256 -l 0 -n 5 /dev/sd{b,c,d,e,f}     
      
-   You should see something along the lines of 
+    You should see something along the lines of 
 		 
-		mdadm: /dev/md0 has been started with 5 drives.
+	 	  mdadm: /dev/md0 has been started with 5 drives.
      
-   Next:
+    Next:
 		 
-		>cp /etc/mdadm/mdadm.conf /etc/mdadm/mdadm.conf.QS.bak
-		>mdadm --examine --scan > /etc/mdadm.conf
+		  >cp /etc/mdadm/mdadm.conf /etc/mdadm/mdadm.conf.QS.bak
+		  >mdadm --examine --scan > /etc/mdadm.conf
   
 
- b) Format the DRSU
+ 2. Format the DRSU
 	
 			>/LWA/scripts/StorageControl.sh format /dev/md0 MyDrsuBarcode
 
