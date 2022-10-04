@@ -1,3 +1,11 @@
+Software for DROSv2 is covered jointly under GPLv3 and Boost 1.0 licenses,
+to the extent required by included Boost sources and GPL sources, and to the
+more restrictive case pertaining thereunto, as defined herebelow. Beyond those
+requirements, any code not explicitly restricted by either of thowse two license
+models shall be deemed to be licensed under the GPLv3 license and subject to
+those restrictions.
+
+
 Boost Software License - Version 1.0 - August 17th, 2003
 
 Permission is hereby granted, free of charge, to any person or organization
