@@ -1,7 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-
-from __future__ import print_function
+#!/usr/bin/env python3
 
 import os
 import sys
@@ -9,18 +6,19 @@ import time
 import requests
 from socket import gethostname
 
+from lwa_auth import KEYS as LWA_AUTH_KEYS
+from lwa_auth.signed_requests import post as signed_post
 
-URL = "https://lda10g.unm.edu/metadata/sorter/index.py"
-KEY = "c0843461abe746a4608dd9c897f9b261"
+URL = "https://lda10g.unm.edu/metadata/sorter/upload"
 SITE = gethostname().split('-', 1)[0]
 SUBSYSTEM = gethostname().split('-', 1)[1].upper()
 TYPE = "SSLOG"
 
 # Send the update to lwalab
 r = os.path.realpath(sys.argv[1])
-f = requests.post(URL,
-                  data={'key': KEY, 'site': SITE, 'type': TYPE, 'subsystem': SUBSYSTEM},
-                  files={'file': open(r)},
-                  verify=False) # We don't have a certiticate for lda10g.unm.edu
+f = signed_post(LWA_AUTH_KEYS.get('dr', kind='private'), URL,
+                data={'site': SITE, 'type': TYPE, 'subsystem': SUBSYSTEM},
+                files={'file': open(r)},
+                verify=False) # We don't have a certiticate for lda10g.unm.edu
 print(f.text)
 f.close()
