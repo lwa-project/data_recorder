@@ -3,7 +3,6 @@
 import os
 import sys
 import time
-import requests
 from socket import gethostname
 
 from lwa_auth import KEYS as LWA_AUTH_KEYS
