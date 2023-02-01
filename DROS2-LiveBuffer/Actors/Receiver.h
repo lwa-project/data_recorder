@@ -385,7 +385,6 @@ public:
 				// count packet sizes
 				for (size_t j=0; j<(size_t) res; j++){
 					switch(t->mhdrs[j].msg_len){
-						case   -1:           n[IDX_ERROR]++;   last[IDX_ERROR]=j; break;
 						case    0:           n[IDX_EMPTY]++;   last[IDX_EMPTY]=j; break;
 						case TBN_FRAME_SIZE: n[IDX_TBN]++;     last[IDX_TBN]=j; break;
 						case TBW_FRAME_SIZE: n[IDX_TBW]++;     last[IDX_TBW]=j; break;
@@ -398,7 +397,6 @@ public:
 					}
 				}
 				switch(t->fsize){
-					case   -1:           curIdx = IDX_ERROR;   break;
 					case    0:           curIdx = IDX_EMPTY;   break;
 					case TBN_FRAME_SIZE: curIdx = IDX_TBN;     break;
 					case TBW_FRAME_SIZE: curIdx = IDX_TBW;     break;
