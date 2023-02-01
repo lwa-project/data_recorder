@@ -204,11 +204,11 @@ Assumptions
            anything is easiest. Note that building the software can be done in user space, 
            but installation requires root privileges. Consequently, you will need login 
            information:
-	   The default username and password for MCS-DR PCs is 
-		mcsdr / mcsdrrdscm
+	   The default username for MCS-DR PCs is 
+		mcsdr
 	   but may be 
-		chwolfe2 / cnw112177.
-           on earlier machines (first PC on-site at LWA1 and PC sent to JPL)
+		chwolfe2 
+     on earlier machines (first PC on-site at LWA1 and PC sent to JPL)
    
 
 Files and Organization
@@ -1098,7 +1098,3 @@ Advanced utility: ICD-Compliance-Test.sh
 ========================================
   [Deprecated]
   
-
-
-
-
