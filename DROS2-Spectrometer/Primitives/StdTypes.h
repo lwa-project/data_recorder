@@ -88,9 +88,6 @@
 #include <boost/utility.hpp>
 
 
-#define BOOST_BIND_GLOBAL_PLACEHOLDERS
-
-
 #define foreach BOOST_FOREACH
 using namespace boost;
 using namespace std;
