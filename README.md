@@ -36,11 +36,8 @@ root permission to work directly with partitions, so 'sudo su' before doing
 anything is easiest. Note that building the software can be done in user space, 
 but installation requires root privileges. Consequently, you will need login 
 information:
-The default username and password for MCS-DR PCs is 
-mcsdr / mcsdrrdscm
-but may be 
-chwolfe2 / cnw112177.
-on earlier machines (first PC on-site at LWA1 and PC sent to JPL)
+The default username for MCS-DR PCs is mcsdr but may be chwolfe2 on earlier
+machines (first PC on-site at LWA1 and PC sent to JPL)
   
 At the bash prompt, type:
 	
