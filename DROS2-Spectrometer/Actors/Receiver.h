@@ -477,7 +477,8 @@ public:
 				}
 				
 				// get the new format based on deeper packet inspection once we know the new size
-				DrxFrame* f; // only drx might require looking at the actual frame
+				DrxFrame* f; // only drx and drx8 might require looking at the actual frame
+				Drx8Frame* f8;
 				switch(new_frame_size){
 					case    0:
 						// ignore, not a mode change
@@ -524,8 +525,8 @@ public:
 						break;
 					case DRX8_FRAME_SIZE:
 						// changed to DRX8
-						f = (Drx8Frame*) t->frames[last_seen];
-						if (!setNewFmtDrx(bswap16(f->header.decFactor), true)){
+						f8 = (Drx8Frame*) t->frames[last_seen];
+						if (!setNewFmtDrx(bswap16(f8->header.decFactor), true)){
 							CANCEL_TICKET();
 							RESUME_RECEPTION();
 							/* CONTINUE_WITH_TICKET(); */
