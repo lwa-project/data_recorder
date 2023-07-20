@@ -382,7 +382,7 @@ public:
 				
 				// check in case drx rate changed
 				if ((fsize == DRX_FRAME_SIZE || fsize == DRX8_FRAME_SIZE) && drxRateChange && !lookMore){
-					if (!setNewFmtDrx(newDrxDecFactor)){
+					if (!setNewFmtDrx(newDrxDecFactor, (fsize == DRX8_FRAME_SIZE))){
 						CANCEL_TICKET();
 						RESUME_RECEPTION();
 						/* CONTINUE_WITH_TICKET(); */
@@ -516,7 +516,7 @@ public:
 					case DRX_FRAME_SIZE:
 						// changed to DRX
 						f = (DrxFrame*) t->frames[last_seen];
-						if (!setNewFmtDrx(bswap16(f->header.decFactor))){
+						if (!setNewFmtDrx(bswap16(f->header.decFactor, false))){
 							CANCEL_TICKET();
 							RESUME_RECEPTION();
 							/* CONTINUE_WITH_TICKET(); */
@@ -525,7 +525,7 @@ public:
 					case DRX8_FRAME_SIZE:
 						// changed to DRX8
 						f = (Drx8Frame*) t->frames[last_seen];
-						if (!setNewFmtDrx(bswap16(f->header.decFactor))){
+						if (!setNewFmtDrx(bswap16(f->header.decFactor, true))){
 							CANCEL_TICKET();
 							RESUME_RECEPTION();
 							/* CONTINUE_WITH_TICKET(); */
