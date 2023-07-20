@@ -406,9 +406,9 @@ public:
 #define IDX_ODDBALL 8
 				
 				// some count variables for deeper inspection
-				size_t n[8]    = {0,0,0,0,0,0,0,0};         // in order : error, empty, tbn, tbw, tbf, cor, drx, odd
-				size_t last[8] = {0,0,0,0,0,0,0,0};         // in order : error, empty, tbn, tbw, tbf, cor, drx, odd
-				int    sz[8]   = {0,-1,TBN_FRAME_SIZE,TBW_FRAME_SIZE,TBF_FRAME_SIZE,COR_FRAME_SIZE,DRX_FRAME_SIZE,DRX8_FRAME_SIZE,-2}; // in order : error, empty, tbn, tbw, tbf, cor, drx, drx8, odd
+				size_t n[9]    = {0,0,0,0,0,0,0,0,0};         // in order : error, empty, tbn, tbw, tbf, cor, drx, drx8, odd
+				size_t last[9] = {0,0,0,0,0,0,0,0,0};         // in order : error, empty, tbn, tbw, tbf, cor, drx, drx8, odd
+				int    sz[9]   = {0,-1,TBN_FRAME_SIZE,TBW_FRAME_SIZE,TBF_FRAME_SIZE,COR_FRAME_SIZE,DRX_FRAME_SIZE,DRX8_FRAME_SIZE,-2}; // in order : error, empty, tbn, tbw, tbf, cor, drx, drx8, odd
 				size_t curIdx;
 				// count packet sizes
 				for (size_t j=0; j<(size_t) res; j++){
