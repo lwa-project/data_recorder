@@ -55,6 +55,7 @@ DataFormat::FormatList DataFormat::knownFormats = map_list_of
 	("DEFAULT_TBW",   DataFormat("DEFAULT_TBW",  1224ll,   85983232ll, PT_TBW,     -1 ))
 	("DEFAULT_TBF",   DataFormat("DEFAULT_TBF",  6168ll,  117440512ll, PT_TBF,     -1 ))
 	("DEFAULT_COR",   DataFormat("DEFAULT_COR",  2336ll,  117440512ll, PT_FSC,     -1 ))
+	("DEFAULT_DRX8",  DataFormat("DRX8_GENERIC", 8224ll,  157415584ll, PT_DRX8,    -1 ))
 
 	("TBN_FILT_1",    DataFormat("TBN_FILT_1",   1048ll,    1064375ll, PT_TBN, 196000 ))
 	("TBN_FILT_2",    DataFormat("TBN_FILT_2",   1048ll,    3326172ll, PT_TBN,  62720 ))
@@ -72,6 +73,14 @@ DataFormat::FormatList DataFormat::knownFormats = map_list_of
 	("DRX_FILT_6",    DataFormat("DRX_FILT_6",   4128ll,   39509088ll, PT_DRX,     20 ))
 	("DRX_FILT_7",    DataFormat("DRX_FILT_7",   4128ll,   79014048ll, PT_DRX,     10 ))
 
+	("DRX8_FILT_1",   DataFormat("DRX8_FILT_1",  8224ll,    2006656ll, PT_DRX8,   784 ))
+	("DRX8_FILT_2",   DataFormat("DRX8_FILT_2",  8224ll,    4013312ll, PT_DRX8,   392 ))
+	("DRX8_FILT_3",   DataFormat("DRX8_FILT_3",  8224ll,    8026624ll, PT_DRX8,   196 ))
+	("DRX8_FILT_4",   DataFormat("DRX8_FILT_4",  8224ll,   16061472ll, PT_DRX8,    98 ))
+	("DRX8_FILT_5",   DataFormat("DRX8_FILT_5",  8224ll,   39351840ll, PT_DRX8,    40 ))
+	("DRX8_FILT_6",   DataFormat("DRX8_FILT_6",  8224ll,   78703680ll, PT_DRX8,    20 ))
+	("DRX8_FILT_7",   DataFormat("DRX8_FILT_7",  8224ll,  157415584ll, PT_DRX8,    10 ))
+	
 	("20DIPOLE_TBW",  DataFormat("20DIPOLE_TBW", 1224ll,    7549632ll, PT_TBN,     -1 ))
 	("20DIPOLE_TBN",  DataFormat("20DIPOLE_TBN", 1048ll,    4194304ll, PT_TBW,     -1 ))
 
@@ -79,7 +88,3 @@ DataFormat::FormatList DataFormat::knownFormats = map_list_of
 const string DataFormat::defaultFormatName = "DRX_FILT_7";
 
 INIT_ACCESS_MUTEX_ST(DataFormat);
-
-
-
-
