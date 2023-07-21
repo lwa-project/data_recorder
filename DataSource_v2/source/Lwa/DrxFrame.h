@@ -87,7 +87,7 @@ typedef struct __DrxFrameHeader{
 // DRX frame as received
 typedef struct __DrxFrame{ // Jake's drx frame struct
 	DrxFrameHeader header;
-	PackedSample4  samples[DRX_SAMPLES_PER_FRAME];
+	PackedSample8  samples[DRX_SAMPLES_PER_FRAME];
 	void fixByteOrder(){
 		header.freqCode   = __builtin_bswap32(header.freqCode);
 		header.decFactor  = (header.decFactor << 8)  | (header.decFactor >> 8);

@@ -59,15 +59,11 @@ DrxFrameGenerator::DrxFrameGenerator(
 	generate();
 }
 
-void DrxFrameGenerator::__pack(UnpackedSample* u, PackedSample4* p){
+void DrxFrameGenerator::__pack(UnpackedSample* u, PackedSample8* p){
 	int _i = (int)round(u->re);
-	if(_i>7) _i=7;
-	if(_i<-8) _i=-8;
 	int _q = (int)round(u->im);
-	if(_q>7) _q=7;
-	if(_q<-8) _q=-8;
-	p->i =  (((int8_t) _i) & 0xf);
-	p->q =  (((int8_t) _q) & 0xf);
+	p->i =  (((int8_t) _i) & 0xff);
+	p->q =  (((int8_t) _q) & 0xff);
 }
 void DrxFrameGenerator::__printFrame(DrxFrame* f, bool compact, bool single){
 	if (compact){
@@ -90,7 +86,7 @@ void DrxFrameGenerator::__printFrame(DrxFrame* f, bool compact, bool single){
 		cout << "== Status Flags:      " << f->header.statusFlags << hex << endl;
 		cout << "==============================================================================" << endl;
 		for(int i=0; i<1024; i++){
-			printf("%02hhx ",(int)f->samples[i].packed);
+			printf("%02hhx %02hhx",(int)f->samples[i].i,(int)f->samples[i].q);
 			if (((i & 0xf) == 0xf) || single){
 				cout << endl;
 			}
@@ -128,8 +124,8 @@ void DrxFrameGenerator::generate(){
 							UnpackedSample* temp = &samples[j];
 							//*temp =adder.next(dt);
 							*temp = sig[tuning]->sample(t);
-							temp->i = temp->i / (sig[tuning]->getDynamicRange() / 8.0);
-							temp->q = temp->q / (sig[tuning]->getDynamicRange() / 8.0);
+							temp->i = temp->i / (sig[tuning]->getDynamicRange() / 128.0);
+							temp->q = temp->q / (sig[tuning]->getDynamicRange() / 128.0);
 							__pack(&samples[j],&frames[tuning][frm].samples[j]);
 						}
 					} else {
@@ -140,10 +136,10 @@ void DrxFrameGenerator::generate(){
 							//UnpackedSample x = adder.next(dt);
 							UnpackedSample x = sig[tuning]->sample(t);
 							UnpackedSample y;
-							y.re = -x.im  / (sig[tuning]->getDynamicRange() / 8.0);
-							y.im = x.re  / (sig[tuning]->getDynamicRange() / 8.0);
-							x.re = x.re / (sig[tuning]->getDynamicRange() / 8.0);
-							x.im = x.im / (sig[tuning]->getDynamicRange() / 8.0);
+							y.re = -x.im  / (sig[tuning]->getDynamicRange() / 128.0);
+							y.im = x.re  / (sig[tuning]->getDynamicRange() / 128.0);
+							x.re = x.re / (sig[tuning]->getDynamicRange() / 128.0);
+							x.im = x.im / (sig[tuning]->getDynamicRange() / 128.0);
 							__pack(&y,&frames[tuning][frm + 1].samples[j]);
 							__pack(&x,&frames[tuning][frm].samples[j]);
 						}

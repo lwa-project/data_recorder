@@ -60,7 +60,7 @@ private:
 	SignalGenerator* sig[DRX_TUNINGS];
 	uint64_t			curFrame;
 	uint64_t			start;
-	void __pack(UnpackedSample* u, PackedSample4* p);
+	void __pack(UnpackedSample* u, PackedSample8* p);
 	void __printFrame(DrxFrame* f, bool compact=false, bool single=false);
 };
 
