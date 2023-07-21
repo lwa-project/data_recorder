@@ -19,14 +19,14 @@ typedef fftwf_complex 	 ComplexType;
 typedef float			 RealType;
 typedef union __PackedSample{
 	struct {
-		int8_t q:4;
-		int8_t i:4;
+		int8_t q;
+		int8_t i;
 	};
 	struct {
-		int8_t im:4;
-		int8_t re:4;
+		int8_t im;
+		int8_t re;
 	};
-	uint8_t packed;
+	uint16_t packed;
 }__attribute__((packed)) PackedSample;
 
 // define union type for an unpacked sample

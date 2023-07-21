@@ -80,13 +80,9 @@ DrxFrameGenerator::DrxFrameGenerator(
 
 void DrxFrameGenerator::__pack(UnpackedSample* u, PackedSample* p){
 	int _i = (int)round(u->re);
-	if(_i>7) _i=7;
-	if(_i<-8) _i=-8;
 	int _q = (int)round(u->im);
-	if(_q>7) _q=7;
-	if(_q<-8) _q=-8;
-	p->i =  (((int8_t) _i) & 0xf);
-	p->q =  (((int8_t) _q) & 0xf);
+	p->i =  (((int8_t) _i) & 0xff);
+	p->q =  (((int8_t) _q) & 0xff);
 }
 void DrxFrameGenerator::__printFrame(DrxFrame* f, bool compact, bool single){
 	if (compact){
@@ -109,7 +105,7 @@ void DrxFrameGenerator::__printFrame(DrxFrame* f, bool compact, bool single){
 		cout << "== Status Flags:      " << f->header.statusFlags << hex << endl;
 		cout << "==============================================================================" << endl;
 		for(int i=0; i<1024; i++){
-			printf("%02hhx ",(int)f->samples[i].packed);
+			printf("%02hhx %02hhx",(int)f->samples[i].i,(int)f->samples[i].q);
 			if (((i & 0xf) == 0xf) || single){
 				cout << endl;
 			}
@@ -140,8 +136,8 @@ void DrxFrameGenerator::generate(){
 				for(size_t j=0; j<DRX_SAMPLES_PER_FRAME; j++){
 					UnpackedSample* temp = &samples[j];
 					*temp =adder.next(dt);
-					temp->i = temp->i / (max / 8.0);
-					temp->q = temp->q / (max / 8.0);
+					temp->i = temp->i / (max / 128.0);
+					temp->q = temp->q / (max / 128.0);
 					__pack(&samples[j],&frames[frm].samples[j]);
 				}
 			} else {
@@ -149,10 +145,10 @@ void DrxFrameGenerator::generate(){
 					// generate y orthogonal to x, so correlation will be pure imaginary
 					UnpackedSample x = adder.next(dt);
 					UnpackedSample y;
-					y.re = -x.im  / (max / 8.0);
-					y.im = x.re  / (max / 8.0);
-					x.re = x.re / (max / 8.0);
-					x.im = x.im / (max / 8.0);
+					y.re = -x.im  / (max / 128.0);
+					y.im = x.re  / (max / 128.0);
+					x.re = x.re / (max / 128.0);
+					x.im = x.im / (max / 128.0);
 					__pack(&y,&frames[frm + 1].samples[j]);
 					__pack(&x,&frames[frm].samples[j]);
 				}
