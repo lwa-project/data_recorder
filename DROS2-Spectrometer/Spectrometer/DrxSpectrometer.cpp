@@ -49,27 +49,15 @@
 
 #include "DrxSpectrometer.h"
 #include "../System/LoggableAssert.h"
-#ifdef USE_LUTS
-	fftwf_complex DrxSpectrometer::LUT[256];
-#endif
 
 unsigned char DrxSpectrometer::SatLUT[256];
 bool          DrxSpectrometer::LUT_initialized=false;
 
 void DrxSpectrometer::initLookUpTables(){
 	if (LUT_initialized) return;
-	#ifdef USE_LUTS
-	#else
-		fftwf_complex LUT[256];
-	#endif
-
 	for (int byte=0; byte<256; byte++){
-		signed char _i = (byte & 0xf0);
-		signed char _q = (byte & 0x0f)<<4;
-		LUT[byte][0]   = (float)(_i>>4);
-		LUT[byte][1]   = (float)(_q>>4);
-		float magSquared = ((LUT[byte][0] * LUT[byte][0]) + (LUT[byte][1] * LUT[byte][1]));
-		SatLUT[byte] = ( magSquared >= 49.0);
+		float magSquared = (float) byte * byte;
+		SatLUT[byte] = ( magSquared >= 16129 );
 	}
 	LUT_initialized=true;
 }
@@ -665,17 +653,12 @@ bool DrxSpectrometer::unpack(DrxFrame* f, DrxBlockSetup* bs){
 	*fills += (DRX_SAMPLES_PER_FRAME / freqCount_or_samp_per_frame);
 
 	// unpack, counting saturation counts along the way
-	for (size_t i=0; i<DRX_SAMPLES_PER_FRAME; i++){
-		satsThisRound += (size_t) SatLUT[f->samples[i].packed];
-		#ifdef USE_LUTS
-			idata[i][0] = LUT[f->samples[i].packed][0];
-			idata[i][1] = LUT[f->samples[i].packed][1];
-		#else
-			signed char _i = (f->samples[i].packed & 0xf0);
-			signed char _q = (f->samples[i].packed & 0x0f)<<4;
-			idata[i][0]    = (float)(_i>>4);
-			idata[i][1]    = (float)(_q>>4);
-		#endif
+	for (size_t i=0; i<DRX_SAMPLES_PER_FRAME; i+=2){
+		signed char _i = f->samples[i].packed;
+		signed char _q = f->samples[i+1].packed;
+		satsThisRound += (size_t)(SatLUT[_i] | SatLUT[_q]);
+		idata[i][0]    = (float)_i;
+		idata[i][1]    = (float)_q;
 	}
 	// update sat counts
 	*sat_counts += satsThisRound;

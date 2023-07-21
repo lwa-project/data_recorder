@@ -50,12 +50,11 @@
 #include "DataFormat.h"
 
 DataFormat::FormatList DataFormat::knownFormats = map_list_of
-	("DEFAULT_DRX",   DataFormat("DRX_GENERIC",  4128ll,   79014048ll, PT_DRX,     -1 ))
+	("DEFAULT_DRX",   DataFormat("DRX_GENERIC",  4128ll,  157415584ll, PT_DRX,     -1 ))
 	("DEFAULT_TBN",   DataFormat("DEFAULT_TBN",  1048ll,  117440512ll, PT_TBN,     -1 ))
 	("DEFAULT_TBW",   DataFormat("DEFAULT_TBW",  1224ll,   85983232ll, PT_TBW,     -1 ))
 	("DEFAULT_TBF",   DataFormat("DEFAULT_TBF",  6168ll,  117440512ll, PT_TBF,     -1 ))
 	("DEFAULT_COR",   DataFormat("DEFAULT_COR",  2336ll,  117440512ll, PT_FSC,     -1 ))
-	("DEFAULT_DRX8",  DataFormat("DRX8_GENERIC", 8224ll,  157415584ll, PT_DRX8,    -1 ))
 
 	("TBN_FILT_1",    DataFormat("TBN_FILT_1",   1048ll,    1064375ll, PT_TBN, 196000 ))
 	("TBN_FILT_2",    DataFormat("TBN_FILT_2",   1048ll,    3326172ll, PT_TBN,  62720 ))
@@ -65,22 +64,14 @@ DataFormat::FormatList DataFormat::knownFormats = map_list_of
 	("TBN_FILT_6",    DataFormat("TBN_FILT_6",   1048ll,   53218750ll, PT_TBN,   3920 ))
 	("TBN_FILT_7",    DataFormat("TBN_FILT_7",   1048ll,  106437500ll, PT_TBN,   1960 ))
 
-	("DRX_FILT_1",    DataFormat("DRX_FILT_1",   4128ll,    1011360ll, PT_DRX,    784 ))
-	("DRX_FILT_2",    DataFormat("DRX_FILT_2",   4128ll,    2018592ll, PT_DRX,    392 ))
-	("DRX_FILT_3",    DataFormat("DRX_FILT_3",   4128ll,    4033056ll, PT_DRX,    196 ))
-	("DRX_FILT_4",    DataFormat("DRX_FILT_4",   4128ll,    8066112ll, PT_DRX,     98 ))
-	("DRX_FILT_5",    DataFormat("DRX_FILT_5",   4128ll,   19756608ll, PT_DRX,     40 ))
-	("DRX_FILT_6",    DataFormat("DRX_FILT_6",   4128ll,   39509088ll, PT_DRX,     20 ))
-	("DRX_FILT_7",    DataFormat("DRX_FILT_7",   4128ll,   79014048ll, PT_DRX,     10 ))
+	("DRX_FILT_1",    DataFormat("DRX_FILT_1",   4128ll,    2006656ll, PT_DRX,    784 ))
+	("DRX_FILT_2",    DataFormat("DRX_FILT_2",   4128ll,    4013312ll, PT_DRX,    392 ))
+	("DRX_FILT_3",    DataFormat("DRX_FILT_3",   4128ll,    8026624ll, PT_DRX,    196 ))
+	("DRX_FILT_4",    DataFormat("DRX_FILT_4",   4128ll,   16061472ll, PT_DRX,     98 ))
+	("DRX_FILT_5",    DataFormat("DRX_FILT_5",   4128ll,   39351840ll, PT_DRX,     40 ))
+	("DRX_FILT_6",    DataFormat("DRX_FILT_6",   4128ll,   78703680ll, PT_DRX,     20 ))
+	("DRX_FILT_7",    DataFormat("DRX_FILT_7",   4128ll,  157415584ll, PT_DRX,     10 ))
 
-	("DRX8_FILT_1",   DataFormat("DRX8_FILT_1",  8224ll,    2006656ll, PT_DRX8,   784 ))
-	("DRX8_FILT_2",   DataFormat("DRX8_FILT_2",  8224ll,    4013312ll, PT_DRX8,   392 ))
-	("DRX8_FILT_3",   DataFormat("DRX8_FILT_3",  8224ll,    8026624ll, PT_DRX8,   196 ))
-	("DRX8_FILT_4",   DataFormat("DRX8_FILT_4",  8224ll,   16061472ll, PT_DRX8,    98 ))
-	("DRX8_FILT_5",   DataFormat("DRX8_FILT_5",  8224ll,   39351840ll, PT_DRX8,    40 ))
-	("DRX8_FILT_6",   DataFormat("DRX8_FILT_6",  8224ll,   78703680ll, PT_DRX8,    20 ))
-	("DRX8_FILT_7",   DataFormat("DRX8_FILT_7",  8224ll,  157415584ll, PT_DRX8,    10 ))
-	
 	("20DIPOLE_TBW",  DataFormat("20DIPOLE_TBW", 1224ll,    7549632ll, PT_TBN,     -1 ))
 	("20DIPOLE_TBN",  DataFormat("20DIPOLE_TBN", 1048ll,    4194304ll, PT_TBW,     -1 ))
 
