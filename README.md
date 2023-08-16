@@ -5,6 +5,11 @@ Quick Start User's guide for MCS-DR/DRSU
 	Date:    2013-06-23
 	Author:  Christopher Wolfe
 
+[![Test](https://github.com/lwa-project/data_recorder/actions/workflows/main.yml/badge.svg)](https://github.com/lwa-project/data_recorder/actions/workflows/main.yml)
+
+[![LWAMemo](https://img.shields.io/badge/lwa%20memo-165-blue)](https://leo.phys.unm.edu/~lwa/memos/memo/lwa0165.pdf)
+[![MCSMemo](https://img.shields.io/badge/mcs%20memo-0045-blue)](https://leo.phys.unm.edu/~lwa/lwavt/doc/MCS0045_MCS-DR_ICD_V1.4.pdf)
+
 DROS Versions and ICD Version
 -----------------------------
 This quick start applies to DROS-2.3.0.1-RELEASE. For additional information about versions and 
