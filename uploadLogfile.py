@@ -17,7 +17,6 @@ TYPE = "SSLOG"
 r = os.path.realpath(sys.argv[1])
 f = signed_post(LWA_AUTH_KEYS.get('dr', kind='private'), URL,
                 data={'site': SITE, 'type': TYPE, 'subsystem': SUBSYSTEM},
-                files={'file': open(r)},
-                verify=False) # We don't have a certiticate for lda10g.unm.edu
+                files={'file': open(r)})
 print(f.text)
 f.close()
