@@ -19,7 +19,6 @@ if r.find('/LWA/DR') != -1:
     SUBSYSTEM = r.split('/')[2].upper()
 f = signed_post(LWA_AUTH_KEYS.get('dr', kind='private'), URL,
                 data={'site': SITE, 'type': TYPE, 'subsystem': SUBSYSTEM},
-                files={'file': open(r)},
-                verify=False) # We don't have a certiticate for lda10g.unm.edu
+                files={'file': open(r)})
 print(f.text)
 f.close()
