@@ -68,9 +68,9 @@ ROOT_PARTITION=`df -a | nawk '/\/$/{print $1}'`
 # get a list of ext2/3/4 volumes, less our root partition and any partitions listed in /LWA_STORAGE/StorageExceptionList
 if [ -f /LWA_STORAGE/StorageExceptionList ]; then
 	EXCEPT=`cat /LWA_STORAGE/StorageExceptionList`;
-	CANDIDATES=`blkid | grep 'TYPE=\"ext' | grep -v "$EXCEPT" | grep -v "$ROOT_PARTITION" | sed 's/UUID.*$//' | sort -k 2 | sed 's/:.*$/ /' | tr -d '\n' | sed 's/\s*$//'`
+  CANDIDATES=`blkid | grep 'TYPE=\"ext' | grep -v "$EXCEPT" | grep -v "$ROOT_PARTITION" | sed 's/:.*$/ /' | tr -d '\n' | sed 's/\s*$//'`
 else
-	CANDIDATES=`blkid | grep 'TYPE=\"ext' | grep -v "$ROOT_PARTITION" | sed 's/UUID.*$//' | sort -k 2 | sed 's/:.*$/ /' | tr -d '\n' | sed 's/\s*$//'`
+	CANDIDATES=`blkid | grep 'TYPE=\"ext' | grep -v "$ROOT_PARTITION" | sed 's/:.*$/ /' | tr -d '\n' | sed 's/\s*$//'`
 fi
 
 function doDown()
