@@ -62,7 +62,7 @@ using namespace boost::assign;
 
 #define foreach BOOST_FOREACH
 
-enum PacketType{PT_DRX, PT_TBN, PT_TBW, PT_TBF, PT_FSC, PT_SPC, PT_COR};
+enum PacketType{PT_DRX, PT_TBN, PT_TBW, PT_TBF, PT_FSC, PT_SPC, PT_COR, PT_DRX8};
 
 class DataFormat {
 public:

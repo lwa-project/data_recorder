@@ -59,5 +59,6 @@
 // ADP
 #include "TbfFrame.h"
 #include "CorFrame.h"
+#include "Drx8Frame.h"
 
 #endif /* LWADATAFORMATS_H_ */
