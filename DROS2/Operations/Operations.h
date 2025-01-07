@@ -67,6 +67,7 @@
 #include "RecordOperation.h"
 #ifndef DROS_LIVE_BUFFER
   #include "SpectrometerOperation.h"
+  #include "Spectrometer8Operation.h"
 #endif
 
 // pseudo-operation

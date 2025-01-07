@@ -61,6 +61,7 @@
   #include "../LiveBuffer/LiveBuffer.h"
 #else
   #include "../Spectrometer/DrxSpectrometer.h"
+  #include "../Spectrometer/Drx8Spectrometer.h"
 #endif
 
 using namespace boost::assign;
@@ -693,6 +694,11 @@ bool MessageProcessor::onDoReceive(Message& received){
 		}
 
 
+		string inputBitDepth = received.getMetaValue("Bits");
+		if (inputBitDepth.empty()){
+			inputBitDepth = "4";
+		}
+		
 		string stokesModeString = received.getMetaValue("Stokes");
 		if (stokesModeString.empty()){
 			stokesModeString = "XXYY";
@@ -730,8 +736,6 @@ bool MessageProcessor::onDoReceive(Message& received){
 			}
 		}
 
-		DataFormat opFormat=DataFormat::getFormatByName("DEFAULT_DRX");
-
 		char optag[20];
 		sprintf(optag, "%.6lu_%.9lu", startMJD, received.getReference());
 		string tag(optag);
@@ -747,13 +751,26 @@ bool MessageProcessor::onDoReceive(Message& received){
 			RESPOND( false, "Cannot create output file, or file already exists");
 		}
 
-		SpectrometerOperation* op_spc = new SpectrometerOperation(received.getReference(),ts,buf,opFormat,tagfile,0, outputType,Nfreqs, NInts);
-		checkAndSchedule(sch, op_spc, accept, comment);
-		if (!accept){
-			s_internal->putFile(tagfile);
-			RESPOND(accept,comment);
+		if (!inputBitDepth.compare("4")){
+			DataFormat opFormat=DataFormat::getFormatByName("DEFAULT_DRX");
+			SpectrometerOperation* op_spc = new SpectrometerOperation(received.getReference(),ts,buf,opFormat,tagfile,0, outputType,Nfreqs, NInts);
+			checkAndSchedule(sch, op_spc, accept, comment);
+			if (!accept){
+				s_internal->putFile(tagfile);
+				RESPOND(accept,comment);
+			} else {
+				RESPOND(accept,tag);
+			}
 		} else {
-			RESPOND(accept,tag);
+			DataFormat opFormat=DataFormat::getFormatByName("DEFAULT_DRX8");
+			Spectrometer8Operation* op_spc = new Spectrometer8Operation(received.getReference(),ts,buf,opFormat,tagfile,0, outputType,Nfreqs, NInts);
+			checkAndSchedule(sch, op_spc, accept, comment);
+			if (!accept){
+				s_internal->putFile(tagfile);
+				RESPOND(accept,comment);
+			} else {
+				RESPOND(accept,tag);
+			}
 		}
 
 	}
