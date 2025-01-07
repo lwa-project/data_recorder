@@ -78,7 +78,7 @@ Drx8Spectrometer::Drx8Spectrometer(
 			blocks_free(Nb+1,1),
 			blocks_startable(Nb+1,1),
 			blocks_dropped((2*Nb)+1,1),  // double the size so that we can always drop blocks
-			blocks_computing(MAX_SIMULTANEOUS_BLOCKS_PROCESSING+1,1),
+			blocks_computing(MAX8_SIMULTANEOUS_BLOCKS_PROCESSING+1,1),
 
 			blocks_filling(),
 			lastFilledBlockSetup(),
@@ -266,7 +266,7 @@ void Drx8Spectrometer::run_slave(){
 		if (canMove(&blocks_computing, &blocks_free)){
 			Drx8BlockSetup*    bs    = *blocks_computing.nextOut();
 			LOG_ASSERT(bs != NULL);
-			LOG_ASSERT(bs->state == BS_PROCESSING);
+			LOG_ASSERT(bs->state == BS8_PROCESSING);
 			if (isDoneOrError(bs)){
 				if (isError(bs)){
 					counters.checkBlockDone_Error++;
@@ -279,7 +279,7 @@ void Drx8Spectrometer::run_slave(){
 				}
 				spc->waitBlock(bs->bIdx);
 				spc->resetBlock(bs->bIdx);
-				bs->state = BS_DONE;
+				bs->state = BS8_DONE;
 				resetBlockSetup(bs);
 				doMove(&blocks_computing, &blocks_free);
 				Plugin::doneOut(doneProducing);
@@ -298,7 +298,7 @@ void Drx8Spectrometer::run_slave(){
 		if (canMove(&blocks_dropped, &blocks_free)){
 			Drx8BlockSetup* bs = *blocks_dropped.nextOut();
 			LOG_ASSERT(bs != NULL);
-			LOG_ASSERT(bs->state == BS_DROPPED);
+			LOG_ASSERT(bs->state == BS8_DROPPED);
 			spc->resetBlock(bs->bIdx);
 			resetBlockSetup(bs);
 			doMove(&blocks_dropped, &blocks_free);
@@ -313,7 +313,7 @@ void Drx8Spectrometer::resetBlockSetup(Drx8BlockSetup* bs){
 	LOG_ASSERT(spc!=NULL);
 	LOG_ASSERT(blocks!=NULL);
 	LOG_ASSERT(bs!=NULL);
-	LOG_ASSERT((bs->state == BS_DONE) || (bs->state == BS_DROPPED));
+	LOG_ASSERT((bs->state == BS8_DONE) || (bs->state == BS8_DROPPED));
 	size_t bIdx = bs->bIdx;
 	bzero(bs, sizeof(Drx8BlockSetup));
 	bs->bIdx = bIdx;
@@ -325,10 +325,10 @@ void Drx8Spectrometer::startBlock(Drx8BlockSetup* bs, Drx8SpectraHeader* dsh, fl
 	LOG_ASSERT(bs!=NULL);
 	LOG_ASSERT(dsh!=NULL);
 	LOG_ASSERT(aData!=NULL);
-	LOG_ASSERT(bs->state == BS_STARTABLE);
+	LOG_ASSERT(bs->state == BS8_STARTABLE);
 	initSpectraHeader(bs,dsh);
 	spc->startBlock(bs->bIdx, aData);
-	bs->state = BS_PROCESSING;
+	bs->state = BS8_PROCESSING;
 	counters.blocksStarted++;
 }
 
@@ -336,7 +336,7 @@ bool Drx8Spectrometer::isDoneOrError(Drx8BlockSetup* bs){
 	LOG_ASSERT(spc!=NULL);
 	LOG_ASSERT(blocks!=NULL);
 	LOG_ASSERT(bs!=NULL);
-	LOG_ASSERT(bs->state == BS_PROCESSING);
+	LOG_ASSERT(bs->state == BS8_PROCESSING);
 	return (spc->isBlockDone(bs->bIdx) || spc->isBlockError(bs->bIdx));
 }
 
@@ -389,7 +389,7 @@ uint64_t Drx8Spectrometer::nextTimeTagAfterBlock(Drx8BlockSetup* bs){
 }
 
 void Drx8Spectrometer::initBlockSetup(Drx8BlockSetup* toPrepare, Drx8Frame* f, Drx8BlockSetup* predecessor){
-	LOG_ASSERT(toPrepare->state == BS_UNUSED);
+	LOG_ASSERT(toPrepare->state == BS8_UNUSED);
 	if (predecessor != NULL){
 		counters.framesInsertedStale++;
 		toPrepare->beam      		= predecessor->beam;
@@ -411,11 +411,11 @@ void Drx8Spectrometer::initBlockSetup(Drx8BlockSetup* toPrepare, Drx8Frame* f, D
 		toPrepare->timeTagStep  	= f->header.decFactor*DRX8_SAMPLES_PER_FRAME;
 		toPrepare->timeTag0			= f->header.timeTag;
 		toPrepare->timeTagN			= f->header.timeTag + (toPrepare->timeTagStep * (((freqCount_or_samp_per_frame * intCount) / DRX8_SAMPLES_PER_FRAME)-1));
-		toPrepare->freqCode[0]  	= (f->header.drx_tuning == DRX8_TUN_0) ? f->header.freqCode : FREQ_CODE_UNINITIALIZED;
-		toPrepare->freqCode[1]  	= (f->header.drx_tuning != DRX8_TUN_0) ? f->header.freqCode : FREQ_CODE_UNINITIALIZED;
+		toPrepare->freqCode[0]  	= (f->header.drx_tuning == DRX8_TUN_0) ? f->header.freqCode : FREQ8_CODE_UNINITIALIZED;
+		toPrepare->freqCode[1]  	= (f->header.drx_tuning != DRX8_TUN_0) ? f->header.freqCode : FREQ8_CODE_UNINITIALIZED;
 		toPrepare->stepPhase    	= (((uint64_t)f->header.timeTag) % (((uint64_t) f->header.decFactor) * ((uint64_t) DRX8_SAMPLES_PER_FRAME)));
 	}
-	toPrepare->state            = BS_FILLING;
+	toPrepare->state            = BS8_FILLING;
 	toPrepare->insertionCount   = 0;
 	toPrepare->header           = NULL;
 	toPrepare->data             = NULL;
@@ -432,7 +432,7 @@ bool Drx8Spectrometer::blockMatch(Drx8Frame* f, Drx8BlockSetup* bs){
 		(
 			(bs->beam == f->header.drx_beam) &&
 			(bs->decFactor == f->header.decFactor) &&
-			((bs->freqCode[t] == f->header.freqCode) || (bs->freqCode[t] == FREQ_CODE_UNINITIALIZED)) &&
+			((bs->freqCode[t] == f->header.freqCode) || (bs->freqCode[t] == FREQ8_CODE_UNINITIALIZED)) &&
 			(frameStepPhase == bs->stepPhase)
 		);
 	return compatible;
@@ -480,7 +480,7 @@ bool Drx8Spectrometer::insert(Drx8Frame* f){
 	){
 		bs = *searchPos;
 		LOG_ASSERT(bs!=NULL);
-		LOG_ASSERT(bs->state == BS_FILLING);
+		LOG_ASSERT(bs->state == BS8_FILLING);
 
 		int  order        = compare(f,bs);
 		bool compatible   = blockMatch(f,bs);
@@ -532,7 +532,7 @@ bool Drx8Spectrometer::insert(Drx8Frame* f){
 				Drx8BlockSetup** mvptr = blocks_dropped.nextIn();
 				LOG_ASSERT(mvptr!=NULL);
 				*mvptr=*clearPos;
-				(*mvptr)->state = BS_DROPPED;
+				(*mvptr)->state = BS8_DROPPED;
 				blocks_dropped.doneIn(mvptr);
 				clearPos++;
 			}
@@ -552,7 +552,7 @@ bool Drx8Spectrometer::insert(Drx8Frame* f){
 			Drx8BlockSetup** insptr = blocks_startable.nextIn();
 			LOG_ASSERT(insptr!=NULL);
 			*insptr=bs;
-			bs->state = BS_STARTABLE;
+			bs->state = BS8_STARTABLE;
 			blocks_startable.doneIn(insptr);
 
 			// remove the head of the list upto and including searchPos
@@ -571,7 +571,7 @@ bool Drx8Spectrometer::insert(Drx8Frame* f){
 			Drx8BlockSetup** newPtr = blocks_free.nextOut();
 			LOG_ASSERT(newPtr!=NULL);
 			Drx8BlockSetup* bs_new = *newPtr;
-			LOG_ASSERT(bs_new->state == BS_UNUSED);
+			LOG_ASSERT(bs_new->state == BS8_UNUSED);
 
 
 			// initialize the block
@@ -611,7 +611,7 @@ bool Drx8Spectrometer::unpack(Drx8Frame* f, Drx8BlockSetup* bs){
 	LOG_ASSERT(blocks!=NULL);
 	LOG_ASSERT(bs!=NULL);
 	LOG_ASSERT(f!=NULL);
-	LOG_ASSERT(bs->state == BS_FILLING);
+	LOG_ASSERT(bs->state == BS8_FILLING);
 	bool    error         = false;
 	size_t  satsThisRound = 0;
 	size_t  framePos      = (f->header.timeTag - bs->timeTag0) / bs->timeTagStep;
@@ -633,7 +633,7 @@ bool Drx8Spectrometer::unpack(Drx8Frame* f, Drx8BlockSetup* bs){
 
 
 	// possibly update freq code
-	if (unlikely(bs->freqCode[tunIndex]==FREQ_CODE_UNINITIALIZED)){
+	if (unlikely(bs->freqCode[tunIndex]==FREQ8_CODE_UNINITIALIZED)){
 		bs->freqCode[tunIndex]=f->header.freqCode;
 	}
 

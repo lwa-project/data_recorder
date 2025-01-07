@@ -92,17 +92,17 @@ typedef struct __Drx8SpectraHeader{
 	uint32_t			MAGIC2;     // must always equal 0xED0CED0C
 } __attribute__((packed)) Drx8SpectraHeader;
 
-enum Drx8Comp{ BEFORE, COMPAT_BEFORE, COMPAT_IN, COMPAT_AFTER, INCOMPAT };
-enum Drx8BlockState{ BS_UNUSED=0, BS_FILLING, BS_STARTABLE, BS_PROCESSING, BS_DONE, BS_DROPPED};
-#define FREQ_CODE_UNINITIALIZED (uint32_t)0xFEEDBEEF
+enum Drx8Comp{ BEFORE8, COMPAT8_BEFORE, COMPAT8_IN, COMPAT8_AFTER, INCOMPAT8 };
+enum Drx8BlockState{ BS8_UNUSED=0, BS8_FILLING, BS8_STARTABLE, BS8_PROCESSING, BS8_DONE, BS8_DROPPED};
+#define FREQ8_CODE_UNINITIALIZED (uint32_t)0xFEEDBEEF
 #define DRX8_TUN_0 1
-#define MAX_SIMULTANEOUS_BLOCKS_PROCESSING 1
+#define MAX8_SIMULTANEOUS_BLOCKS_PROCESSING 1
 
 enum BlockStages {FILLING, PROCESSING, DONE}; // implicit invalid stage
 
 typedef struct __Drx8BlockSetup{
 	__Drx8BlockSetup():
-		//state(BS_EMPTY),
+		//state(BS8_EMPTY),
 		//spc_block_index(0),
 		//ticketFrameIndex(0),
 		bIdx((size_t)(-1ll)),
@@ -115,8 +115,8 @@ typedef struct __Drx8BlockSetup{
 		beam(0),
 		freqCode()
 		{
-		freqCode[0]=FREQ_CODE_UNINITIALIZED;
-		freqCode[1]=FREQ_CODE_UNINITIALIZED;
+		freqCode[0]=FREQ8_CODE_UNINITIALIZED;
+		freqCode[1]=FREQ8_CODE_UNINITIALIZED;
 	}
 	Drx8BlockState       state;
 	size_t              bIdx; // block index into the spectrometer buffer
