@@ -98,7 +98,7 @@ enum Drx8BlockState{ BS8_UNUSED=0, BS8_FILLING, BS8_STARTABLE, BS8_PROCESSING, B
 #define DRX8_TUN_0 1
 #define MAX8_SIMULTANEOUS_BLOCKS_PROCESSING 1
 
-enum BlockStages {FILLING, PROCESSING, DONE}; // implicit invalid stage
+enum BlockStages {FILLING8, PROCESSING8, DONE8}; // implicit invalid stage
 
 typedef struct __Drx8BlockSetup{
 	__Drx8BlockSetup():
