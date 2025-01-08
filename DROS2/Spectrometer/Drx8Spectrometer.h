@@ -58,8 +58,6 @@
 #include "Spectrometer.h"
 #include "TestPattern.h"
 
-// do we do sample unpacking on the fly, or use look up tables?
-//#define USE_LUTS
 #define DRX8_SPECTROMETER_REPORT_INTERVAL 30000
 #define DRX8_SPECTRA_MAGIC1 0xC0DEC0DE
 #define DRX8_SPECTRA_MAGIC2 0xED0CED0C

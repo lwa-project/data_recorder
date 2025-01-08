@@ -100,7 +100,6 @@ Drx8Spectrometer::Drx8Spectrometer(
 
 
 			{
-	initLookUpTables();
 
 	if (!blocks_free.isValid()){
 		LOGC(L_ERROR, "["+getObjName()+"]: can't initialize blocks_free", ACTOR_ERROR_COLORS);
