@@ -261,4 +261,4 @@ private:
 	volatile bool     up;
 };
 
-// #endif /* SPECTROMETER8OPERATION_H_ */
+#endif /* SPECTROMETER8OPERATION_H_ */
