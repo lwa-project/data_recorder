@@ -698,6 +698,9 @@ bool MessageProcessor::onDoReceive(Message& received){
 		if (inputBitDepth.empty()){
 			inputBitDepth = "4";
 		}
+		if (!inputBitDepth.compare("4") && !inputBitDepth.compare("8")) {
+			RESPOND( false, "Unsupported bit depth: '"+inputBitDepth+"'");
+		}
 		
 		string stokesModeString = received.getMetaValue("Stokes");
 		if (stokesModeString.empty()){
@@ -721,8 +724,16 @@ bool MessageProcessor::onDoReceive(Message& received){
 			RESPOND( false, "Unsupported integration count: '"+LXS(NInts)+"'");
 		}
 
-		if (((Nfreqs*NInts)%DRX_SAMPLES_PER_FRAME) != 0){
-			RESPOND( false, "Unsupported geometry: 'Nf x Ni  must be an integral multiple of DRX frame sizes'");
+		if (!inputBitDepth.compare("4")){
+			// DRX
+		  if (((Nfreqs*NInts)%DRX_SAMPLES_PER_FRAME) != 0){
+			  RESPOND( false, "Unsupported geometry: 'Nf x Ni  must be an integral multiple of DRX frame sizes'");
+		  }
+		} else {
+			// DRX8
+			if (((Nfreqs*NInts)%DRX8_SAMPLES_PER_FRAME) != 0){
+			  RESPOND( false, "Unsupported geometry: 'Nf x Ni  must be an integral multiple of DRX8 frame sizes'");
+		  }
 		}
 
 		TimeSlot ts(__TimeStamp(startMJD, startMPM),duration);
@@ -752,6 +763,7 @@ bool MessageProcessor::onDoReceive(Message& received){
 		}
 
 		if (!inputBitDepth.compare("4")){
+			// DRX
 			DataFormat opFormat=DataFormat::getFormatByName("DEFAULT_DRX");
 			SpectrometerOperation* op_spc = new SpectrometerOperation(received.getReference(),ts,buf,opFormat,tagfile,0, outputType,Nfreqs, NInts);
 			checkAndSchedule(sch, op_spc, accept, comment);
@@ -762,6 +774,7 @@ bool MessageProcessor::onDoReceive(Message& received){
 				RESPOND(accept,tag);
 			}
 		} else {
+			// DRX8
 			DataFormat opFormat=DataFormat::getFormatByName("DEFAULT_DRX8");
 			Spectrometer8Operation* op_spc = new Spectrometer8Operation(received.getReference(),ts,buf,opFormat,tagfile,0, outputType,Nfreqs, NInts);
 			checkAndSchedule(sch, op_spc, accept, comment);
