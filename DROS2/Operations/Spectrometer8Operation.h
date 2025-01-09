@@ -70,7 +70,7 @@ public:
 			unsigned _nFreqs,
 			unsigned _nInts
 		):
-		ScheduledOperation("Spectrometr8", _reference, _ts),
+		ScheduledOperation("Spectrometr", _reference, _ts),
 		reference(_reference),
 		ts(_ts),
 		opFormat(_opFormat),
