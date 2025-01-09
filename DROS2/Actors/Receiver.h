@@ -251,8 +251,8 @@ public:
 	}
 	virtual void packetBurn(){
 		externallyClosed=true;
-		char buf[8192];
-		bzero((void*)buf, 8192);
+		char buf[8224];
+		bzero((void*)buf, 8224);
 		int burnsd = socket(AF_INET, SOCK_DGRAM, 0);
 		struct sockaddr_storage sa;
 		bzero((void*)&sa, sizeof(struct sockaddr_storage));
@@ -351,7 +351,7 @@ public:
 						tt = __builtin_bswap64(*((size_t*)(&((CorFrame*)t->iovs[cnt-1].iov_base)->header.timeTag)));
 					  break;
 					case DRX8_FRAME_SIZE:
-						tt = __builtin_bswap64(*((size_t*)(&((DrxFrame*)t->iovs[cnt-1].iov_base)->header.timeTag)));
+						tt = __builtin_bswap64(*((size_t*)(&((Drx8Frame*)t->iovs[cnt-1].iov_base)->header.timeTag)));
 						break;
 					default : break;
 				}
