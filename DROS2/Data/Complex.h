@@ -71,14 +71,15 @@ typedef union __PackedSample4{
 	uint8_t packed;
 }__attribute__((packed)) PackedSample4;
 
+// NOTE: little-endian packing
 typedef union __PackedSample8{
 	struct {
-		int8_t q;
 		int8_t i;
+		int8_t q;
 	};
 	struct {
-		int8_t im;
 		int8_t re;
+		int8_t im;
 	};
 	uint16_t packed;
 }__attribute__((packed)) PackedSample8;
