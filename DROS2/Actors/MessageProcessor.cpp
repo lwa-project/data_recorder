@@ -1,4 +1,4 @@
-x// ========================= DROSv2 License preamble===========================
+// ========================= DROSv2 License preamble===========================
 // Software for DROSv2 is covered jointly under GPLv3 and Boost 1.0 licenses,
 // to the extent required by included Boost sources and GPL sources, and to the
 // more restrictive case pertaining thereunto, as defined herebelow. Beyond those
