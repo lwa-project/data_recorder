@@ -74,6 +74,7 @@ public:
 	virtual bool monitor(){return true;}
 
 	// used by the derived class to get data to work with
+	void* peekNextIn(size_t size);
 	void* getNextIn(size_t size);
 	void  doneIn(bool release = false);
 	void* getNextOut(size_t size);

@@ -67,7 +67,6 @@
   #include "../LiveBuffer/LiveBuffer.h"
 #else
   #include "../Spectrometer/DrxSpectrometer.h"
-  #include "../Spectrometer/Drx8Spectrometer.h"
 #endif
 
 ///////////////////////////////////////////////////////////////////

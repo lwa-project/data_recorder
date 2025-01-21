@@ -73,8 +73,8 @@ typedef struct __DrxSpectraHeader{
 	uint32_t			fills[4];
 	uint8_t				errors[4];
 	uint8_t 			beam;
-	uint8_t         stokes_format;
-	uint8_t             spec_version;
+	uint8_t 			stokes_format;
+	uint8_t 			spec_version;
 	union{
 		struct {
 			uint8_t     flag_xcp:1;
@@ -198,11 +198,16 @@ public:
 
 	// input-thread methods
 	bool     insert(DrxFrame* f);
+	bool     insert(Drx8Frame* f);
 	uint64_t nextTimeTagAfterBlock(DrxBlockSetup* bs);
 	void     initBlockSetup(DrxBlockSetup* toPrepare, DrxFrame* f, DrxBlockSetup* predecessor = NULL);
 	bool     blockMatch(DrxFrame* f, DrxBlockSetup* bs);
+	bool     blockMatch(Drx8Frame* f, DrxBlockSetup* bs);
 	int      compare(DrxFrame* f, DrxBlockSetup* bs);
+	int      compare(Drx8Frame* f, DrxBlockSetup* bs);
 	bool     unpack(DrxFrame* f, DrxBlockSetup* bs);
+	bool     unpack(Drx8Frame* f, DrxBlockSetup* bs);
+	bool     frameIsLegal(DrxFrame* f);
 	bool     frameIsLegal(DrxFrame* f);
 
 	// output-thread methods
@@ -225,6 +230,7 @@ public:
 	void   printSpecSetup();
 	void   printBlockSetup(DrxBlockSetup* bs);
 	void   printFrameSetup(DrxFrame* f, DrxBlockSetup* bs=NULL);
+	void   printFrameSetup(Drx8Frame* f, DrxBlockSetup* bs=NULL);
 	string specReport();
 	//void   generateTestPattern(float* specdata);
 	void   doPeriodicReport();

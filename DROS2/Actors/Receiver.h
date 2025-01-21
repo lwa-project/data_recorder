@@ -69,7 +69,7 @@
 #define NSEC_PER_SEC (1000000000ll)
 #define IDEAL_TRANSFER_SIZE 4194304   /*4MB*/
 //#define INITIAL_BUFFER_SIZE 2147483648 /*2 GiB*/
-#define INITIAL_BUFFER_SIZE (1048576lu*2048lu*2lu)
+#define INITIAL_BUFFER_SIZE (1048576lu*4096lu)
 //#define INITIAL_BUFFER_SIZE 33554432 /*32MB*/
 
 
@@ -130,6 +130,7 @@ public:
 		bufsize(0),
 		transferSize(0),
 		currentDrxDecFactor(-1),
+		currentIsDrx8(false),
 		resetRequired(true),
 		newFormat(DataFormat::getFormatByName(DataFormat::defaultFormatName)),
 		newTransferSize(IDEAL_TRANSFER_SIZE),
@@ -328,6 +329,7 @@ public:
 				bool   drxRateChange = false;
 				size_t cnt           = (size_t) res;
 				uint16_t newDrxDecFactor;
+				bool isDrx8 = false;
 				for (size_t c=0; c<(size_t)res; c++){
 					bytesReceived += t->mhdrs[c].msg_len;
 				}
@@ -370,7 +372,8 @@ public:
 				for (size_t j=0; j<cnt; j++){
 					if (fsize == DRX_FRAME_SIZE || fsize == DRX8_FRAME_SIZE){
 						newDrxDecFactor = bswap16(((DrxFrame*) t->frames[j])->header.decFactor);
-						if (newDrxDecFactor != currentDrxDecFactor){
+						isDrx8 = ((DrxFrame*) t->frames[j])->header.drx_is_adp;
+						if (newDrxDecFactor != currentDrxDecFactor || isDrx8 != currentIsDrx8){
 							drxRateChange=true;
 						}
 					}
@@ -382,7 +385,7 @@ public:
 				
 				// check in case drx rate changed
 				if ((fsize == DRX_FRAME_SIZE || fsize == DRX8_FRAME_SIZE) && drxRateChange && !lookMore){
-					if (!setNewFmtDrx(newDrxDecFactor, (fsize == DRX8_FRAME_SIZE))){
+					if (!setNewFmtDrx(newDrxDecFactor, isDrx8)){
 						CANCEL_TICKET();
 						RESUME_RECEPTION();
 						/* CONTINUE_WITH_TICKET(); */
@@ -515,18 +518,10 @@ public:
 						newFormat = DataFormat::getFormatByName("DEFAULT_COR");
 						break;
 					case DRX_FRAME_SIZE:
-						// changed to DRX
-						f = (DrxFrame*) t->frames[last_seen];
-						if (!setNewFmtDrx(bswap16(f->header.decFactor), false)){
-							CANCEL_TICKET();
-							RESUME_RECEPTION();
-							/* CONTINUE_WITH_TICKET(); */
-						}
-						break;
 					case DRX8_FRAME_SIZE:
-						// changed to DRX8
-						f8 = (Drx8Frame*) t->frames[last_seen];
-						if (!setNewFmtDrx(bswap16(f8->header.decFactor), true)){
+						// changed to DRX or DRX8
+						f = (DrxFrame*) t->frames[last_seen];
+						if (!setNewFmtDrx(bswap16(f->header.decFactor), f->header.drx_is_adp)){
 							CANCEL_TICKET();
 							RESUME_RECEPTION();
 							/* CONTINUE_WITH_TICKET(); */
@@ -607,6 +602,7 @@ private:
 	size_t                         bufsize;
 	size_t                         transferSize;
 	int                            currentDrxDecFactor; // to detect mode changes
+	bool                           currentIsDrx8; // to detect mode changes
 
 	// buffer geometry change stuff
 	volatile bool                  resetRequired;
@@ -765,6 +761,7 @@ private:
 		this->currentFormat       = newFormat;
 		this->transferSize        = newTransferSize;
 		this->currentDrxDecFactor = newFormat.getDecFactor();
+		this->currentIsDrx8       = (newFormat.getBitDepth() == 8);
 		this->resetRequired       = false;
 		return true;
 

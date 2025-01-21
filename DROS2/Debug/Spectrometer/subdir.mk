@@ -5,19 +5,16 @@
 # Add inputs and outputs from these tool invocations to the build variables 
 CPP_SRCS += \
 ../Spectrometer/DrxSpectrometer.cpp \
-../Spectrometer/Drx8Spectrometer.cpp \
 ../Spectrometer/Spectrometer.cpp \
 ../Spectrometer/TestPattern.cpp 
 
 OBJS_S += \
 ./Spectrometer/DrxSpectrometer_S.o \
-./Spectrometer/Drx8Spectrometer_S.o \
 ./Spectrometer/Spectrometer_S.o \
 ./Spectrometer/TestPattern_S.o 
 
 CPP_DEPS += \
 ./Spectrometer/DrxSpectrometer.d \
-./Spectrometer/Drx8Spectrometer.d \
 ./Spectrometer/Spectrometer.d \
 ./Spectrometer/TestPattern.d 
 

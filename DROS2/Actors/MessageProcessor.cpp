@@ -1,4 +1,4 @@
-// ========================= DROSv2 License preamble===========================
+x// ========================= DROSv2 License preamble===========================
 // Software for DROSv2 is covered jointly under GPLv3 and Boost 1.0 licenses,
 // to the extent required by included Boost sources and GPL sources, and to the
 // more restrictive case pertaining thereunto, as defined herebelow. Beyond those
@@ -61,7 +61,6 @@
   #include "../LiveBuffer/LiveBuffer.h"
 #else
   #include "../Spectrometer/DrxSpectrometer.h"
-  #include "../Spectrometer/Drx8Spectrometer.h"
 #endif
 
 using namespace boost::assign;
@@ -694,14 +693,6 @@ bool MessageProcessor::onDoReceive(Message& received){
 		}
 
 
-		string inputBitDepth = received.getMetaValue("Bits");
-		if (inputBitDepth.empty()){
-			inputBitDepth = "4";
-		}
-		if (!inputBitDepth.compare("4") && !inputBitDepth.compare("8")) {
-			RESPOND( false, "Unsupported bit depth: '"+inputBitDepth+"'");
-		}
-		
 		string stokesModeString = received.getMetaValue("Stokes");
 		if (stokesModeString.empty()){
 			stokesModeString = "XXYY";
@@ -724,17 +715,10 @@ bool MessageProcessor::onDoReceive(Message& received){
 			RESPOND( false, "Unsupported integration count: '"+LXS(NInts)+"'");
 		}
 
-		if (!inputBitDepth.compare("4")){
-			// DRX
-		  if (((Nfreqs*NInts)%DRX_SAMPLES_PER_FRAME) != 0){
-			  RESPOND( false, "Unsupported geometry: 'Nf x Ni  must be an integral multiple of DRX frame sizes'");
-		  }
-		} else {
-			// DRX8
-			if (((Nfreqs*NInts)%DRX8_SAMPLES_PER_FRAME) != 0){
-			  RESPOND( false, "Unsupported geometry: 'Nf x Ni  must be an integral multiple of DRX8 frame sizes'");
-		  }
-		}
+		// DRX
+	  if (((Nfreqs*NInts)%DRX_SAMPLES_PER_FRAME) != 0){
+		  RESPOND( false, "Unsupported geometry: 'Nf x Ni  must be an integral multiple of DRX frame sizes'");
+	  }
 
 		TimeSlot ts(__TimeStamp(startMJD, startMPM),duration);
 
@@ -762,28 +746,14 @@ bool MessageProcessor::onDoReceive(Message& received){
 			RESPOND( false, "Cannot create output file, or file already exists");
 		}
 
-		if (!inputBitDepth.compare("4")){
-			// DRX
-			DataFormat opFormat=DataFormat::getFormatByName("DEFAULT_DRX");
-			SpectrometerOperation* op_spc = new SpectrometerOperation(received.getReference(),ts,buf,opFormat,tagfile,0, outputType,Nfreqs, NInts);
-			checkAndSchedule(sch, op_spc, accept, comment);
-			if (!accept){
-				s_internal->putFile(tagfile);
-				RESPOND(accept,comment);
-			} else {
-				RESPOND(accept,tag);
-			}
+    DataFormat opFormat=DataFormat::getFormatByName("DEFAULT_DRX");
+		SpectrometerOperation* op_spc = new SpectrometerOperation(received.getReference(),ts,buf,opFormat,tagfile,0, outputType,Nfreqs, NInts);
+		checkAndSchedule(sch, op_spc, accept, comment);
+		if (!accept){
+			s_internal->putFile(tagfile);
+			RESPOND(accept,comment);
 		} else {
-			// DRX8
-			DataFormat opFormat=DataFormat::getFormatByName("DEFAULT_DRX8");
-			Spectrometer8Operation* op_spc = new Spectrometer8Operation(received.getReference(),ts,buf,opFormat,tagfile,0, outputType,Nfreqs, NInts);
-			checkAndSchedule(sch, op_spc, accept, comment);
-			if (!accept){
-				s_internal->putFile(tagfile);
-				RESPOND(accept,comment);
-			} else {
-				RESPOND(accept,tag);
-			}
+			RESPOND(accept,tag);
 		}
 
 	}

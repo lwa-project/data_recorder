@@ -56,14 +56,14 @@ all: DROS2-LiveBuffer DROS2-Spectrometer
 DROS2-LiveBuffer: $(OBJS_L) $(USER_OBJS)
 	@echo 'Building target: $@'
 	@echo 'Invoking: GCC C++ Linker'
-	g++ $(CPPFLAGS) -DDROS_LIVE_BUFFER -pthread -std=c++11 -march=native -rdynamic -p -pg -o "DROS2-LiveBuffer" $(OBJS_L) $(USER_OBJS) $(LIBS)
+	g++ $(CPPFLAGS) -DDROS_LIVE_BUFFER -pthread -std=c++17 -march=native -rdynamic -p -pg -o "DROS2-LiveBuffer" $(OBJS_L) $(USER_OBJS) $(LIBS)
 	@echo 'Finished building target: $@'
 	@echo ' '
 
 DROS2-Spectrometer: $(OBJS_S) $(USER_OBJS)
 	@echo 'Building target: $@'
 	@echo 'Invoking: GCC C++ Linker'
-	g++ $(CPPFLAGS) -pthread -std=c++11 -march=native -rdynamic -p -pg -o "DROS2-Spectrometer" $(OBJS_S) $(USER_OBJS) $(LIBS)
+	g++ $(CPPFLAGS) -pthread -std=c++17 -march=native -rdynamic -p -pg -o "DROS2-Spectrometer" $(OBJS_S) $(USER_OBJS) $(LIBS)
 	@echo 'Finished building target: $@'
 	@echo ' '
 
