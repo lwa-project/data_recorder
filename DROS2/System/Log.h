@@ -49,6 +49,7 @@
 
 #ifndef LOG_H_
 #define LOG_H_
+#define BOOST_TIMER_ENABLE_DEPRECATED
 #include <boost/filesystem/operations.hpp>
 #include <boost/filesystem/path.hpp>
 #include <boost/progress.hpp>

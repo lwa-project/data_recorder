@@ -208,7 +208,7 @@ public:
 	bool     unpack(DrxFrame* f, DrxBlockSetup* bs);
 	bool     unpack(Drx8Frame* f, DrxBlockSetup* bs);
 	bool     frameIsLegal(DrxFrame* f);
-	bool     frameIsLegal(DrxFrame* f);
+	bool     frameIsLegal(Drx8Frame* f);
 
 	// output-thread methods
 	void startBlock(DrxBlockSetup* bs, DrxSpectraHeader* dsh, float* aData);
