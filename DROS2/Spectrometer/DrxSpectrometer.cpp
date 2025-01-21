@@ -471,7 +471,7 @@ void DrxSpectrometer::initBlockSetup(DrxBlockSetup* toPrepare, FrameType* f, Drx
 }
 
 template<typename FrameType>
-bool DrxSpectrometer::blockMatch(FrameType f, DrxBlockSetup* bs){
+bool DrxSpectrometer::blockMatch(FrameType* f, DrxBlockSetup* bs){
 	LOG_ASSERT(spc!=NULL);
 	LOG_ASSERT(blocks!=NULL);
 	LOG_ASSERT(bs!=NULL);
