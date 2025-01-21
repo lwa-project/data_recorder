@@ -106,7 +106,7 @@ public:
 		dataRate(dataRate),
 		frameRate((double)dataRate/(double)frameSize),
 		type(type),
-		decFactor(decFactor)
+		decFactor(decFactor),
 		bitDepth(bitDepth){
 	}
 	DataFormat():
@@ -125,7 +125,7 @@ public:
 		dataRate(tc.dataRate),
 		frameRate(tc.frameRate),
 		type(tc.type),
-		decFactor(tc.decFactor)
+		decFactor(tc.decFactor),
 		bitDepth(tc.bitDepth){
 	}
 
