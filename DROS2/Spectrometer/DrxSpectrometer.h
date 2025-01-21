@@ -197,18 +197,19 @@ public:
 	virtual void run_slave();
 
 	// input-thread methods
-	bool     insert(DrxFrame* f);
-	bool     insert(Drx8Frame* f);
+	template<typename FrameType>
+	bool     insert(FrameType* f);
 	uint64_t nextTimeTagAfterBlock(DrxBlockSetup* bs);
-	void     initBlockSetup(DrxBlockSetup* toPrepare, DrxFrame* f, DrxBlockSetup* predecessor = NULL);
-	bool     blockMatch(DrxFrame* f, DrxBlockSetup* bs);
-	bool     blockMatch(Drx8Frame* f, DrxBlockSetup* bs);
-	int      compare(DrxFrame* f, DrxBlockSetup* bs);
-	int      compare(Drx8Frame* f, DrxBlockSetup* bs);
-	bool     unpack(DrxFrame* f, DrxBlockSetup* bs);
-	bool     unpack(Drx8Frame* f, DrxBlockSetup* bs);
-	bool     frameIsLegal(DrxFrame* f);
-	bool     frameIsLegal(Drx8Frame* f);
+	template<typename FrameType>
+	void     initBlockSetup(DrxBlockSetup* toPrepare, FrameType* f, DrxBlockSetup* predecessor = NULL);
+	template<typename FrameType>
+	bool     blockMatch(FrameType* f, DrxBlockSetup* bs);
+	template<typename FrameType>
+	int      compare(FrameType* f, DrxBlockSetup* bs);
+	template<typename FrameType>
+	bool     unpack(FrameType* f, DrxBlockSetup* bs);
+	template<typename FrameType>
+	bool     frameIsLegal(FrameType* f);
 
 	// output-thread methods
 	void startBlock(DrxBlockSetup* bs, DrxSpectraHeader* dsh, float* aData);
@@ -229,8 +230,8 @@ public:
 	SpectrometerCounters* getCounters();
 	void   printSpecSetup();
 	void   printBlockSetup(DrxBlockSetup* bs);
-	void   printFrameSetup(DrxFrame* f, DrxBlockSetup* bs=NULL);
-	void   printFrameSetup(Drx8Frame* f, DrxBlockSetup* bs=NULL);
+	template<typename FrameType>
+	void   printFrameSetup(FrameType* f, DrxBlockSetup* bs=NULL);
 	string specReport();
 	//void   generateTestPattern(float* specdata);
 	void   doPeriodicReport();
