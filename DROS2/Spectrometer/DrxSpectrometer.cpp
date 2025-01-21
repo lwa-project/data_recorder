@@ -207,7 +207,7 @@ bool DrxSpectrometer::frameIsLegal(FrameType* f){
   
 	return
 			(f->header.decFactor != 0) &&
-			(f->header.drx_is_adp == is_drx8 &&
+			(f->header.drx_is_adp == is_drx8) &&
 			(f->header.timeTag != 0) &&
 			(
 					(f->header.drx_tuning == 1) ||
