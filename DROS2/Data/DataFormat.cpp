@@ -80,9 +80,6 @@ DataFormat::FormatList DataFormat::knownFormats = map_list_of
 	("DRX8_FILT_5",   DataFormat("DRX8_FILT_5",  8224ll,   39351840ll, PT_DRX8,    40, 8 ))
 	("DRX8_FILT_6",   DataFormat("DRX8_FILT_6",  8224ll,   78703680ll, PT_DRX8,    20, 8 ))
 	("DRX8_FILT_7",   DataFormat("DRX8_FILT_7",  8224ll,  157415584ll, PT_DRX8,    10, 8 ))
-	
-	("20DIPOLE_TBW",  DataFormat("20DIPOLE_TBW", 1224ll,    7549632ll, PT_TBN,     -1 ))
-	("20DIPOLE_TBN",  DataFormat("20DIPOLE_TBN", 1048ll,    4194304ll, PT_TBW,     -1 ))
 
 ;
 const string DataFormat::defaultFormatName = "DRX_FILT_7";
