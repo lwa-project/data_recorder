@@ -249,18 +249,20 @@ void DrxSpectrometer::run_master(){
 				}
 			} else {
 				curFrame8 = (Drx8Frame*) Plugin::getNextIn(DRX8_FRAME_SIZE);
-				curFrame8->fixByteOrder();
-				if (frameIsLegal(curFrame8)){
-					if (insert(curFrame8)){
+				if (curFrame8 != NULL){
+					curFrame8->fixByteOrder();
+					if (frameIsLegal(curFrame8)){
+						if (insert(curFrame8)){
+							Plugin::doneIn(doneReceiving);
+							curFrame8=NULL;
+						} else {
+							curFrame8->unfixByteOrder();
+						}
+					} else {
+						counters.illegalFrames++;
 						Plugin::doneIn(doneReceiving);
 						curFrame8=NULL;
-					} else {
-						curFrame8->unfixByteOrder();
 					}
-				} else {
-					counters.illegalFrames++;
-					Plugin::doneIn(doneReceiving);
-					curFrame8=NULL;
 				}
 			}
 		}
