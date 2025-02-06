@@ -164,7 +164,6 @@ void* Plugin::peekNextIn(size_t size){
 	if (in.next == in.t->cnt_used){
 		return NULL;
 	}
-	bytesReceived += in.t->fsize;
 	return in.t->iovs[in.next].iov_base;
 }
 
