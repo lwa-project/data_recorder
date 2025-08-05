@@ -50,20 +50,13 @@
 #include "DataFormat.h"
 
 DataFormat::FormatList DataFormat::knownFormats = map_list_of
-	("DEFAULT_DRX",   DataFormat("DRX_GENERIC",  4128ll,   79014048ll, PT_DRX,     -1, 4 ))
-	("DEFAULT_TBN",   DataFormat("DEFAULT_TBN",  1048ll,  117440512ll, PT_TBN,     -1, 8 ))
-	("DEFAULT_TBW",   DataFormat("DEFAULT_TBW",  1224ll,   85983232ll, PT_TBW,     -1, 12))
-	("DEFAULT_TBF",   DataFormat("DEFAULT_TBF",  6168ll,  117440512ll, PT_TBF,     -1, 4 ))
-	("DEFAULT_COR",   DataFormat("DEFAULT_COR",  2336ll,  117440512ll, PT_FSC,     -1, 32))
-	("DEFAULT_DRX8",  DataFormat("DRX8_GENERIC", 8224ll,  157415584ll, PT_DRX8,    -1, 8 ))
+	("DEFAULT_DRX",   DataFormat("DRX_GENERIC",  4128ll,   79014048ll, PT_DRX,     -1 ))
+	("DEFAULT_TBT",   DataFormat("DEFAULT_TBT",  8220ll,  117440512ll, PT_TBT,     -1 ))
+	("DEFAULT_TBS",   DataFormat("DEFAULT_TBS",  4124ll,   98976999ll, PT_TBS,     -1 ))
+	("DEFAULT_COR",   DataFormat("DEFAULT_COR",  2336ll,  117440512ll, PT_FSC,     -1 ))
+  ("DEFAULT_DRX8",  DataFormat("DRX8_GENERIC", 8224ll,  157415584ll, PT_DRX8,    -1, 8 ))
 
-	("TBN_FILT_1",    DataFormat("TBN_FILT_1",   1048ll,    1064375ll, PT_TBN, 196000, 8 ))
-	("TBN_FILT_2",    DataFormat("TBN_FILT_2",   1048ll,    3326172ll, PT_TBN,  62720, 8 ))
-	("TBN_FILT_3",    DataFormat("TBN_FILT_3",   1048ll,    6652344ll, PT_TBN,  31360, 8 ))
-	("TBN_FILT_4",    DataFormat("TBN_FILT_4",   1048ll,   13304688ll, PT_TBN,  15680, 8 ))
-	("TBN_FILT_5",    DataFormat("TBN_FILT_5",   1048ll,   26609375ll, PT_TBN,   7840, 8 ))
-	("TBN_FILT_6",    DataFormat("TBN_FILT_6",   1048ll,   53218750ll, PT_TBN,   3920, 8 ))
-	("TBN_FILT_7",    DataFormat("TBN_FILT_7",   1048ll,  106437500ll, PT_TBN,   1960, 8 ))
+	("TBS_FILT_8",    DataFormat("TBS_FILT_8",   4124ll,   98976999ll, PT_TBS,     -1 ))
 
 	("DRX_FILT_1",    DataFormat("DRX_FILT_1",   4128ll,    1011360ll, PT_DRX,    784, 4 ))
 	("DRX_FILT_2",    DataFormat("DRX_FILT_2",   4128ll,    2018592ll, PT_DRX,    392, 4 ))
@@ -80,7 +73,6 @@ DataFormat::FormatList DataFormat::knownFormats = map_list_of
 	("DRX8_FILT_5",   DataFormat("DRX8_FILT_5",  8224ll,   39351840ll, PT_DRX8,    40, 8 ))
 	("DRX8_FILT_6",   DataFormat("DRX8_FILT_6",  8224ll,   78703680ll, PT_DRX8,    20, 8 ))
 	("DRX8_FILT_7",   DataFormat("DRX8_FILT_7",  8224ll,  157415584ll, PT_DRX8,    10, 8 ))
-
 ;
 const string DataFormat::defaultFormatName = "DRX_FILT_7";
 

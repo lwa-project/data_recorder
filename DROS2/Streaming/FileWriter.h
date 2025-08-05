@@ -334,12 +334,6 @@ private:
 				case DRX_FRAME_SIZE:
 					sid = (size_t*)(&((DrxFrame*)t->iovs[i].iov_base)->samples[0]);
 					break;
-				case TBN_FRAME_SIZE:
-					sid = (size_t*)(&((TbnFrame*)t->iovs[i].iov_base)->samples[0]);
-					break;
-				case TBW_FRAME_SIZE:
-					sid = (size_t*)(&((TbwFrame*)t->iovs[i].iov_base)->samples_4bit[0]);
-					break;
 				case DRX8_FRAME_SIZE:
 					sid = (size_t*)(&((Drx8Frame*)t->iovs[i].iov_base)->samples[0]);
 					break;

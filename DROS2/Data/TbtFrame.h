@@ -49,15 +49,15 @@
 
 
 
-#ifndef TBFFRAME_H_
-#define TBFFRAME_H_
+#ifndef TBTFRAME_H_
+#define TBTFRAME_H_
 
 
 #ifdef __cplusplus
 extern "C"{
 #endif
 
-#define TBF_SAMPLES_PER_FRAME 6144
+#define TBT_SAMPLES_PER_STAND (16*2)
 
 #define Fs_Day (196l* 1000000l * 60l *60l * 24l) /*16934400000000l*/
 
@@ -66,36 +66,37 @@ extern "C"{
 #include "Complex.h"
 
 
-typedef struct __TbfFrameHeader{
+typedef struct __TbtFrameHeader{
 	uint32_t syncCode;
 	union {
 		uint8_t  id;
 		uint32_t frameCount;
 	};
 	uint32_t secondsCount;
-	uint16_t freq_chan;
-	uint16_t unassigned;
+	uint32_t freq_chan;
+	uint16_t nStand;
+    uint16_t nChan;
 	uint64_t timeTag;
-}__attribute__((packed)) TbfFrameHeader;
+}__attribute__((packed)) TbtFrameHeader;
 
-// TBF frame as received
+// TBT frame as received
 typedef struct __TbfFrame{
-	TbfFrameHeader  header;
-	PackedSample4   samples[TBF_SAMPLES_PER_FRAME];
-} __attribute__((packed)) TbfFrame;
+	TbtFrameHeader  header;
+	PackedSample4   samples[TBT_SAMPLES_PER_STAND*TBX_STAND_COUNT];
+} __attribute__((packed)) TbtFrame;
 // alias to the above
-typedef TbfFrame	PackedTbfFrame;
+typedef TbtFrame	PackedTbtFrame;
 
-typedef struct __UnpackedTbfFrame{
-	TbfFrameHeader  header;
-	UnpackedSample  samples[TBF_SAMPLES_PER_FRAME];
-} __attribute__((packed)) UnpackedTbfFrame;
+typedef struct __UnpackedTbtFrame{
+	TbtFrameHeader  header;
+	UnpackedSample  samples[TBT_SAMPLES_PER_STAND*TBX_STAND_COUNT];
+} __attribute__((packed)) UnpackedTbtFrame;
 
 
-#define TBF_FRAME_SIZE (sizeof(TbfFrame))
-#define TBF_TUNINGS            	2l
-#define TBF_POLARIZATIONS     	2l
-#define TBF_STREAMS            	(TBF_TUNINGS*TBF_POLARIZATIONS)
+#define TBT_FRAME_SIZE (sizeof(TbtFrame))
+#define TBT_TUNINGS            	2l
+#define TBT_POLARIZATIONS     	2l
+#define TBT_STREAMS            	(TBT_TUNINGS*TBT_POLARIZATIONS)
 
 
 #ifdef __cplusplus
@@ -103,4 +104,4 @@ typedef struct __UnpackedTbfFrame{
 #endif
 
 
-#endif /* TBFFRAME_H_ */
+#endif /* TBTFRAME_H_ */
