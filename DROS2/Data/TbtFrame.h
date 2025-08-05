@@ -47,14 +47,17 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef TBNFRAME_H_
-#define TBNFRAME_H_
+
+
+#ifndef TBTFRAME_H_
+#define TBTFRAME_H_
+
 
 #ifdef __cplusplus
 extern "C"{
 #endif
 
-#define TBN_SAMPLES_PER_FRAME 512
+#define TBT_SAMPLES_PER_STAND (16*2)
 
 #define Fs_Day (196l* 1000000l * 60l *60l * 24l) /*16934400000000l*/
 
@@ -63,90 +66,37 @@ extern "C"{
 #include "Complex.h"
 
 
-typedef struct __TbnFrameHeader{
+typedef struct __TbtFrameHeader{
 	uint32_t syncCode;
 	union {
 		uint8_t  id;
 		uint32_t frameCount;
 	};
 	uint32_t secondsCount;
-	union {
-		struct {
-			uint16_t tbn_tbn_bit_n:1;    // 0-> tbn, 1-> not tbn
-			uint16_t tbn_stand_pol:15;   // 1..519 -> (1->260, X..Y)
-		};
-		uint16_t tbn_id;
-	};
-	uint16_t unassigned;
+	uint32_t freq_chan;
+	uint16_t nStand;
+    uint16_t nChan;
 	uint64_t timeTag;
-}__attribute__((packed)) TbnFrameHeader;
+}__attribute__((packed)) TbtFrameHeader;
 
-// TBN frame as received
-typedef struct __TbnFrame{
-	TbnFrameHeader  header;
-	PackedSample8   samples[TBN_SAMPLES_PER_FRAME];
-} __attribute__((packed)) TbnFrame;
+// TBT frame as received
+typedef struct __TbfFrame{
+	TbtFrameHeader  header;
+	PackedSample4   samples[TBT_SAMPLES_PER_STAND*TBX_STAND_COUNT];
+} __attribute__((packed)) TbtFrame;
 // alias to the above
-typedef TbnFrame	PackedTbnFrame;
+typedef TbtFrame	PackedTbtFrame;
 
-typedef struct __UnpackedTbnFrame{
-	TbnFrameHeader  header;
-	UnpackedSample  samples[TBN_SAMPLES_PER_FRAME];
-} __attribute__((packed)) UnpackedTbnFrame;
-
-#define TBN_FRAME_SIZE (sizeof(TbnFrame))
+typedef struct __UnpackedTbtFrame{
+	TbtFrameHeader  header;
+	UnpackedSample  samples[TBT_SAMPLES_PER_STAND*TBX_STAND_COUNT];
+} __attribute__((packed)) UnpackedTbtFrame;
 
 
-#define TBN_TUNINGS            	2l
-#define TBN_POLARIZATIONS     	2l
-#define TBN_STREAMS            	(TBN_TUNINGS*TBN_POLARIZATIONS)
-
-
-const uint64_t TbnSampleRates[] = {
-	   1000lu,
-	   3125lu,
-	   6250lu,
-	  12500lu,
-	  25000lu,
-	  50000lu,
-	 100000lu
-};
-const uint64_t TbnDecFactors[] = {
-	196000lu,
-	 62720lu,
-	 31360lu,
-	 15680lu,
-	  7840lu,
-	  3920lu,
-	  1960lu
-};
-const uint64_t TbnTimeTagSteps[] = {
-	100352000lu,
-	 32112640lu,
-	 16056320lu,
-	  8028160lu,
-	  4014080lu,
-	  2007040lu,
-	  1003520lu
-};
-const uint64_t TbnDataRates[] = {
-	   1064375lu,
-	   3326172lu,
-	   6652344lu,
-	  13304688lu,
-	  26609375lu,
-	  53218750lu,
-	 106437500lu
-};
-const double TbnTimeSteps[] = {
-	1.0f /   1000.0l,
-	1.0f /   3125.0l,
-	1.0f /   6250.0l,
-	1.0f /  12500.0l,
-	1.0f /  25000.0l,
-	1.0f /  50000.0l,
-	1.0f / 100000.0l
-};
+#define TBT_FRAME_SIZE (sizeof(TbtFrame))
+#define TBT_TUNINGS            	2l
+#define TBT_POLARIZATIONS     	2l
+#define TBT_STREAMS            	(TBT_TUNINGS*TBT_POLARIZATIONS)
 
 
 #ifdef __cplusplus
@@ -154,4 +104,4 @@ const double TbnTimeSteps[] = {
 #endif
 
 
-#endif /* TBNFRAME_H_ */
+#endif /* TBTFRAME_H_ */

@@ -316,14 +316,11 @@ public:
 					case DRX_FRAME_SIZE:
 						tt = __builtin_bswap64(*((size_t*)(&((DrxFrame*)t->iovs[cnt-1].iov_base)->header.timeTag)));
 						break;
-					case TBN_FRAME_SIZE:
-						tt = __builtin_bswap64(*((size_t*)(&((TbnFrame*)t->iovs[cnt-1].iov_base)->header.timeTag)));
+					case TBS_FRAME_SIZE:
+						tt = __builtin_bswap64(*((size_t*)(&((TbsFrame*)t->iovs[cnt-1].iov_base)->header.timeTag)));
 						break;
-					case TBW_FRAME_SIZE:
-						tt = __builtin_bswap64(*((size_t*)(&((TbwFrame*)t->iovs[cnt-1].iov_base)->header.timeTag)));
-						break;
-					case TBF_FRAME_SIZE:
-						tt = __builtin_bswap64(*((size_t*)(&((TbfFrame*)t->iovs[cnt-1].iov_base)->header.timeTag)));
+					case TBT_FRAME_SIZE:
+						tt = __builtin_bswap64(*((size_t*)(&((TbtFrame*)t->iovs[cnt-1].iov_base)->header.timeTag)));
 					case COR_FRAME_SIZE:
 						tt = __builtin_bswap64(*((size_t*)(&((CorFrame*)t->iovs[cnt-1].iov_base)->header.timeTag)));
 					default : break;
@@ -370,25 +367,23 @@ public:
 				
 #define IDX_ERROR   0
 #define IDX_EMPTY   1
-#define IDX_TBN     2
-#define IDX_TBW     3
-#define IDX_TBF     4
-#define IDX_COR     5
-#define IDX_DRX     6
-#define IDX_ODDBALL 7
+#define IDX_TBS     2
+#define IDX_TBT     3
+#define IDX_COR     4
+#define IDX_DRX     5
+#define IDX_ODDBALL 6
 				
 				// some count variables for deeper inspection
-				size_t n[8]    = {0,0,0,0,0,0,0,0};         // in order : error, empty, tbn, tbw, tbf, cor, drx, odd
-				size_t last[8] = {0,0,0,0,0,0,0,0};         // in order : error, empty, tbn, tbw, tbf, cor, drx, odd
-				int    sz[8]   = {0,-1,TBN_FRAME_SIZE,TBW_FRAME_SIZE,TBF_FRAME_SIZE,COR_FRAME_SIZE,DRX_FRAME_SIZE,-2}; // in order : error, empty, tbn, tbw, tbf, cor, drx, odd
+				size_t n[7]    = {0,0,0,0,0,0,0};         // in order : error, empty, tbs, tbt, cor, drx, odd
+				size_t last[7] = {0,0,0,0,0,0,0};         // in order : error, empty, tbs, tbt, cor, drx, odd
+				int    sz[7]   = {0,-1,TBS_FRAME_SIZE,TBT_FRAME_SIZE,COR_FRAME_SIZE,DRX_FRAME_SIZE,-2}; // in order : error, empty, tbn, tbw, tbf, cor, drx, odd
 				size_t curIdx;
 				// count packet sizes
 				for (size_t j=0; j<(size_t) res; j++){
 					switch(t->mhdrs[j].msg_len){
 						case    0:           n[IDX_EMPTY]++;   last[IDX_EMPTY]=j; break;
-						case TBN_FRAME_SIZE: n[IDX_TBN]++;     last[IDX_TBN]=j; break;
-						case TBW_FRAME_SIZE: n[IDX_TBW]++;     last[IDX_TBW]=j; break;
-						case TBF_FRAME_SIZE: n[IDX_TBF]++;     last[IDX_TBF]=j; break;
+						case TBS_FRAME_SIZE: n[IDX_TBS]++;     last[IDX_TBS]=j; break;
+						case TBT_FRAME_SIZE: n[IDX_TBT]++;     last[IDX_TBT]=j; break;
 						case COR_FRAME_SIZE: n[IDX_COR]++;     last[IDX_COR]=j; break;
 						case DRX_FRAME_SIZE: n[IDX_DRX]++;     last[IDX_DRX]=j; break;
 						default:
@@ -398,9 +393,8 @@ public:
 				}
 				switch(t->fsize){
 					case    0:           curIdx = IDX_EMPTY;   break;
-					case TBN_FRAME_SIZE: curIdx = IDX_TBN;     break;
-					case TBW_FRAME_SIZE: curIdx = IDX_TBW;     break;
-					case TBF_FRAME_SIZE: curIdx = IDX_TBF;     break;
+					case TBS_FRAME_SIZE: curIdx = IDX_TBS;     break;
+					case TBT_FRAME_SIZE: curIdx = IDX_TBT;     break;
 					case COR_FRAME_SIZE: curIdx = IDX_COR;     break;
 					case DRX_FRAME_SIZE: curIdx = IDX_DRX;     break;
 					default:             curIdx = IDX_ODDBALL; break;
@@ -410,7 +404,7 @@ public:
 				size_t max_count      = 0;
 				int    new_frame_size = -3;
 				size_t last_seen      = 0;
-				for (size_t j=0; j<8; j++){
+				for (size_t j=0; j<7; j++){
 					if (j != curIdx){
 						if (n[j] > max_count){
 							max_count      = n[j];
@@ -431,7 +425,6 @@ public:
 					LOGC(L_FATAL, "[Receiver] n[4]  " + LXS(n[4]), FATAL_COLORS );
 					LOGC(L_FATAL, "[Receiver] n[5]  " + LXS(n[5]), FATAL_COLORS );
 					LOGC(L_FATAL, "[Receiver] n[6]  " + LXS(n[6]), FATAL_COLORS );
-					LOGC(L_FATAL, "[Receiver] n[7]  " + LXS(n[7]), FATAL_COLORS );
 					CANCEL_TICKET();
 					RESUME_RECEPTION();
 					/* CONTINUE_WITH_TICKET(); */
@@ -466,17 +459,13 @@ public:
 						CANCEL_TICKET();
 						RESUME_RECEPTION();
 						/* CONTINUE_WITH_TICKET(); */
-					case TBN_FRAME_SIZE:
-						// changed to TBN
-						newFormat = DataFormat::getFormatByName("DEFAULT_TBN");
+					case TBS_FRAME_SIZE:
+						// changed to TBS
+						newFormat = DataFormat::getFormatByName("DEFAULT_TBS");
 						break;
-					case TBW_FRAME_SIZE:
-						// changed to TBW
-						newFormat = DataFormat::getFormatByName("DEFAULT_TBW");
-						break;
-					case TBF_FRAME_SIZE:
-						// changed to TBF
-						newFormat = DataFormat::getFormatByName("DEFAULT_TBF");
+					case TBT_FRAME_SIZE:
+						// changed to TBT
+						newFormat = DataFormat::getFormatByName("DEFAULT_TBT");
 						break;
 					case COR_FRAME_SIZE:
 						// changed to COR

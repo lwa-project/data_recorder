@@ -49,15 +49,16 @@
 
 
 
-#ifndef TBFFRAME_H_
-#define TBFFRAME_H_
+#ifndef TBSFRAME_H_
+#define TBSFRAME_H_
 
 
 #ifdef __cplusplus
 extern "C"{
 #endif
 
-#define TBF_SAMPLES_PER_FRAME 6144
+#define TBS8_SAMPLES_PER_STAND (8*2)
+#define TBS12_SAMPLES_PER_STAND (12*2)
 
 #define Fs_Day (196l* 1000000l * 60l *60l * 24l) /*16934400000000l*/
 
@@ -66,36 +67,52 @@ extern "C"{
 #include "Complex.h"
 
 
-typedef struct __TbfFrameHeader{
+typedef struct __TbsFrameHeader{
 	uint32_t syncCode;
 	union {
 		uint8_t  id;
 		uint32_t frameCount;
 	};
 	uint32_t secondsCount;
-	uint16_t freq_chan;
-	uint16_t unassigned;
+	uint32_t freq_chan;
+	uint16_t nStand;
+    uint16_t nChan;
 	uint64_t timeTag;
-}__attribute__((packed)) TbfFrameHeader;
+}__attribute__((packed)) TbsFrameHeader;
 
-// TBF frame as received
-typedef struct __TbfFrame{
-	TbfFrameHeader  header;
-	PackedSample4   samples[TBF_SAMPLES_PER_FRAME];
-} __attribute__((packed)) TbfFrame;
+// TBS frame as received - 8 channels
+typedef struct __Tbs8Frame{
+	TbsFrameHeader  header;
+	PackedSample4   samples[TBS8_SAMPLES_PER_STAND*TBX_STAND_COUNT];
+} __attribute__((packed)) Tbs8Frame;
 // alias to the above
-typedef TbfFrame	PackedTbfFrame;
+typedef Tbs8Frame	TbsFrame;
+typedef Tbs8Frame	PackedTbsFrame;
 
-typedef struct __UnpackedTbfFrame{
-	TbfFrameHeader  header;
-	UnpackedSample  samples[TBF_SAMPLES_PER_FRAME];
-} __attribute__((packed)) UnpackedTbfFrame;
+typedef struct __UnpackedTbs8Frame{
+	TbsFrameHeader  header;
+	UnpackedSample  samples[TBS8_SAMPLES_PER_STAND*TBX_STAND_COUNT];
+} __attribute__((packed)) UnpackedTbs8Frame;
+// alias to the above
+typedef UnpackedTbs8Frame	UnpackedTbsFrame;
 
 
-#define TBF_FRAME_SIZE (sizeof(TbfFrame))
-#define TBF_TUNINGS            	2l
-#define TBF_POLARIZATIONS     	2l
-#define TBF_STREAMS            	(TBF_TUNINGS*TBF_POLARIZATIONS)
+// TBS frame as received - 12 channels
+typedef struct __Tbs12Frame{
+	TbsFrameHeader  header;
+	PackedSample4   samples[TBS12_SAMPLES_PER_STAND*TBX_STAND_COUNT];
+} __attribute__((packed)) Tbs12Frame;
+
+typedef struct __UnpackedTbs12Frame{
+	TbsFrameHeader  header;
+	UnpackedSample  samples[TBS12_SAMPLES_PER_STAND*TBX_STAND_COUNT];
+} __attribute__((packed)) UnpackedTbs12Frame;
+
+
+#define TBS_FRAME_SIZE (sizeof(TbsFrame))
+#define TBS_TUNINGS            	2l
+#define TBS_POLARIZATIONS     	2l
+#define TBS_STREAMS            	(TBS_TUNINGS*TBS_POLARIZATIONS)
 
 
 #ifdef __cplusplus
