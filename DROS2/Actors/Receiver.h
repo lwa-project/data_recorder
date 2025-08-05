@@ -400,7 +400,7 @@ public:
 #define IDX_TBT     3
 #define IDX_COR     4
 #define IDX_DRX     5
-#degine IDX_DRX8    6
+#define IDX_DRX8    6
 #define IDX_ODDBALL 7
 				
 				// some count variables for deeper inspection
