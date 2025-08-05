@@ -404,9 +404,9 @@ public:
 #define IDX_ODDBALL 7
 				
 				// some count variables for deeper inspection
-				size_t n[8]    = {0,0,0,0,0,0,0};         // in order : error, empty, tbs, tbt, cor, drx, drx8, odd
-				size_t last[8] = {0,0,0,0,0,0,0};         // in order : error, empty, tbs, tbt, cor, drx, drx8, odd
-				int    sz[7]   = {0,-1,TBS_FRAME_SIZE,TBT_FRAME_SIZE,COR_FRAME_SIZE,DRX_FRAME_SIZE,DRX8_FRAME_SIZE,-2}; // in order : error, empty, tbs, tbt, tbf, cor, drx, drx8, odd
+				size_t n[8]    = {0,0,0,0,0,0,0,0};         // in order : error, empty, tbs, tbt, cor, drx, drx8, odd
+				size_t last[8] = {0,0,0,0,0,0,0,0};         // in order : error, empty, tbs, tbt, cor, drx, drx8, odd
+				int    sz[8]   = {0,-1,TBS_FRAME_SIZE,TBT_FRAME_SIZE,COR_FRAME_SIZE,DRX_FRAME_SIZE,DRX8_FRAME_SIZE,-2}; // in order : error, empty, tbs, tbt, tbf, cor, drx, drx8, odd
 				size_t curIdx;
 				// count packet sizes
 				for (size_t j=0; j<(size_t) res; j++){
@@ -416,7 +416,7 @@ public:
 						case TBT_FRAME_SIZE:  n[IDX_TBT]++;     last[IDX_TBT]=j; break;
 						case COR_FRAME_SIZE:  n[IDX_COR]++;     last[IDX_COR]=j; break;
 						case DRX_FRAME_SIZE:  n[IDX_DRX]++;     last[IDX_DRX]=j; break;
-            case DRX8_FRAME_SIZE: n[IDX_DRX8]++;    last[IDX_DRX8]=j;  break;
+						case DRX8_FRAME_SIZE: n[IDX_DRX8]++;    last[IDX_DRX8]=j;  break;
 						default:
 							LOGC(L_DEBUG, "Bad size: " + LXS(t->mhdrs[j].msg_len), TRACE_COLORS);
 							n[IDX_ODDBALL]++; last[IDX_ODDBALL]=j; break;
@@ -428,7 +428,7 @@ public:
 					case TBT_FRAME_SIZE:  curIdx = IDX_TBT;     break;
 					case COR_FRAME_SIZE:  curIdx = IDX_COR;     break;
 					case DRX_FRAME_SIZE:  curIdx = IDX_DRX;     break;
-          case DRX8_FRAME_SIZE: curIdx = IDX_DRX8;    break;
+					case DRX8_FRAME_SIZE: curIdx = IDX_DRX8;    break;
 					default:              curIdx = IDX_ODDBALL; break;
 				}
 				
