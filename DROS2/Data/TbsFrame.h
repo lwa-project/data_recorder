@@ -57,6 +57,7 @@
 extern "C"{
 #endif
 
+#define TBS4_SAMPLES_PER_STAND (4*2)
 #define TBS8_SAMPLES_PER_STAND (8*2)
 #define TBS12_SAMPLES_PER_STAND (12*2)
 
@@ -80,7 +81,20 @@ typedef struct __TbsFrameHeader{
 	uint64_t timeTag;
 }__attribute__((packed)) TbsFrameHeader;
 
-// TBS frame as received - 8 channels
+
+// TBS frame as received - 4 channels
+typedef struct __Tbs4Frame{
+	TbsFrameHeader  header;
+	PackedSample4   samples[TBS4_SAMPLES_PER_STAND*TBX_STAND_COUNT];
+} __attribute__((packed)) Tbs4Frame;
+
+typedef struct __UnpackedTbs4Frame{
+	TbsFrameHeader  header;
+	UnpackedSample  samples[TBS4_SAMPLES_PER_STAND*TBX_STAND_COUNT];
+} __attribute__((packed)) UnpackedTbs4Frame;
+
+
+// TBS frame as received - 8 channels (default)
 typedef struct __Tbs8Frame{
 	TbsFrameHeader  header;
 	PackedSample4   samples[TBS8_SAMPLES_PER_STAND*TBX_STAND_COUNT];
