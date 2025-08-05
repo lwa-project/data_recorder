@@ -56,7 +56,7 @@ DataFormat::FormatList DataFormat::knownFormats = map_list_of
 	("DEFAULT_COR",   DataFormat("DEFAULT_COR",  2336ll,  117440512ll, PT_FSC,     -1, 4 ))
 	("DEFAULT_DRX8",  DataFormat("DRX8_GENERIC", 8224ll,  157415584ll, PT_DRX8,    -1, 8 ))
 
-	("TBS_FILT_8",    DataFormat("TBS_FILT_8",   4124ll,   98976999ll, PT_TBS,     -1 ))
+	("TBS_FILT_8",    DataFormat("TBS_FILT_8",   4124ll,   98976999ll, PT_TBS,     -1, 4 ))
 
 	("DRX_FILT_1",    DataFormat("DRX_FILT_1",   4128ll,    1011360ll, PT_DRX,    784, 4 ))
 	("DRX_FILT_2",    DataFormat("DRX_FILT_2",   4128ll,    2018592ll, PT_DRX,    392, 4 ))
