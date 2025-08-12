@@ -236,9 +236,6 @@ Included Binaries / Source Trees
                            MCS-DR (or any ICD compliant system), and is intended to operate the
                            MCS-DR in the absence of MCS. 
 
-  'DataSource'             is a simulated data source which can be used to emulate DP output for 
-                           testing purposes.
-
   'DataSource2'            is a simulated data source which can be used to emulate DP output for 
                            testing purposes.
 
@@ -1010,9 +1007,9 @@ Live Wire Test (Recording Real Data)
   previous commands to initiate a recording on the MCS-DR, and then use a data source (real 
   or emulated) to provide data.
  
-  Using the included DataSource tool in yet another terminal, or via an SSH session to another 
-  computer with DataSource installed, you would enter the following:
-	>/LWA/bin/DataSource
+  Using the included DataSource2 tool in yet another terminal, or via an SSH session to another 
+  computer with DataSource2 installed, you would enter the following:
+	>/LWA/bin/DataSource2
   With the following options, all mandatory
 	-DestinationIpAddress aaa.bbb.ccc.ddd (URL or IP, limit 15 chars)
   	-DestinationPort      12345           (port number)
@@ -1020,7 +1017,7 @@ Live Wire Test (Recording Real Data)
 	-Rate                 123456789012345 (in bytes/second)
 	-Duration             1234567890      (in milliseconds)
   following our previous example with the default TBN format:
-	>/LWA/bin/DataSource -DestinationIpAddress localhost -DestinationPort 6001 \
+	>/LWA/bin/DataSource2 -DestinationIpAddress localhost -DestinationPort 6001 \
         -DataSize 1024 -Rate 117440512 -Duration 30000
         
   This would create an emulated TBN source on the same machine as the DROS is running.

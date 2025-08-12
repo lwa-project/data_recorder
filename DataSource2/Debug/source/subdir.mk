@@ -4,17 +4,17 @@
 
 # Add inputs and outputs from these tool invocations to the build variables 
 CPP_SRCS += \
-../source/DataSource_v2.cpp \
+../source/DataSource2.cpp \
 ../source/Socket.cpp \
 ../source/TimeKeeper.cpp 
 
 OBJS += \
-./source/DataSource_v2.o \
+./source/DataSource2.o \
 ./source/Socket.o \
 ./source/TimeKeeper.o 
 
 CPP_DEPS += \
-./source/DataSource_v2.d \
+./source/DataSource2.d \
 ./source/Socket.d \
 ./source/TimeKeeper.d 
 
