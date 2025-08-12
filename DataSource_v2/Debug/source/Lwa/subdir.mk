@@ -5,6 +5,7 @@
 # Add inputs and outputs from these tool invocations to the build variables 
 CPP_SRCS += \
 ../source/Lwa/DrxFrameGenerator.cpp \
+../source/Lwa/Drx8FrameGenerator.cpp \
 ../source/Lwa/TbnFrameGenerator.cpp \
 ../source/Lwa/TbwFrameGenerator.cpp \
 ../source/Lwa/TbfFrameGenerator.cpp \
@@ -12,6 +13,7 @@ CPP_SRCS += \
 
 OBJS += \
 ./source/Lwa/DrxFrameGenerator.o \
+./source/Lwa/Drx8FrameGenerator.o \
 ./source/Lwa/TbnFrameGenerator.o \
 ./source/Lwa/TbwFrameGenerator.o \
 ./source/Lwa/TbfFrameGenerator.o \
@@ -19,6 +21,7 @@ OBJS += \
 
 CPP_DEPS += \
 ./source/Lwa/DrxFrameGenerator.d \
+./source/Lwa/Drx8FrameGenerator.d \
 ./source/Lwa/TbnFrameGenerator.d \
 ./source/Lwa/TbwFrameGenerator.d \
 ./source/Lwa/TbfFrameGenerator.d \

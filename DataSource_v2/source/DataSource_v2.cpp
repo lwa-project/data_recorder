@@ -29,6 +29,7 @@
 #include <cstdlib>
 #include "Signals/Complex.h"
 #include "Lwa/DrxFrameGenerator.hpp"
+#include "Lwa/Drx8FrameGenerator.hpp"
 #include "Lwa/TbnFrameGenerator.h"
 #include "Lwa/TbwFrameGenerator.h"
 #include "Lwa/TbfFrameGenerator.h"
@@ -49,6 +50,7 @@ void usage(string errorMsg){
 	"\t=========  ===============  ==========================  ========  =======================  =======================\n"
 	"\n"
 	"\t-DRX       n/a (flag)       Generate 4-bit DRX data streams  N/A                                                  \n"
+	"\t-DRX8      n/a (flag)       Generate 8-bit DRX data streams  N/A                                                  \n"
 	"\t-TBN       n/a (flag)       Generate TBN data streams        N/A                                                  \n"
 	"\t-TBW       n/a (flag)       Generate TBW data streams        N/A                                                  \n"
 	"\t-TBF       n/a (flag)       Generate TBF data streams        N/A                                                  \n"
@@ -87,7 +89,8 @@ void usage(string errorMsg){
 	exit(EXIT_FAILURE);
 }
 
-void printFrame(DrxFrame* f, bool compact=false, bool single=false){
+template<typename F, class G>
+void printFrame(F* f, bool compact=false, bool single=false){
 	if (compact){
 		for(int i=0; i<DRX_SAMPLES_PER_FRAME; i++){
 			printf("%3hd %3hd ",(int)f->samples[i].i,(int)f->samples[i].q);
@@ -96,7 +99,7 @@ void printFrame(DrxFrame* f, bool compact=false, bool single=false){
 			}
 		}
 	} else {
-		DrxFrameGenerator::unfixByteOrder(f);
+		G::unfixByteOrder(f);
 		cout << "==============================================================================" << endl;
 		cout << "== Beam:              " << (int)f->header.drx_beam << dec << endl;
 		cout << "== Tuning:            " << (int)f->header.drx_tuning << dec << endl;
@@ -115,10 +118,11 @@ void printFrame(DrxFrame* f, bool compact=false, bool single=false){
 		}
 		cout << " ... << additional data truncated >> " << endl;
 		cout << "==============================================================================" << endl;
-		DrxFrameGenerator::fixByteOrder(f);
+		G::fixByteOrder(f);
 	}
 }
-void checkIsCVframe(DrxFrame*f){
+template<typename F>
+void checkIsCVframe(F*f){
 	int i=1;
 	while((i<4096) && (f->samples[i].packed == f->samples[0].packed)){
 		i++;
@@ -219,6 +223,7 @@ int main(int argc, char * argv[]){
 	cout << "TBN:  " << sizeof(TbnFrame)  << endl;
 	cout << "TBW:  " << sizeof(TbwFrame)  << endl;
 	cout << "DRX:  " << sizeof(DrxFrame)  << endl;
+	cout << "DRX8: " << sizeof(DrxFrame)  << endl;
 	cout << "TBF:  " << sizeof(TbfFrame)  << endl;
 	cout << "COR:  " << sizeof(CorFrame)  << endl;
 
@@ -249,12 +254,12 @@ int main(int argc, char * argv[]){
 
 
 	//common to multiple formats
-	uint16_t filterCode      = 7;         // used by TBN, DRX, TBF
-	uint64_t N               = DEFAULT_N; // used by TBN, TBW, DRX
-	bool     useComplex      = false;     // used by TBN, TBW, DRX
-	bool     correlatorTest  = false;     // used by TBN, TBW, DRX
+	uint16_t filterCode      = 7;         // used by TBN, DRX, DRX8, TBF
+	uint64_t N               = DEFAULT_N; // used by TBN, TBW, DRX, DRX8
+	bool     useComplex      = false;     // used by TBN, TBW, DRX, DRX8
+	bool     correlatorTest  = false;     // used by TBN, TBW, DRX, DRX8
 	bool     bitPattern      = false;     // used by ALL
-	uint16_t decFactor       = 10;        // used by TBN, DRX
+	uint16_t decFactor       = 10;        // used by TBN, DRX, DRX8
 
 	// set up a pattern that will be visible in spectrograms
 	double   baseBandWidth   = 32.0;
@@ -307,6 +312,7 @@ int main(int argc, char * argv[]){
 		TEST_OPT_SIZE_T(   Key,                  k,          Key,                   KeySpecified);
 		TEST_OPT_SIZE_T(   filter_code,          fc,         filterCode,            fcSpecified);
 		TEST_OPT_SETTABLE( DRX,                  DRX,        mode,DRX,              ignoredFlag);
+		TEST_OPT_SETTABLE( DRX8,                 DRX8,       mode,DRX8,             ignoredFlag);
 		TEST_OPT_SETTABLE( TBN,                  TBN,        mode,TBN,              ignoredFlag);
 		TEST_OPT_SETTABLE( TBW,                  TBW,        mode,TBW,              ignoredFlag);
 		TEST_OPT_SETTABLE( COR,                  COR,        mode,COR,              ignoredFlag);
@@ -363,6 +369,7 @@ int main(int argc, char * argv[]){
 	
 	switch(mode){
 	case DRX:
+	case DRX8:
 		if (!fcSpecified){
 			cout << "Warning: No filter code specified, will default to 7.\n";
 			filterCode = 7;
@@ -493,6 +500,7 @@ int main(int argc, char * argv[]){
 	size_t* sid = NULL;
 	size_t* key = NULL;
 	DrxFrame*  f_drx;
+	Drx8Frame* f_drx8;
 	TbnFrame*  f_tbn;
 	TbwFrame*  f_tbw;
 	CorFrame*  f_cor;
@@ -503,6 +511,12 @@ int main(int argc, char * argv[]){
 			fg = (void*) new DrxFrameGenerator(bitPattern, correlatorTest, useComplex, N, decFactor, 0, 0, 0, freqCode[0], freqCode[1], tp[0], tp[1]);
 			if (!fg){
 				cout << "Error: failed to allocate Drx Frame Generator.\n";
+			}
+			break;
+		case DRX8:
+			fg = (void*) new Drx8FrameGenerator(bitPattern, correlatorTest, useComplex, N, decFactor, 0, 0, 0, freqCode[0], freqCode[1], tp[0], tp[1]);
+			if (!fg){
+				cout << "Error: failed to allocate Drx8 Frame Generator.\n";
 			}
 			break;
 		case TBN:
@@ -574,6 +588,9 @@ int main(int argc, char * argv[]){
 			case DRX:
 				((DrxFrameGenerator*)fg)->resetTimeTag(TimeKeeper::getTT());
 				break;
+			case DRX8:
+				((Drx8FrameGenerator*)fg)->resetTimeTag(TimeKeeper::getTT());
+				break;
 			case TBF:
 				((TbfFrameGenerator*)fg)->resetTimeTag(TimeKeeper::getTT());
 				break;
@@ -629,6 +646,16 @@ int main(int argc, char * argv[]){
 			lastTimeTag = __builtin_bswap64(f_drx->header.timeTag);
 			bs = mySocket.send((char*)f_drx,sizeof(DrxFrame));
 			if (bs!=sizeof(DrxFrame)){
+				cout << "Error in send.\n";
+				return -1;
+			}
+			totalSent+=bs;
+			break;
+		case DRX8:
+			f_drx8 = ((Drx8FrameGenerator*)fg)->next();
+			lastTimeTag = __builtin_bswap64(f_drx->header.timeTag);
+			bs = mySocket.send((char*)f_drx,sizeof(Drx8Frame));
+			if (bs!=sizeof(Drx8Frame)){
 				cout << "Error in send.\n";
 				return -1;
 			}
