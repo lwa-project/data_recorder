@@ -146,6 +146,7 @@ public:
 	size_t     getDataRate()     const {return dataRate;}
 	double     getFrameRate()    const {return frameRate;}
 	PacketType getPacketType()   const {return type;}
+	bool       isTBX()           const {return (type == PT_TBS) || (type == PT_TBT);}
 	int        getDecFactor()    const {return decFactor;}
 	int        getBitDepth()     const {return 4;}
 

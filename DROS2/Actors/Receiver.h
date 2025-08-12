@@ -63,6 +63,9 @@
 #include "../Common/misc.h"
 #include "../System/PeriodicReportTimer.h"
 
+#include <boost/preprocessor/stringize.hpp>
+
+
 
 #define RX_REPORT_INTERVAL 5000
 
@@ -490,7 +493,11 @@ public:
 				
 				// now we have a new format, so set the reset required flag and leave
 				// (next thread to lock both phase locks will actually do the reset
-				LOGC(L_INFO, "[Receiver] Detected a data mode change to '"+newFormat.getName()+"'", ACTOR_COLORS );
+				if (newFormat.isTBX()){
+					LOGC(L_INFO, "[Receiver] Detected a data mode change to '"+newFormat.getName()+"' with "+BOOST_PP_STRINGIZE(TBX_STAND_COUNT)+" stands", ACTOR_COLORS );
+				} else {
+					LOGC(L_INFO, "[Receiver] Detected a data mode change to '"+newFormat.getName()+"'", ACTOR_COLORS );
+				}
 				t->returnEmpty();
 				
 				if (!__doReset()){
