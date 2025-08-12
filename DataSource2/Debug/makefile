@@ -39,10 +39,10 @@ endif
 # Add inputs and outputs from these tool invocations to the build variables 
 
 # All Target
-all: DataSource_v2
+all: DataSource2
 
 # Tool invocations
-DataSource_v2: $(OBJS) $(USER_OBJS)
+DataSource2: $(OBJS) $(USER_OBJS)
 	@echo 'Building target: $@'
 	@echo 'Invoking: GCC C++ Linker'
 	g++  -o "DataSource_v2" $(OBJS) $(USER_OBJS) $(LIBS)
@@ -51,7 +51,7 @@ DataSource_v2: $(OBJS) $(USER_OBJS)
 
 # Other Targets
 clean:
-	-$(RM) $(OBJS)$(C++_DEPS)$(C_DEPS)$(CC_DEPS)$(CPP_DEPS)$(EXECUTABLES)$(CXX_DEPS)$(C_UPPER_DEPS) DataSource_v2
+	-$(RM) $(OBJS)$(C++_DEPS)$(C_DEPS)$(CC_DEPS)$(CPP_DEPS)$(EXECUTABLES)$(CXX_DEPS)$(C_UPPER_DEPS) DataSource2
 	-@echo ' '
 
 .PHONY: all clean dependents
