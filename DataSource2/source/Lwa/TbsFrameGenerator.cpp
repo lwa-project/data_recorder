@@ -1,12 +1,19 @@
-#include "TbwFrameGenerator.h"
+#include "TbsFrameGenerator.hpp"
 
 #include <assert.h>
 #include <math.h>
 #include "../TimeKeeper.h"
 #include "LWA.h"
 
-TbwFrameGenerator::TbwFrameGenerator(
-		bool     _bitPattern,
+
+static inline unsigned short __builtin_bswap16(unsigned short a)
+{
+    return (a<<8)|(a>>8);
+}
+
+
+TbsFrameGenerator::TbsFrameGenerator(
+		bool	 _bitPattern,
 		bool	 _correlatorTest,
 		bool	 _useComplex,
 		uint64_t _numFrames,
@@ -21,15 +28,15 @@ TbwFrameGenerator::TbwFrameGenerator(
 	sig(_sig),
 	start(TimeKeeper::getTT())
 {
-	frames = (TbwFrame*) malloc(numFrames* sizeof(TbwFrame));
+	frames = (TbsFrame*) malloc(numFrames* sizeof(TbsFrame));
 	assert(frames!=NULL);
-	bzero((void*) frames, numFrames* sizeof(TbwFrame));
-	cout << "allocated " << (numFrames* sizeof(TbwFrame)) << " bytes of storage (" << numFrames << " frames x " << sizeof(TbwFrame) << " bytes/frame.\n";
+	bzero((void*) frames, numFrames* sizeof(TbsFrame));
+	cout << "allocated " << (numFrames* sizeof(TbsFrame)) << " bytes of storage (" << numFrames << " frames x " << sizeof(TbsFrame) << " bytes/frame.\n";
 
 	generate();
 }
 
-void TbwFrameGenerator::__pack(UnpackedSample* u, PackedSample4* p){
+void TbsFrameGenerator::__pack(UnpackedSample* u, PackedSample4* p){
 	int _i = (int)round(u->re);
 	if(_i>7) _i=7;
 	if(_i<-8) _i=-8;
@@ -39,34 +46,34 @@ void TbwFrameGenerator::__pack(UnpackedSample* u, PackedSample4* p){
 	p->i =  (((int8_t) _i) & 0xf);
 	p->q =  (((int8_t) _q) & 0xf);
 }
-void TbwFrameGenerator::__printFrame(TbwFrame* f, bool compact, bool single){
+void TbsFrameGenerator::__printFrame(TbsFrame* f, bool compact, bool single){
 	if (compact){
-		for(int i=0; i<TBW_SAMPLES_PER_FRAME_4BIT; i++){
-			printf("%3hd %3hd ",(int)f->samples_4bit[i].i,(int)f->samples_4bit[i].q);
+		for(int i=0; i<TBS_SAMPLES_PER_FRAME; i++){
+			printf("%3hd %3hd ",(int)f->samples[i].i,(int)f->samples[i].q);
 			if (((i & 0xf) == 0xf) || single){
 				cout << endl;
 			}
 		}
 	} else {
-		TbwFrameGenerator::unfixByteOrder(f);
+		TbsFrameGenerator::unfixByteOrder(f);
 		cout << "==============================================================================" << endl;
 		cout << "== Time Tag:          " << (long int) f->header.timeTag                  << dec << endl;
-		cout << "== Stand:             " << (int)      f->header.tbw_stand                << dec << endl;
+		cout << "== Channel:           " << (int)      f->header.freq_chan                << dec << endl;
 		cout << "==============================================================================" << endl;
-		for(int i=0; i<TBW_SAMPLES_PER_FRAME_4BIT; i++){
-			printf("%02hhx ",(int)f->samples_4bit[i].packed);
+		for(int i=0; i<TBS_SAMPLES_PER_FRAME; i++){
+			printf("%02hhx ",(int)f->samples[i].packed);
 			if (((i & 0xf) == 0xf) || single){
 				cout << endl;
 			}
 		}
 		//cout << " ... << additional data truncated >> " << endl;
 		cout << "==============================================================================" << endl;
-		cout << "<<< frame size = "<<sizeof(TbwFrame)<<dec<<">>>\n";
-		TbwFrameGenerator::fixByteOrder(f);
+		cout << "<<< frame size = "<<sizeof(TbsFrame)<<dec<<">>>\n";
+		TbsFrameGenerator::fixByteOrder(f);
 	}
 }
 
-void TbwFrameGenerator::generate(){
+void TbsFrameGenerator::generate(){
 	cout << "Beginning generation of " << numFrames << " frames.\n";
 	try{
 	size_t rptcnt = numFrames / 20;
@@ -76,12 +83,12 @@ void TbwFrameGenerator::generate(){
 			cout << (double) frm * 100.0f / (double) numFrames << "% complete. \n";
 		}
 		if 	(bitPattern){
-			for(size_t j=0; j<TBW_SAMPLES_PER_FRAME_4BIT; j++){
-				frames[frm].samples_4bit[j].packed = (uint8_t) ((j+frm) & 0xffll);
+			for(size_t j=0; j<TBS_SAMPLES_PER_FRAME; j++){
+				frames[frm].samples[j].packed = (uint8_t) ((j+frm) & 0xffll);
 			}
 		} else {
-			for(size_t j=0; j<TBW_SAMPLES_PER_FRAME_4BIT; j+=2){
-				size_t sampleNumber=((frm >> 2) * TBW_SAMPLES_PER_FRAME_4BIT + j);
+			for(size_t j=0; j<TBS_SAMPLES_PER_FRAME; j+=2){
+				size_t sampleNumber=((frm >> 2) * TBS_SAMPLES_PER_FRAME + j);
 				double t = ((double)sampleNumber)/((double)DP_BASE_FREQ_HZ);
 				if (!correlatorTest){
 					UnpackedSample* temp = &samples[j];
@@ -89,8 +96,8 @@ void TbwFrameGenerator::generate(){
 					*temp = sig->sample(t);
 					temp->i = temp->i / (sig->getDynamicRange() / 8.0);
 					temp->q = temp->q / (sig->getDynamicRange() / 8.0);
-					__pack(&samples[j],&frames[frm].samples_4bit[j]);
-					__pack(&samples[j],&frames[frm].samples_4bit[j+1]);
+					__pack(&samples[j],&frames[frm].samples[j]);
+					__pack(&samples[j],&frames[frm].samples[j+1]);
 				} else {
 					// generate y orthogonal to x, so correlation will be pure imaginary
 					//UnpackedSample x = adder.next(dt);
@@ -100,18 +107,18 @@ void TbwFrameGenerator::generate(){
 					y.im =  x.re / (sig->getDynamicRange() / 8.0);
 					x.re =  x.re / (sig->getDynamicRange() / 8.0);
 					x.im =  x.im / (sig->getDynamicRange() / 8.0);
-					__pack(&x,&frames[frm].samples_4bit[j]);
-					__pack(&y,&frames[frm].samples_4bit[j+1]);
+					__pack(&x,&frames[frm].samples[j]);
+					__pack(&y,&frames[frm].samples[j+1]);
 				}
 			}
 		}
 
 		frames[frm].header.syncCode 	  		= 0x5CDEC0DE;
-		frames[frm].header.frameCount   		= 0;
-		frames[frm].header.timeTag				= 0; // fixup on next()
-		frames[frm].header.secondsCount         = 0;
-		frames[frm].header.id                   = 0;
-		frames[frm].header.tbw_id               = 0;
+		frames[frm].header.frameCount   		= 0; // fixup on next()
+		frames[frm].header.timeTag			= 0; // fixup on next()
+		frames[frm].header.secondsCount		= 0; // fixup on next()
+		frames[frm].header.id				= 0; // fixup on next()
+		frames[frm].header.freq_chan			= 0; // fixup on next()
 		fixByteOrder(&frames[frm]);
 	}
 
@@ -122,31 +129,32 @@ void TbwFrameGenerator::generate(){
 	}
 }
 
-void TbwFrameGenerator::resetTimeTag(uint64_t start){
+void TbsFrameGenerator::resetTimeTag(uint64_t start){
 	this->start=start;
 }
-TbwFrame * TbwFrameGenerator::next(){
+TbsFrame * TbsFrameGenerator::next(){
 	static size_t sid = 0;
-	static size_t cur_stand = 0; // 0 - 259
+	static size_t cur_band = 0; // 0 - 127
 	static size_t cur_frame = 0;
 	size_t actualFrames = numFrames >> 1;
-
+	
 	size_t index = cur_frame % numFrames;
 	if (index>numFrames){
 		cout << "index exceeds numFrames " << index << " > " << numFrames<<". ( cur frame = "<<cur_frame<<")\n";
 		exit(-1);
 	}
-	frames[index].header.tbw_stand         = (cur_stand*2)+1;
-	frames[index].header.tbw_tbw_bit       = 1;
-	frames[index].header.tbw_4bit          = 1;
-	frames[index].header.timeTag           = cur_frame * TBW_SAMPLES_PER_FRAME_4BIT + start;
+	
+	frames[index].header.frameCount        = cur_frame | (1<<24);
+	frames[index].header.secondsCount      = (cur_frame * 8192*1960/2048 + start) / 196000000;
+	frames[index].header.freq_chan         = cur_band*12;
+	frames[index].header.timeTag           = cur_frame * 8192*1960/2048 + start;
 	fixByteOrder(&frames[index]);
 	if (bitPattern){
-		((size_t*)(&frames[index].samples_4bit[0]))[0] = sid++;
+		((size_t*)(&frames[index].samples[0]))[0] = sid++;
 	}
-	cur_stand++;
-	if (cur_stand == 260){
-		cur_stand = 0;
+	cur_band++;
+	if (cur_band == 128){
+		cur_band = 0;
 		cur_frame++;
 		if (cur_frame == actualFrames+1){
 			cur_frame = 0;
@@ -155,14 +163,16 @@ TbwFrame * TbwFrameGenerator::next(){
 	return &frames[index];
 }
 
-void TbwFrameGenerator::fixByteOrder(TbwFrame* frame){
-	frame->header.tbw_id = (frame->header.tbw_id << 8) | (frame->header.tbw_id >> 8);
+void TbsFrameGenerator::fixByteOrder(TbsFrame* frame){
+	frame->header.freq_chan  = __builtin_bswap16(frame->header.freq_chan);
+	frame->header.frameCount = __builtin_bswap32(frame->header.frameCount);
+	frame->header.secondsCount = __builtin_bswap32(frame->header.secondsCount);
 	frame->header.timeTag    = __builtin_bswap64(frame->header.timeTag);
 }
-void TbwFrameGenerator::unfixByteOrder(TbwFrame* frame){
+void TbsFrameGenerator::unfixByteOrder(TbsFrame* frame){
 	fixByteOrder(frame);
 }
 
-TbwFrameGenerator::~TbwFrameGenerator(){
+TbsFrameGenerator::~TbsFrameGenerator(){
 	if(frames) free(frames);
 }

@@ -24,6 +24,15 @@ with open('DROS2/Data/LwaDataFormats.h', 'r') as ih:
 os.rename('DROS2/Data/LwaDataFormats.h', 'DROS2/Data/LwaDataFormats.h.orig')
 os.rename('LwaDataFormats.h.tmp', 'DROS2/Data/LwaDataFormats.h')
 
+with open('DataSource2/source/Lwa/LWA.h', 'r') as ih:
+    with open('LWA.h.tmp', 'w') as oh:
+        for line in ih:
+            if line.find('#define TBX_STAND_COUNT') != -1:
+                line = f"#define TBX_STAND_COUNT {args.n_stand}\n"
+            oh.write(line)
+os.rename('DataSource2/source/Lwa/LWA.h', 'DataSource2/source/Lwa/LWA.h.orig')
+os.rename('LWA.h.tmp', 'DataSource2/source/Lwa/LWA.h')
+
 if len(args.drs) == 0:
     # Standard build
     os.system("make clean && make -j all")

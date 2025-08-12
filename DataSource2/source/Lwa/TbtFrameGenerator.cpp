@@ -1,4 +1,4 @@
-#include "TbfFrameGenerator.h"
+#include "TbtFrameGenerator.hpp"
 
 #include <assert.h>
 #include <math.h>
@@ -12,7 +12,7 @@ static inline unsigned short __builtin_bswap16(unsigned short a)
 }
 
 
-TbfFrameGenerator::TbfFrameGenerator(
+TbtFrameGenerator::TbtFrameGenerator(
 		bool	 _bitPattern,
 		bool	 _correlatorTest,
 		bool	 _useComplex,
@@ -28,15 +28,15 @@ TbfFrameGenerator::TbfFrameGenerator(
 	sig(_sig),
 	start(TimeKeeper::getTT())
 {
-	frames = (TbfFrame*) malloc(numFrames* sizeof(TbfFrame));
+	frames = (TbtFrame*) malloc(numFrames* sizeof(TbtFrame));
 	assert(frames!=NULL);
-	bzero((void*) frames, numFrames* sizeof(TbfFrame));
-	cout << "allocated " << (numFrames* sizeof(TbfFrame)) << " bytes of storage (" << numFrames << " frames x " << sizeof(TbfFrame) << " bytes/frame.\n";
+	bzero((void*) frames, numFrames* sizeof(TbtFrame));
+	cout << "allocated " << (numFrames* sizeof(TbtFrame)) << " bytes of storage (" << numFrames << " frames x " << sizeof(TbtFrame) << " bytes/frame.\n";
 
 	generate();
 }
 
-void TbfFrameGenerator::__pack(UnpackedSample* u, PackedSample4* p){
+void TbtFrameGenerator::__pack(UnpackedSample* u, PackedSample4* p){
 	int _i = (int)round(u->re);
 	if(_i>7) _i=7;
 	if(_i<-8) _i=-8;
@@ -46,21 +46,21 @@ void TbfFrameGenerator::__pack(UnpackedSample* u, PackedSample4* p){
 	p->i =  (((int8_t) _i) & 0xf);
 	p->q =  (((int8_t) _q) & 0xf);
 }
-void TbfFrameGenerator::__printFrame(TbfFrame* f, bool compact, bool single){
+void TbtFrameGenerator::__printFrame(TbtFrame* f, bool compact, bool single){
 	if (compact){
-		for(int i=0; i<TBF_SAMPLES_PER_FRAME; i++){
+		for(int i=0; i<TBT_SAMPLES_PER_FRAME; i++){
 			printf("%3hd %3hd ",(int)f->samples[i].i,(int)f->samples[i].q);
 			if (((i & 0xf) == 0xf) || single){
 				cout << endl;
 			}
 		}
 	} else {
-		TbfFrameGenerator::unfixByteOrder(f);
+		TbtFrameGenerator::unfixByteOrder(f);
 		cout << "==============================================================================" << endl;
 		cout << "== Time Tag:          " << (long int) f->header.timeTag                  << dec << endl;
 		cout << "== Channel:           " << (int)      f->header.freq_chan                << dec << endl;
 		cout << "==============================================================================" << endl;
-		for(int i=0; i<TBF_SAMPLES_PER_FRAME; i++){
+		for(int i=0; i<TBT_SAMPLES_PER_FRAME; i++){
 			printf("%02hhx ",(int)f->samples[i].packed);
 			if (((i & 0xf) == 0xf) || single){
 				cout << endl;
@@ -68,12 +68,12 @@ void TbfFrameGenerator::__printFrame(TbfFrame* f, bool compact, bool single){
 		}
 		//cout << " ... << additional data truncated >> " << endl;
 		cout << "==============================================================================" << endl;
-		cout << "<<< frame size = "<<sizeof(TbfFrame)<<dec<<">>>\n";
-		TbfFrameGenerator::fixByteOrder(f);
+		cout << "<<< frame size = "<<sizeof(TbtFrame)<<dec<<">>>\n";
+		TbtFrameGenerator::fixByteOrder(f);
 	}
 }
 
-void TbfFrameGenerator::generate(){
+void TbtFrameGenerator::generate(){
 	cout << "Beginning generation of " << numFrames << " frames.\n";
 	try{
 	size_t rptcnt = numFrames / 20;
@@ -83,12 +83,12 @@ void TbfFrameGenerator::generate(){
 			cout << (double) frm * 100.0f / (double) numFrames << "% complete. \n";
 		}
 		if 	(bitPattern){
-			for(size_t j=0; j<TBF_SAMPLES_PER_FRAME; j++){
+			for(size_t j=0; j<TBT_SAMPLES_PER_FRAME; j++){
 				frames[frm].samples[j].packed = (uint8_t) ((j+frm) & 0xffll);
 			}
 		} else {
-			for(size_t j=0; j<TBF_SAMPLES_PER_FRAME; j+=2){
-				size_t sampleNumber=((frm >> 2) * TBF_SAMPLES_PER_FRAME + j);
+			for(size_t j=0; j<TBT_SAMPLES_PER_FRAME; j+=2){
+				size_t sampleNumber=((frm >> 2) * TBT_SAMPLES_PER_FRAME + j);
 				double t = ((double)sampleNumber)/((double)DP_BASE_FREQ_HZ);
 				if (!correlatorTest){
 					UnpackedSample* temp = &samples[j];
@@ -129,10 +129,10 @@ void TbfFrameGenerator::generate(){
 	}
 }
 
-void TbfFrameGenerator::resetTimeTag(uint64_t start){
+void TbtFrameGenerator::resetTimeTag(uint64_t start){
 	this->start=start;
 }
-TbfFrame * TbfFrameGenerator::next(){
+TbtFrame * TbtFrameGenerator::next(){
 	static size_t sid = 0;
 	static size_t cur_band = 0; // 0 - 127
 	static size_t cur_frame = 0;
@@ -163,16 +163,16 @@ TbfFrame * TbfFrameGenerator::next(){
 	return &frames[index];
 }
 
-void TbfFrameGenerator::fixByteOrder(TbfFrame* frame){
+void TbtFrameGenerator::fixByteOrder(TbtFrame* frame){
 	frame->header.freq_chan  = __builtin_bswap16(frame->header.freq_chan);
 	frame->header.frameCount = __builtin_bswap32(frame->header.frameCount);
 	frame->header.secondsCount = __builtin_bswap32(frame->header.secondsCount);
 	frame->header.timeTag    = __builtin_bswap64(frame->header.timeTag);
 }
-void TbfFrameGenerator::unfixByteOrder(TbfFrame* frame){
+void TbtFrameGenerator::unfixByteOrder(TbtFrame* frame){
 	fixByteOrder(frame);
 }
 
-TbfFrameGenerator::~TbfFrameGenerator(){
+TbtFrameGenerator::~TbtFrameGenerator(){
 	if(frames) free(frames);
 }

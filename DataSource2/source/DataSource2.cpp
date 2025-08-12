@@ -29,9 +29,8 @@
 #include <cstdlib>
 #include "Signals/Complex.h"
 #include "Lwa/DrxFrameGenerator.hpp"
-#include "Lwa/TbnFrameGenerator.h"
-#include "Lwa/TbwFrameGenerator.h"
-#include "Lwa/TbfFrameGenerator.h"
+#include "Lwa/TbsFrameGenerator.hpp"
+#include "Lwa/TbtFrameGenerator.hpp"
 #include "Lwa/CorFrameGenerator.h"
 #include "Signals/TestPatternGenerator.h"
 
@@ -45,12 +44,12 @@ void usage(string errorMsg){
 	"Usage: " << endl <<
 	"\tDataSource " << endl <<
 	"\t                                                                         \n"
-	"\tParameter  Format           Description                 Unit      DRX/TBN/TBW Default      RAW Mode Default\n"
+	"\tParameter  Format           Description                 Unit      DRX/TBS/TBT Default      RAW Mode Default\n"
 	"\t=========  ===============  ==========================  ========  =======================  =======================\n"
 	"\n"
 	"\t-DRX       n/a (flag)       Generate 4-bit DRX data streams  N/A                                                  \n"
-	"\t-TBN       n/a (flag)       Generate TBN data streams        N/A                                                  \n"
-	"\t-TBW       n/a (flag)       Generate TBW data streams        N/A                                                  \n"
+	"\t-TBS       n/a (flag)       Generate TBS data streams        N/A                                                  \n"
+	"\t-TBT       n/a (flag)       Generate TBT data streams        N/A                                                  \n"
 	"\t-TBF       n/a (flag)       Generate TBF data streams        N/A                                                  \n"
 	"\t-COR       n/a (flag)       Generate COR data streams        N/A                                                  \n"
 	"\t-RAW       n/a (flag)       Generate RAW data streams        N/A                                                  \n"
@@ -63,10 +62,10 @@ void usage(string errorMsg){
 	"\t-r         integer (+)      Data Rate                    bytes/s  ignored, by filt. code   <required> \n"
 	"\t-d         integer (0,+)    Duration                          ms  0, forever               0, forever \n"
 	"\t-k         integer (+)      Key                              N/A  <ignored>                0xFEEDDEADBEEF2DAD\n"
-	"\t-fc        integer (+)      DRX/TBN filter code             #1-7  7                        <ignored>\n"
+	"\t-fc        integer (+)      DRX/TBS filter code             #1-7  7                        <ignored>\n"
 	"\t                              Determines data rate, \n"
 	"\t                              decimation factor, etc.\n"
-	"\t                              DRX/TBN mode.\n"
+	"\t                              DRX/TBS mode.\n"
 
 	"\t-f0        float            Sine wave 0 frequency             Hz                           <ignored>\n"
 	"\t-m0        float            Sine wave 0 amplitude           arb.  6.0                      <ignored>\n"
@@ -216,10 +215,9 @@ char * humanReadable(uint64_t timetag, uint64_t Fs = 196000000){
 
 int main(int argc, char * argv[]){
 
-	cout << "TBN:  " << sizeof(TbnFrame)  << endl;
-	cout << "TBW:  " << sizeof(TbwFrame)  << endl;
+	cout << "TBS:  " << sizeof(TbsFrame)  << endl;
+	cout << "TBT:  " << sizeof(TbtFrame)  << endl;
 	cout << "DRX:  " << sizeof(DrxFrame)  << endl;
-	cout << "TBF:  " << sizeof(TbfFrame)  << endl;
 	cout << "COR:  " << sizeof(CorFrame)  << endl;
 
 
@@ -249,12 +247,12 @@ int main(int argc, char * argv[]){
 
 
 	//common to multiple formats
-	uint16_t filterCode      = 7;         // used by TBN, DRX, TBF
-	uint64_t N               = DEFAULT_N; // used by TBN, TBW, DRX
-	bool     useComplex      = false;     // used by TBN, TBW, DRX
-	bool     correlatorTest  = false;     // used by TBN, TBW, DRX
+	uint16_t filterCode      = 7;         // used by TBS, DRX
+	uint64_t N               = DEFAULT_N; // used by TBS, TBT, DRX
+	bool     useComplex      = false;     // used by TBS, TBT, DRX
+	bool     correlatorTest  = false;     // used by TBS, TBT, DRX
 	bool     bitPattern      = false;     // used by ALL
-	uint16_t decFactor       = 10;        // used by TBN, DRX
+	uint16_t decFactor       = 10;        // used by DRX
 
 	// set up a pattern that will be visible in spectrograms
 	double   baseBandWidth   = 32.0;
@@ -307,10 +305,9 @@ int main(int argc, char * argv[]){
 		TEST_OPT_SIZE_T(   Key,                  k,          Key,                   KeySpecified);
 		TEST_OPT_SIZE_T(   filter_code,          fc,         filterCode,            fcSpecified);
 		TEST_OPT_SETTABLE( DRX,                  DRX,        mode,DRX,              ignoredFlag);
-		TEST_OPT_SETTABLE( TBN,                  TBN,        mode,TBN,              ignoredFlag);
-		TEST_OPT_SETTABLE( TBW,                  TBW,        mode,TBW,              ignoredFlag);
+		TEST_OPT_SETTABLE( TBS,                  TBS,        mode,TBS,              ignoredFlag);
+		TEST_OPT_SETTABLE( TBT,                  TBT,        mode,TBT,              ignoredFlag);
 		TEST_OPT_SETTABLE( COR,                  COR,        mode,COR,              ignoredFlag);
-		TEST_OPT_SETTABLE( TBF,                  TBF,        mode,TBF,              ignoredFlag);
 		TEST_OPT_SETTABLE( RAW,                  RAW,        mode,RAW,              ignoredFlag);
 		TEST_OPT_SETTABLE( XCP,                  XCP,        correlatorTest,true,   ignoredFlag);
 		TEST_OPT_SETTABLE( pattern-only,         po,         bitPattern,true,       ignoredFlag);
@@ -385,41 +382,31 @@ int main(int argc, char * argv[]){
 			cout << "Warning: Key value is ignored in DRX mode.\n";
 		}
 		break;
-	case TBN:
+	case TBS:
 		if (!fcSpecified){
-			cout << "Warning: No filter code specified, will default to 7.\n";
-			filterCode = 7;
+			cout << "Warning: No filter code specified, will default to 8.\n";
+			filterCode = 8;
 		} else {
-			if (filterCode > 7){
-				cout << "Warning: Filter code exceeds maximum value, will default to 7.\n";
-				filterCode = 7;
+			if (filterCode > 8){
+				cout << "Warning: Filter code exceeds maximum value, will default to 8.\n";
+				filterCode = 8;
 			}
-			if (filterCode < 1){
-				cout << "Warning: Filter code exceeds minimum value, will default to 1.\n";
-				filterCode = 1;
+			if (filterCode < 8){
+				cout << "Warning: Filter code exceeds minimum value, will default to 8.\n";
+				filterCode = 8;
 			}
 		}
-		Rate=TbnDataRates[filterCode-1];
-		decFactor = TbnDecFactors[filterCode-1];
-		if (DataSizeSpecified || RateSpecified){
-			cout << "Warning: Rate and DataSize options are ignored in DRX mode.\n";
-		}
-		if (KeySpecified){
-			cout << "Warning: Key value is ignored in DRX mode.\n";
-		}
+		Rate=98976999.0;
 		break;
-	case TBW:
-		Rate=104857600.0;
-		break;
-	case TBF:
-		Rate=104857600.0;
+	case TBT:
+		Rate=117440512.0;
 		break;
 	case COR:
 		Rate=104857600.0;
 		break;
 	case RAW:
 		if (!DataSizeSpecified || !RateSpecified){
-			usage("You must specify data size and rate when not in DRX, TBN, or TBW modes");
+			usage("You must specify data size and rate when not in DRX, TBS, or TBT modes");
 		}
 		if (! KeySpecified){
 			cout << "Warning: No key specified, will default to 0xFEED.DEAD.BEEF.2.DAD.\n";
@@ -493,10 +480,9 @@ int main(int argc, char * argv[]){
 	size_t* sid = NULL;
 	size_t* key = NULL;
 	DrxFrame*  f_drx;
-	TbnFrame*  f_tbn;
-	TbwFrame*  f_tbw;
+	TbsFrame*  f_tbs;
+	TbtFrame*  f_tbt;
 	CorFrame*  f_cor;
-	TbfFrame*  f_tbf;
 
 	switch(mode){
 		case DRX:
@@ -505,22 +491,16 @@ int main(int argc, char * argv[]){
 				cout << "Error: failed to allocate Drx Frame Generator.\n";
 			}
 			break;
-		case TBN:
-			fg = (void*) new TbnFrameGenerator(bitPattern, correlatorTest, useComplex, N, decFactor, tp[0]);
+		case TBS:
+			fg = (void*) new TbsFrameGenerator(bitPattern, correlatorTest, useComplex, N, tp[0]);
 			if (!fg){
-				cout << "Error: failed to allocate Tbn Frame Generator.\n";
+				cout << "Error: failed to allocate Tbs Frame Generator.\n";
 			}
 			break;
-		case TBW:
-			fg = (void*) new TbwFrameGenerator(bitPattern, correlatorTest, useComplex, N, tp[0]);
+		case TBT:
+			fg = (void*) new TbtFrameGenerator(bitPattern, correlatorTest, useComplex, N, tp[0]);
 			if (!fg){
-				cout << "Error: failed to allocate Tbw Frame Generator.\n";
-			}
-			break;
-		case TBF:
-			fg = (void*) new TbfFrameGenerator(bitPattern, correlatorTest, useComplex, N, tp[0]);
-			if (!fg){
-				cout << "Error: failed to allocate Tbf Frame Generator.\n";
+				cout << "Error: failed to allocate Tbt Frame Generator.\n";
 			}
 			break;
 		case COR:
@@ -565,17 +545,14 @@ int main(int argc, char * argv[]){
 	uint64_t bs = 0;
 
 	switch(mode){
-			case TBN:
-				((TbnFrameGenerator*)fg)->resetTimeTag(TimeKeeper::getTT());
+			case TBS:
+				((TbsFrameGenerator*)fg)->resetTimeTag(TimeKeeper::getTT());
 				break;
-			case TBW:
-				((TbwFrameGenerator*)fg)->resetTimeTag(TimeKeeper::getTT());
+			case TBT:
+				((TbtFrameGenerator*)fg)->resetTimeTag(TimeKeeper::getTT());
 				break;
 			case DRX:
 				((DrxFrameGenerator*)fg)->resetTimeTag(TimeKeeper::getTT());
-				break;
-			case TBF:
-				((TbfFrameGenerator*)fg)->resetTimeTag(TimeKeeper::getTT());
 				break;
 			case COR:
 				((CorFrameGenerator*)fg)->resetTimeTag(TimeKeeper::getTT());
@@ -604,21 +581,21 @@ int main(int argc, char * argv[]){
 			}
 		}
 		switch(mode){
-		case TBN:
-			f_tbn = ((TbnFrameGenerator*)fg)->next();
-			lastTimeTag = __builtin_bswap64(f_tbn->header.timeTag);
-			bs = mySocket.send((char*)f_tbn,sizeof(TbnFrame));
-			if (bs!=sizeof(TbnFrame)){
+		case TBS:
+			f_tbs = ((TbsFrameGenerator*)fg)->next();
+			lastTimeTag = __builtin_bswap64(f_tbs->header.timeTag);
+			bs = mySocket.send((char*)f_tbs,sizeof(TbsFrame));
+			if (bs!=sizeof(TbsFrame)){
 				cout << "Error in send.\n";
 				return -1;
 			}
 			totalSent+=bs;
 			break;
-		case TBW:
-			f_tbw = ((TbwFrameGenerator*)fg)->next();
-			lastTimeTag = __builtin_bswap64(f_tbw->header.timeTag);
-			bs = mySocket.send((char*)f_tbw,sizeof(TbwFrame));
-			if (bs!=sizeof(TbwFrame)){
+		case TBT:
+			f_tbt = ((TbtFrameGenerator*)fg)->next();
+			lastTimeTag = __builtin_bswap64(f_tbt->header.timeTag);
+			bs = mySocket.send((char*)f_tbt,sizeof(TbtFrame));
+			if (bs!=sizeof(TbtFrame)){
 				cout << "Error in send.\n";
 				return -1;
 			}
@@ -629,16 +606,6 @@ int main(int argc, char * argv[]){
 			lastTimeTag = __builtin_bswap64(f_drx->header.timeTag);
 			bs = mySocket.send((char*)f_drx,sizeof(DrxFrame));
 			if (bs!=sizeof(DrxFrame)){
-				cout << "Error in send.\n";
-				return -1;
-			}
-			totalSent+=bs;
-			break;
-		case TBF:
-			f_tbf = ((TbfFrameGenerator*)fg)->next();
-			lastTimeTag = __builtin_bswap64(f_tbf->header.timeTag);
-			bs = mySocket.send((char*)f_tbf,sizeof(TbfFrame));
-			if (bs!=sizeof(TbfFrame)){
 				cout << "Error in send.\n";
 				return -1;
 			}

@@ -1,13 +1,14 @@
 /*
- * TbfFrameGenerator.h
+ * TbtFrameGenerator.h
  *
  *  Created on: Oct 23, 2012
  *      Author: chwolfe2
  */
 
-#ifndef TBFFRAMEGENERATOR_H_
-#define TBFFRAMEGENERATOR_H_
-#include "TbfFrame.h"
+#ifndef TBTFRAMEGENERATOR_H_
+#define TBTFRAMEGENERATOR_H_
+#include "LWA.h"
+#include "TbtFrame.h"
 #include <stdint.h>
 #include <iostream>
 #include <cstring>
@@ -20,11 +21,11 @@
 #include "../Signals/ChirpGenerator.h"
 using namespace std;
 
-class TbfFrameGenerator {
+class TbtFrameGenerator {
 public:
-	static void fixByteOrder(TbfFrame* frame);
-	static void unfixByteOrder(TbfFrame* frame);
-	TbfFrameGenerator(
+	static void fixByteOrder(TbtFrame* frame);
+	static void unfixByteOrder(TbtFrame* frame);
+	TbtFrameGenerator(
 			bool	 _bitPattern,
 			bool	 _correlatorTest,
 			bool	 _useComplex,
@@ -32,13 +33,13 @@ public:
 			SignalGenerator* _sig
 	);
 	void generate();
-	TbfFrame * next();
+	TbtFrame * next();
 	void resetTimeTag(uint64_t start);
 
-	virtual ~TbfFrameGenerator();
+	virtual ~TbtFrameGenerator();
 private:
-	TbfFrame*			frames;
-	UnpackedSample 		samples[TBF_SAMPLES_PER_FRAME];
+	TbtFrame*			frames;
+	UnpackedSample 		samples[TBT_SAMPLES_PER_FRAME];
 	bool     bitPattern;
 	bool     correlatorTest;
 	bool	 useComplex;
@@ -46,7 +47,7 @@ private:
 	SignalGenerator* sig;
 	uint64_t			start;
 	void __pack(UnpackedSample* u, PackedSample4* p);
-	void __printFrame(TbfFrame* f, bool compact=false, bool single=false);
+	void __printFrame(TbtFrame* f, bool compact=false, bool single=false);
 };
 
-#endif /* TBFFRAMEGENERATOR_H_ */
+#endif /* TBTFRAMEGENERATOR_H_ */

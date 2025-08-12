@@ -1,15 +1,14 @@
 /*
- * TbnFrameGenerator.h
+ * TbsFrameGenerator.h
  *
- *  Created on: Oct 22, 2012
+ *  Created on: Oct 23, 2012
  *      Author: chwolfe2
  */
 
-#ifndef TBNFRAMEGENERATOR_H_
-#define TBNFRAMEGENERATOR_H_
-
-
-#include "TbnFrame.h"
+#ifndef TBSFRAMEGENERATOR_H_
+#define TBSFRAMEGENERATOR_H_
+#include "LWA.h"
+#include "TbsFrame.h"
 #include <stdint.h>
 #include <iostream>
 #include <cstring>
@@ -22,38 +21,33 @@
 #include "../Signals/ChirpGenerator.h"
 using namespace std;
 
-class TbnFrameGenerator {
+class TbsFrameGenerator {
 public:
-	static void fixByteOrder(TbnFrame* frame);
-	static void unfixByteOrder(TbnFrame* frame);
-	TbnFrameGenerator(
-			bool     _bitPattern,
+	static void fixByteOrder(TbsFrame* frame);
+	static void unfixByteOrder(TbsFrame* frame);
+	TbsFrameGenerator(
+			bool	 _bitPattern,
 			bool	 _correlatorTest,
 			bool	 _useComplex,
 			uint64_t _numFrames,
-			uint16_t _decFactor,
 			SignalGenerator* _sig
 	);
 	void generate();
-	TbnFrame * next();
+	TbsFrame * next();
 	void resetTimeTag(uint64_t start);
 
-	virtual ~TbnFrameGenerator();
+	virtual ~TbsFrameGenerator();
 private:
-	TbnFrame*			frames;
-	UnpackedSample 		samples[TBN_SAMPLES_PER_FRAME];
+	TbsFrame*			frames;
+	UnpackedSample 		samples[TBS_SAMPLES_PER_FRAME];
 	bool     bitPattern;
 	bool     correlatorTest;
 	bool	 useComplex;
 	uint64_t numFrames;
-	uint16_t decFactor;
-
 	SignalGenerator* sig;
-
 	uint64_t			start;
-
-	void __pack(UnpackedSample* u, PackedSample8* p);
-	void __printFrame(TbnFrame* f, bool compact=false, bool single=false);
+	void __pack(UnpackedSample* u, PackedSample4* p);
+	void __printFrame(TbsFrame* f, bool compact=false, bool single=false);
 };
 
-#endif /* TBNFRAMEGENERATOR_H_ */
+#endif /* TBSFRAMEGENERATOR_H_ */
