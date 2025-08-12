@@ -17,7 +17,7 @@ extern "C"{
 // define the type of datums (float)
 typedef fftwf_complex 	 ComplexType;
 typedef float			 RealType;
-typedef union __PackedSample{
+typedef union __PackedSample4{
 	struct {
 		int8_t q:4;
 		int8_t i:4;
@@ -27,7 +27,19 @@ typedef union __PackedSample{
 		int8_t re:4;
 	};
 	uint8_t packed;
-}__attribute__((packed)) PackedSample;
+}__attribute__((packed)) PackedSample4;
+
+typedef union __PackedSample8{
+	struct {
+		int8_t q;
+		int8_t i;
+	};
+	struct {
+		int8_t im;
+		int8_t re;
+	};
+	uint16_t packed;
+}__attribute__((packed)) PackedSample8;
 
 // define union type for an unpacked sample
 typedef union __UnpackedSample{

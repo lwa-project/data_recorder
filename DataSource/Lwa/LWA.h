@@ -25,6 +25,10 @@ enum Mode {DRX, TBN, TBW, RAW};
 	#include "DrxFrame.h"
 #endif
 
+#ifndef DRX8FRAME_H_
+	#include "Drx8Frame.h"
+#endif
+
 
 
 #endif /* LWA_H_ */

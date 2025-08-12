@@ -6,6 +6,7 @@
 CPP_SRCS += \
 ../ChirpGenerator.cpp \
 ../DrxFrameGenerator.cpp \
+../Drx8FrameGenerator.cpp \
 ../GaussianGenerator.cpp \
 ../SignalGenerator.cpp \
 ../SineGenerator.cpp \
@@ -16,6 +17,7 @@ CPP_SRCS += \
 OBJS += \
 ./ChirpGenerator.o \
 ./DrxFrameGenerator.o \
+./Drx8FrameGenerator.o \
 ./GaussianGenerator.o \
 ./SignalGenerator.o \
 ./SineGenerator.o \
@@ -26,6 +28,7 @@ OBJS += \
 CPP_DEPS += \
 ./ChirpGenerator.d \
 ./DrxFrameGenerator.d \
+./Drx8FrameGenerator.d \
 ./GaussianGenerator.d \
 ./SignalGenerator.d \
 ./SineGenerator.d \

@@ -5,13 +5,13 @@
  *      Author: chwolfe2
  */
 
-#ifndef DRXFRAME_H_
-#define DRXFRAME_H_
+#ifndef DRX8FRAME_H_
+#define DRX8FRAME_H_
 #ifdef __cplusplus
 extern "C"{
 #endif
 
-#define DRX_SAMPLES_PER_FRAME 4096
+#define DRX8_SAMPLES_PER_FRAME 4096
 
 #define Fs_Day (196l* 1000000l * 60l *60l * 24l)/*16934400000000l*/
 
@@ -20,7 +20,7 @@ extern "C"{
 #include "Complex.h"
 
 
-typedef struct __DrxFrameHeader{
+typedef struct __Drx8FrameHeader{
 	uint32_t syncCode;
 	union {
 		union {
@@ -40,24 +40,24 @@ typedef struct __DrxFrameHeader{
 	uint64_t timeTag;
 	uint32_t freqCode;
 	uint32_t statusFlags;
-}__attribute__((packed)) DrxFrameHeader;
+}__attribute__((packed)) Drx8FrameHeader;
 
-// DRX frame as received
-typedef struct __DrxFrame{ // Jake's drx frame struct
-	DrxFrameHeader header;
-	PackedSample4   samples[DRX_SAMPLES_PER_FRAME];
-} __attribute__((packed)) DrxFrame;
+// DRX8 frame as received
+typedef struct __Drx8Frame{ // Jake's drx frame struct
+	Drx8FrameHeader header;
+	PackedSample8   samples[DRX8_SAMPLES_PER_FRAME];
+} __attribute__((packed)) Drx8Frame;
 // alias to the above
-typedef DrxFrame	PackedDrxFrame;
+typedef Drx8Frame	PackedDrx8Frame;
 
-typedef struct __UnpackedDrxFrame{
-	DrxFrameHeader header;
-	UnpackedSample   samples[DRX_SAMPLES_PER_FRAME];
-} __attribute__((packed)) UnpackedDrxFrame;
+typedef struct __UnpackedDrx8Frame{
+	Drx8FrameHeader header;
+	UnpackedSample   samples[DRX8_SAMPLES_PER_FRAME];
+} __attribute__((packed)) UnpackedDrx8Frame;
 
 #ifdef __cplusplus
 }
 #endif
 
 
-#endif /* DRXFRAME_H_ */
+#endif /* DRX8FRAME_H_ */

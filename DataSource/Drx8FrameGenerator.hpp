@@ -1,13 +1,13 @@
 /*
- * DrxFrameGenerator.h
+ * Drx8FrameGenerator.h
  *
  *  Created on: Jan 29, 2012
  *      Author: chwolfe2
  */
 
-#ifndef DRXFRAMEGENERATOR_H_
-#define DRXFRAMEGENERATOR_H_
-#include "DrxFrame.h"
+#ifndef DRX8FRAMEGENERATOR_H_
+#define DRX8FRAMEGENERATOR_H_
+#include "Drx8Frame.h"
 #include <stdint.h>
 #include <iostream>
 #include <cstring>
@@ -20,12 +20,12 @@
 #include "ChirpGenerator.h"
 using namespace std;
 
-class DrxFrameGenerator {
+class Drx8FrameGenerator {
 public:
-	static void fixByteOrder(DrxFrame* frame);
-	static void unfixByteOrder(DrxFrame* frame);
+	static void fixByteOrder(Drx8Frame* frame);
+	static void unfixByteOrder(Drx8Frame* frame);
 	static RealType getFrequency(uint64_t fs, uint32_t freqCode);
-	DrxFrameGenerator(
+	Drx8FrameGenerator(
 			bool     correlatorTest,
 			bool	 useComplex,
 			uint64_t numFrames,
@@ -50,12 +50,12 @@ public:
 			RealType max
 	);
 	void generate();
-	DrxFrame * next();
+	Drx8Frame * next();
 	void resetTimeTag(uint64_t start);
 
-	virtual ~DrxFrameGenerator();
+	virtual ~Drx8FrameGenerator();
 private:
-	DrxFrame*			frames;
+	Drx8Frame*			frames;
 	UnpackedSample 		samples[4096];
 	bool     correlatorTest;
 	bool	 useComplex;
@@ -89,8 +89,8 @@ private:
 	uint64_t			curFrame;
 	uint64_t			start;
 
-	void __pack(UnpackedSample* u, PackedSample4* p);
-	void __printFrame(DrxFrame* f, bool compact=false, bool single=false);
+	void __pack(UnpackedSample* u, PackedSample8* p);
+	void __printFrame(Drx8Frame* f, bool compact=false, bool single=false);
 };
 
-#endif /* DRXFRAMEGENERATOR_H_ */
+#endif /* DRX8FRAMEGENERATOR_H_ */

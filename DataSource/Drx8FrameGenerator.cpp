@@ -1,11 +1,11 @@
 /*
- * DrxFrameGenerator.cpp
+ * Drx8FrameGenerator.cpp
  *
  *  Created on: Jan 29, 2012
  *      Author: chwolfe2
  */
 
-#include "DrxFrameGenerator.hpp"
+#include "Drx8FrameGenerator.hpp"
 #include <assert.h>
 #include <math.h>
 #include "TimeKeeper.h"
@@ -16,11 +16,11 @@
 #define fs_4  (fs_2/2.0)
 #define fs_8  (fs_4/2.0)
 */
-RealType DrxFrameGenerator::getFrequency(uint64_t fs, uint32_t freqCode){
+RealType Drx8FrameGenerator::getFrequency(uint64_t fs, uint32_t freqCode){
 	return ((RealType) freqCode) * ((RealType)fs) /((RealType)0x100000000);
 }
 
-DrxFrameGenerator::DrxFrameGenerator(
+Drx8FrameGenerator::Drx8FrameGenerator(
 	bool	 	correlatorTest,
 	bool	 useComplex,
 	uint64_t numFrames,
@@ -71,14 +71,14 @@ DrxFrameGenerator::DrxFrameGenerator(
 	adder.add(&sine2);
 	adder.add(&gauss);
 	adder.add(&chirp);
-	frames = (DrxFrame*) malloc(numFrames* sizeof(DrxFrame));
+	frames = (Drx8Frame*) malloc(numFrames* sizeof(Drx8Frame));
 	assert(frames!=NULL);
-	cout << "allocated " << (numFrames* sizeof(DrxFrame)) << " bytes of storage (" << numFrames << " frames x " << sizeof(DrxFrame) << " bytes/frame.\n";
+	cout << "allocated " << (numFrames* sizeof(Drx8Frame)) << " bytes of storage (" << numFrames << " frames x " << sizeof(Drx8Frame) << " bytes/frame.\n";
 
 	generate();
 }
 
-void DrxFrameGenerator::__pack(UnpackedSample* u, PackedSample4* p){
+void Drx8FrameGenerator::__pack(UnpackedSample* u, PackedSample8* p){
 	int _i = (int)round(u->re);
 	if(_i>7) _i=7;
 	if(_i<-8) _i=-8;
@@ -88,16 +88,16 @@ void DrxFrameGenerator::__pack(UnpackedSample* u, PackedSample4* p){
 	p->i =  (((int8_t) _i) & 0xf);
 	p->q =  (((int8_t) _q) & 0xf);
 }
-void DrxFrameGenerator::__printFrame(DrxFrame* f, bool compact, bool single){
+void Drx8FrameGenerator::__printFrame(Drx8Frame* f, bool compact, bool single){
 	if (compact){
-		for(int i=0; i<DRX_SAMPLES_PER_FRAME; i++){
+		for(int i=0; i<DRX8_SAMPLES_PER_FRAME; i++){
 			printf("%3hd %3hd ",(int)f->samples[i].i,(int)f->samples[i].q);
 			if (((i & 0xf) == 0xf) || single){
 				cout << endl;
 			}
 		}
 	} else {
-		DrxFrameGenerator::unfixByteOrder(f);
+		Drx8FrameGenerator::unfixByteOrder(f);
 		cout << "==============================================================================" << endl;
 		cout << "== Beam:              " << (int)f->header.drx_beam << dec << endl;
 		cout << "== Tuning:            " << (int)f->header.drx_tuning << dec << endl;
@@ -116,12 +116,12 @@ void DrxFrameGenerator::__printFrame(DrxFrame* f, bool compact, bool single){
 		}
 		//cout << " ... << additional data truncated >> " << endl;
 		cout << "==============================================================================" << endl;
-		cout << "<<< frame size = "<<sizeof(DrxFrame)<<dec<<">>>\n";
-		DrxFrameGenerator::fixByteOrder(f);
+		cout << "<<< frame size = "<<sizeof(Drx8Frame)<<dec<<">>>\n";
+		Drx8FrameGenerator::fixByteOrder(f);
 	}
 }
 
-void DrxFrameGenerator::generate(){
+void Drx8FrameGenerator::generate(){
 	cout << "Beginning generation of " << numFrames << " frames.\n";
 	cout << "debug: fc0=" << dec << freqCode0 << "; fc1=" << dec << freqCode1 << endl;
 	size_t rptcnt = numFrames / 20;
@@ -137,7 +137,7 @@ void DrxFrameGenerator::generate(){
 		switch(stream){
 		case 0: /*1X*/
 			if (!correlatorTest){
-				for(size_t j=0; j<DRX_SAMPLES_PER_FRAME; j++){
+				for(size_t j=0; j<DRX8_SAMPLES_PER_FRAME; j++){
 					UnpackedSample* temp = &samples[j];
 					*temp =adder.next(dt);
 					temp->i = temp->i / (max / 8.0);
@@ -145,7 +145,7 @@ void DrxFrameGenerator::generate(){
 					__pack(&samples[j],&frames[frm].samples[j]);
 				}
 			} else {
-				for(size_t j=0; j<DRX_SAMPLES_PER_FRAME; j++){
+				for(size_t j=0; j<DRX8_SAMPLES_PER_FRAME; j++){
 					// generate y orthogonal to x, so correlation will be pure imaginary
 					UnpackedSample x = adder.next(dt);
 					UnpackedSample y;
@@ -161,17 +161,17 @@ void DrxFrameGenerator::generate(){
 		case 1: /*1Y*/
 			if (!correlatorTest){
 				// when not in correlator mode, Y=X
-				memcpy((void*)&frames[frm].samples[0], (void*)&frames[ frm - 1 ].samples[0], DRX_SAMPLES_PER_FRAME*sizeof(PackedSample4));
+				memcpy((void*)&frames[frm].samples[0], (void*)&frames[ frm - 1 ].samples[0], DRX8_SAMPLES_PER_FRAME*sizeof(PackedSample8));
 			} else {
 				// do nothing, because we prepared this Y frame when X was being generated
 			}
 			break;
 		case 2: /*2X*/ // fall through, 2nd tuning duplicates the first
 		case 3: /*2Y*/
-			memcpy((void*)&frames[frm].samples[0], (void*)&frames[ frm - 2 ].samples[0], DRX_SAMPLES_PER_FRAME*sizeof(PackedSample4));
+			memcpy((void*)&frames[frm].samples[0], (void*)&frames[ frm - 2 ].samples[0], DRX8_SAMPLES_PER_FRAME*sizeof(PackedSample8));
 			break;
 		}
-		uint64_t timetag = ((frm >> 2) * DRX_SAMPLES_PER_FRAME * ((uint64_t)decFactor));
+		uint64_t timetag = ((frm >> 2) * DRX8_SAMPLES_PER_FRAME * ((uint64_t)decFactor));
 		frames[frm].header.syncCode 	  		= 0x5CDEC0DE;
 		frames[frm].header.frameCount   		= 0;
 		frames[frm].header.drx_beam 	  		= this->beam + 1;
@@ -187,30 +187,30 @@ void DrxFrameGenerator::generate(){
 	cout << "Generation of " << numFrames << " frames complete ...\n";
 }
 
-void DrxFrameGenerator::resetTimeTag(uint64_t start){
+void Drx8FrameGenerator::resetTimeTag(uint64_t start){
 	this->start=start;
 }
-DrxFrame * DrxFrameGenerator::next(){
+Drx8Frame * Drx8FrameGenerator::next(){
 	size_t index = curFrame % numFrames;
 	if (index>numFrames){
 		cout << "index exceeds numFrames " << index << " > " << numFrames<<". ( cur frame = "<<curFrame<<")\n";
 		exit(-1);
 	}
-	frames[index].header.timeTag = __builtin_bswap64(((curFrame>>2) * DRX_SAMPLES_PER_FRAME * ((uint64_t)decFactor)+start));
+	frames[index].header.timeTag = __builtin_bswap64(((curFrame>>2) * DRX8_SAMPLES_PER_FRAME * ((uint64_t)decFactor)+start));
 	curFrame++;
 	return &frames[index];
 }
 
-void DrxFrameGenerator::fixByteOrder(DrxFrame* frame){
+void Drx8FrameGenerator::fixByteOrder(Drx8Frame* frame){
 	frame->header.freqCode   = __builtin_bswap32(frame->header.freqCode);
 	frame->header.decFactor  = (frame->header.decFactor << 8)  | (frame->header.decFactor >> 8);
 	frame->header.timeOffset = (frame->header.timeOffset << 8) | (frame->header.timeOffset >> 8);
 	frame->header.timeTag    = __builtin_bswap64(frame->header.timeTag);
 }
-void DrxFrameGenerator::unfixByteOrder(DrxFrame* frame){
+void Drx8FrameGenerator::unfixByteOrder(Drx8Frame* frame){
 	fixByteOrder(frame);
 }
 
-DrxFrameGenerator::~DrxFrameGenerator(){
+Drx8FrameGenerator::~Drx8FrameGenerator(){
 	if(frames) free(frames);
 }

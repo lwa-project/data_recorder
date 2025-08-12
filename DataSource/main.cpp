@@ -29,6 +29,7 @@
 
 #include "Complex.h"
 #include "DrxFrameGenerator.hpp"
+#include "Drx8FrameGenerator.hpp"
 
 using namespace std;
 /*
@@ -37,10 +38,10 @@ int8_t floatToFourBit(float val){
 	if (i>)
 }
 
-PackedSample pack(UnpackedSample u){
+PackedSample4 pack(UnpackedSample u){
 	RealType i = u.i;
 	RealType q = u.q;
-	PackedSample p;
+	PackedSample4 p;
 	p.i = floatToFourBit(i);
 	p.q = floatToFourBit(q);
 }
@@ -80,11 +81,13 @@ void usage(string errorMsg){
 	"\t-sig       float            Gaussian Noise Variance         arb.  1.0                      <ignored>\n"
 	"\t-sc        float            scale                           arb.  8.0                      <ignored>\n"
 	"\t-N         integer (+)      # frames to pre-generate      frames  4s worth of frames       <ignored>\n"
+	"\t-8bit      flag (no val.)   generate DRX8 frames        --------  not set                  <ignored>\n"         
 	"\n";
 	exit(EXIT_FAILURE);
 }
 
-void printFrame(DrxFrame* f, bool compact=false, bool single=false){
+template<typename F, class G>
+void printFrame(F* f, bool compact=false, bool single=false){
 	if (compact){
 		for(int i=0; i<DRX_SAMPLES_PER_FRAME; i++){
 			printf("%3hd %3hd ",(int)f->samples[i].i,(int)f->samples[i].q);
@@ -93,7 +96,7 @@ void printFrame(DrxFrame* f, bool compact=false, bool single=false){
 			}
 		}
 	} else {
-		DrxFrameGenerator::unfixByteOrder(f);
+		G::unfixByteOrder(f);
 		cout << "==============================================================================" << endl;
 		cout << "== Beam:              " << (int)f->header.drx_beam << dec << endl;
 		cout << "== Tuning:            " << (int)f->header.drx_tuning << dec << endl;
@@ -112,10 +115,11 @@ void printFrame(DrxFrame* f, bool compact=false, bool single=false){
 		}
 		cout << " ... << additional data truncated >> " << endl;
 		cout << "==============================================================================" << endl;
-		DrxFrameGenerator::fixByteOrder(f);
+		G::fixByteOrder(f);
 	}
 }
-void checkIsCVframe(DrxFrame*f){
+template<typename F>
+void checkIsCVframe(F*f){
 	int i=1;
 	while((i<4096) && (f->samples[i].packed == f->samples[0].packed)){
 		i++;
@@ -214,6 +218,8 @@ int main(int argc, char * argv[]){
 	bool useComplex=false;
 	bool correlatorTest=false;
 	//bool  looptest = false;
+	
+	bool useDRX8 = false;
 
 
 
@@ -288,6 +294,8 @@ int main(int argc, char * argv[]){
 			if (i<p) fc0=(uint32_t)strtoul(argv[++i],NULL,10); else  usage("Missing operand: fc0");
 		}else if (strcmp(argv[i],"-fc1")==0){
 			if (i<p) fc1=(uint32_t)strtoul(argv[++i],NULL,10); else  usage("Missing operand: fc1");
+		}else if (strcmp(argv[i],"-8bit")==0){
+			useDRX8=true;
 		}else {
 			usage(string("Unknown commandline option:")+argv[i]);
 		}
@@ -369,7 +377,13 @@ int main(int argc, char * argv[]){
 
 	*/
 
-
+	Drx8FrameGenerator fg8(
+			correlatorTest,
+			useComplex,
+			N,
+			fs, decFactor,
+			beam, timeOffset, statusFlags, fc0, fc1, f0,m0,f1,m1,f2,m2,cf0,cf1,cf2,cm,cg,csin,sig,scale);
+	Drx8Frame* f8;
 	DrxFrameGenerator fg(
 			correlatorTest,
 			useComplex,
@@ -377,6 +391,8 @@ int main(int argc, char * argv[]){
 			fs, decFactor,
 			beam, timeOffset, statusFlags, fc0, fc1, f0,m0,f1,m1,f2,m2,cf0,cf1,cf2,cm,cg,csin,sig,scale);
 	DrxFrame* f;
+
+
 
 
 	char * ptr = new char [DataSize] ;
@@ -435,14 +451,26 @@ int main(int argc, char * argv[]){
 			totalSent+=mySocket.send(ptr,DataSize);
 			(*sid)++;
 		} else {
-			f = fg.next();
-			//cout <<"freq code: " << dec << f->header.freqCode << endl;
-			//checkIsCVframe(f);
-			lastTimeTag = __builtin_bswap64(f->header.timeTag);
-			bs = mySocket.send((char*)f,sizeof(DrxFrame));
-			if (bs!=sizeof(DrxFrame)){
-				cout << "Error in send.\n";
-				return -1;
+			if( useDRX8 ) {
+				f8 = fg8.next();
+				//cout <<"freq code: " << dec << f8->header.freqCode << endl;
+				//checkIsCVframe<Drx8Frame>(f8);
+				lastTimeTag = __builtin_bswap64(f8->header.timeTag);
+				bs = mySocket.send((char*)f,sizeof(Drx8Frame));
+				if (bs!=sizeof(Drx8Frame)){
+					cout << "Error in send.\n";
+					return -1;
+				}
+			} else {
+				f = fg.next();
+				//cout <<"freq code: " << dec << f->header.freqCode << endl;
+				//checkIsCVframe<DrxFrame>(f);
+				lastTimeTag = __builtin_bswap64(f->header.timeTag);
+				bs = mySocket.send((char*)f,sizeof(DrxFrame));
+				if (bs!=sizeof(DrxFrame)){
+					cout << "Error in send.\n";
+					return -1;
+				}
 			}
 			totalSent+=bs;
 			/*
