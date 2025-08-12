@@ -1010,17 +1010,15 @@ Live Wire Test (Recording Real Data)
   Using the included DataSource2 tool in yet another terminal, or via an SSH session to another 
   computer with DataSource2 installed, you would enter the following:
 	>/LWA/bin/DataSource2
-  With the following options, all mandatory
-	-DestinationIpAddress aaa.bbb.ccc.ddd (URL or IP, limit 15 chars)
-  	-DestinationPort      12345           (port number)
-	-DataSize             1234            (in bytes per packet)
-	-Rate                 123456789012345 (in bytes/second)
-	-Duration             1234567890      (in milliseconds)
-  following our previous example with the default TBN format:
-	>/LWA/bin/DataSource2 -DestinationIpAddress localhost -DestinationPort 6001 \
-        -DataSize 1024 -Rate 117440512 -Duration 30000
+  With the following options,
+	-i aaa.bbb.ccc.ddd (URL or IP, limit 15 chars)
+  	-p 12345           (port number)
+	-d 1234567890      (in milliseconds)
+  following our previous example with the default TBS format:
+	>/LWA/bin/DataSource2 -i localhost -p 6001 \
+        -TBS -Duration 30000
         
-  This would create an emulated TBN source on the same machine as the DROS is running.
+  This would create an emulated TBS source on the same machine as the DROS is running.
 
   Note that you will have to schedule a recording as before, and that synchronizing the recording
   with the data source can be a pain, so it is better to set the data source to start well before 
