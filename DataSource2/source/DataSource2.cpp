@@ -215,10 +215,11 @@ char * humanReadable(uint64_t timetag, uint64_t Fs = 196000000){
 
 int main(int argc, char * argv[]){
 
-	cout << "TBS:  " << sizeof(TbsFrame)  << endl;
-	cout << "TBT:  " << sizeof(TbtFrame)  << endl;
-	cout << "DRX:  " << sizeof(DrxFrame)  << endl;
-	cout << "COR:  " << sizeof(CorFrame)  << endl;
+	cout << "Nstand: " << TBX_STAND_COUNT  << endl;
+	cout << "TBS:    " << sizeof(TbsFrame) << endl;
+	cout << "TBT:    " << sizeof(TbtFrame) << endl;
+	cout << "DRX:    " << sizeof(DrxFrame) << endl;
+	cout << "COR:    " << sizeof(CorFrame) << endl;
 
 
 	try{
