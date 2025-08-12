@@ -45,7 +45,7 @@ all: DataSource2
 DataSource2: $(OBJS) $(USER_OBJS)
 	@echo 'Building target: $@'
 	@echo 'Invoking: GCC C++ Linker'
-	g++  -o "DataSource_v2" $(OBJS) $(USER_OBJS) $(LIBS)
+	g++  -o "DataSource2" $(OBJS) $(USER_OBJS) $(LIBS)
 	@echo 'Finished building target: $@'
 	@echo ' '
 
