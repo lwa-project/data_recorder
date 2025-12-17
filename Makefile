@@ -56,10 +56,11 @@ install: backup_config
 	install -b -g root -o root -m 544 -t $(INSTALL_LOCATION)/scripts \
 		$(FILES)/installStartupScript.sh \
 		$(FILES)/uninstallStartupScript.sh \
-		$(FILES)/StartDROS*.sh \
 		$(FILES)/uploadLogfile.py \
 		$(FILES)/uploadLogfile.sh \
 		$(WORKSPACE)/DROS2/Scripts/StorageControl.sh
+	install -b -g root -o root -m 644 -t /etc/systemd/system \
+	  $(FILES)/dros-dr*.servce
 	@if [ -f "/BACKUP.defaults_v2.cfg" ]; then echo "Restoring current configuration..."; cp /BACKUP.defaults_v2.cfg $(INSTALL_LOCATION)/config/defaults_v2.cfg; fi
 	@echo 
 	@echo "################################################################"
@@ -77,7 +78,8 @@ install: backup_config
 	@echo "#       $(INSTALL_LOCATION)/bin/DROS2"
 	@echo "# "
 	@echo "# To install the software to run on-boot, execute:"
-	@echo "#       cd $(INSTALL_LOCATION)/scripts; ./installStartupScript.sh StartDROS.sh"
+	@echo "#       systemctl daemon-reload"
+	@echo "#       systemctl enable dros-dr*.service"
 	@echo "# "
 	@echo "################################################################"
 
