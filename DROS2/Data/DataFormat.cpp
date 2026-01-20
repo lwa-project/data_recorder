@@ -48,14 +48,15 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "DataFormat.h"
+#include "LwaDataFormats.h"
 
 DataFormat::FormatList DataFormat::knownFormats = map_list_of
 	("DEFAULT_DRX",   DataFormat("DRX_GENERIC",  4128ll,   79014048ll, PT_DRX,     -1 ))
-	("DEFAULT_TBT",   DataFormat("DEFAULT_TBT",  8220ll,  117440512ll, PT_TBT,     -1 ))
-	("DEFAULT_TBS",   DataFormat("DEFAULT_TBS",  4124ll,   98976999ll, PT_TBS,     -1 ))
+	("DEFAULT_TBT",   DataFormat("DEFAULT_TBT",  (28ll+TBX_STAND_COUNT*TBT_SAMPLES_PER_STAND),  117440512ll, PT_TBT,     -1 ))
+	("DEFAULT_TBS",   DataFormat("DEFAULT_TBS",  (28ll+TBX_STAND_COUNT*TBS8_SAMPLES_PER_STAND),   98976999ll, PT_TBS,     -1 ))
 	("DEFAULT_COR",   DataFormat("DEFAULT_COR",  2336ll,  117440512ll, PT_FSC,     -1 ))
 
-	("TBS_FILT_8",    DataFormat("TBS_FILT_8",   4124ll,   98976999ll, PT_TBS,     -1 ))
+	("TBS_FILT_8",    DataFormat("TBS_FILT_8",   (28ll+TBX_STAND_COUNT*TBS8_SAMPLES_PER_STAND),   98976999ll, PT_TBS,     -1 ))
 
 	("DRX_FILT_1",    DataFormat("DRX_FILT_1",   4128ll,    1011360ll, PT_DRX,    784 ))
 	("DRX_FILT_2",    DataFormat("DRX_FILT_2",   4128ll,    2018592ll, PT_DRX,    392 ))
