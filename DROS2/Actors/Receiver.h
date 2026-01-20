@@ -72,7 +72,7 @@
 #define NSEC_PER_SEC (1000000000ll)
 #define IDEAL_TRANSFER_SIZE 4194304   /*4MB*/
 //#define INITIAL_BUFFER_SIZE 2147483648 /*2 GiB*/
-#define INITIAL_BUFFER_SIZE (1048576lu*2048lu)
+#define INITIAL_BUFFER_SIZE (1048576lu*4096lu)
 //#define INITIAL_BUFFER_SIZE 33554432 /*32MB*/
 
 
@@ -133,6 +133,7 @@ public:
 		bufsize(0),
 		transferSize(0),
 		currentDrxDecFactor(-1),
+		currentIsDrx8(false),
 		resetRequired(true),
 		newFormat(DataFormat::getFormatByName(DataFormat::defaultFormatName)),
 		newTransferSize(IDEAL_TRANSFER_SIZE),
@@ -153,28 +154,50 @@ public:
 
 	}
 
-	bool setNewFmtDrx(int decFactor){
+	bool setNewFmtDrx(int decFactor, bool isDrx8){
 		static TimeStamp lastErrorLogged = Time::now();
 		static size_t errCount = 0;
-		switch(decFactor){
-			case 784: newFormat = DataFormat::getFormatByName("DRX_FILT_1"); return true; break;
-			case 392: newFormat = DataFormat::getFormatByName("DRX_FILT_2"); return true; break;
-			case 196: newFormat = DataFormat::getFormatByName("DRX_FILT_3"); return true; break;
-			case 98:  newFormat = DataFormat::getFormatByName("DRX_FILT_4"); return true; break;
-			case 40:  newFormat = DataFormat::getFormatByName("DRX_FILT_5"); return true; break;
-			case 20:  newFormat = DataFormat::getFormatByName("DRX_FILT_6"); return true; break;
-			case 10:  newFormat = DataFormat::getFormatByName("DRX_FILT_7"); return true; break;
-			default:
-				if (Time::compareTimestamps(Time::addTime(lastErrorLogged, 5000), Time::now()) <=0){
-					lastErrorLogged = Time::now();
-					LOGC(L_FATAL, "[Receiver] Bad DRX Decimation factor: " + LXS(decFactor) + " {"+LXS(errCount)+" previous occurrences}", FATAL_COLORS );
-					errCount = 0;
-				} else {
-					errCount++;
-				}
-				break;
+		if(isDrx8) {
+			switch(decFactor){
+				case 784: newFormat = DataFormat::getFormatByName("DRX8_FILT_1"); return true; break;
+				case 392: newFormat = DataFormat::getFormatByName("DRX8_FILT_2"); return true; break;
+				case 196: newFormat = DataFormat::getFormatByName("DRX8_FILT_3"); return true; break;
+				case 98:  newFormat = DataFormat::getFormatByName("DRX8_FILT_4"); return true; break;
+				case 40:  newFormat = DataFormat::getFormatByName("DRX8_FILT_5"); return true; break;
+				case 20:  newFormat = DataFormat::getFormatByName("DRX8_FILT_6"); return true; break;
+				case 10:  newFormat = DataFormat::getFormatByName("DRX8_FILT_7"); return true; break;
+				default:
+					if (Time::compareTimestamps(Time::addTime(lastErrorLogged, 5000), Time::now()) <=0){
+						lastErrorLogged = Time::now();
+						LOGC(L_FATAL, "[Receiver] Bad DRX8 Decimation factor: " + LXS(decFactor) + " {"+LXS(errCount)+" previous occurrences}", FATAL_COLORS );
+						errCount = 0;
+					} else {
+						errCount++;
+					}
+					break;
+			}
+			newFormat = DataFormat::getFormatByName("DEFAULT_DRX8");
+		} else {
+			switch(decFactor){
+				case 784: newFormat = DataFormat::getFormatByName("DRX_FILT_1"); return true; break;
+				case 392: newFormat = DataFormat::getFormatByName("DRX_FILT_2"); return true; break;
+				case 196: newFormat = DataFormat::getFormatByName("DRX_FILT_3"); return true; break;
+				case 98:  newFormat = DataFormat::getFormatByName("DRX_FILT_4"); return true; break;
+				case 40:  newFormat = DataFormat::getFormatByName("DRX_FILT_5"); return true; break;
+				case 20:  newFormat = DataFormat::getFormatByName("DRX_FILT_6"); return true; break;
+				case 10:  newFormat = DataFormat::getFormatByName("DRX_FILT_7"); return true; break;
+				default:
+					if (Time::compareTimestamps(Time::addTime(lastErrorLogged, 5000), Time::now()) <=0){
+						lastErrorLogged = Time::now();
+						LOGC(L_FATAL, "[Receiver] Bad DRX Decimation factor: " + LXS(decFactor) + " {"+LXS(errCount)+" previous occurrences}", FATAL_COLORS );
+						errCount = 0;
+					} else {
+						errCount++;
+					}
+					break;
+			}
+			newFormat = DataFormat::getFormatByName("DEFAULT_DRX");
 		}
-		newFormat = DataFormat::getFormatByName("DEFAULT_DRX");
 		return true;
 	}
 
@@ -232,8 +255,8 @@ public:
 	}
 	virtual void packetBurn(){
 		externallyClosed=true;
-		char buf[8192];
-		bzero((void*)buf, 8192);
+		char buf[8224];
+		bzero((void*)buf, 8224);
 		int burnsd = socket(AF_INET, SOCK_DGRAM, 0);
 		struct sockaddr_storage sa;
 		bzero((void*)&sa, sizeof(struct sockaddr_storage));
@@ -309,6 +332,7 @@ public:
 				bool   drxRateChange = false;
 				size_t cnt           = (size_t) res;
 				uint16_t newDrxDecFactor;
+				bool isDrx8 = false;
 				for (size_t c=0; c<(size_t)res; c++){
 					bytesReceived += t->mhdrs[c].msg_len;
 				}
@@ -326,6 +350,10 @@ public:
 						tt = __builtin_bswap64(*((size_t*)(&((TbtFrame*)t->iovs[cnt-1].iov_base)->header.timeTag)));
 					case COR_FRAME_SIZE:
 						tt = __builtin_bswap64(*((size_t*)(&((CorFrame*)t->iovs[cnt-1].iov_base)->header.timeTag)));
+					  break;
+					case DRX8_FRAME_SIZE:
+						tt = __builtin_bswap64(*((size_t*)(&((Drx8Frame*)t->iovs[cnt-1].iov_base)->header.timeTag)));
+						break;
 					default : break;
 				}
 				if (tt!=0){
@@ -341,9 +369,10 @@ public:
 
 				// quick check the common case, all packets right size, no change in decfactors
 				for (size_t j=0; j<cnt; j++){
-					if (fsize == DRX_FRAME_SIZE){
+					if (fsize == DRX_FRAME_SIZE || fsize == DRX8_FRAME_SIZE){
 						newDrxDecFactor = bswap16(((DrxFrame*) t->frames[j])->header.decFactor);
-						if (newDrxDecFactor != currentDrxDecFactor){
+						isDrx8 = ((DrxFrame*) t->frames[j])->header.drx_is_adp;
+						if (newDrxDecFactor != currentDrxDecFactor || isDrx8 != currentIsDrx8){
 							drxRateChange=true;
 						}
 					}
@@ -354,8 +383,8 @@ public:
 				}
 				
 				// check in case drx rate changed
-				if ((fsize == DRX_FRAME_SIZE) && drxRateChange && !lookMore){
-					if (!setNewFmtDrx(newDrxDecFactor)){
+				if ((fsize == DRX_FRAME_SIZE || fsize == DRX8_FRAME_SIZE) && drxRateChange && !lookMore){
+					if (!setNewFmtDrx(newDrxDecFactor, isDrx8)){
 						CANCEL_TICKET();
 						RESUME_RECEPTION();
 						/* CONTINUE_WITH_TICKET(); */
@@ -374,33 +403,36 @@ public:
 #define IDX_TBT     3
 #define IDX_COR     4
 #define IDX_DRX     5
-#define IDX_ODDBALL 6
+#define IDX_DRX8    6
+#define IDX_ODDBALL 7
 				
 				// some count variables for deeper inspection
-				size_t n[7]    = {0,0,0,0,0,0,0};         // in order : error, empty, tbs, tbt, cor, drx, odd
-				size_t last[7] = {0,0,0,0,0,0,0};         // in order : error, empty, tbs, tbt, cor, drx, odd
-				int    sz[7]   = {0,-1,TBS_FRAME_SIZE,TBT_FRAME_SIZE,COR_FRAME_SIZE,DRX_FRAME_SIZE,-2}; // in order : error, empty, tbn, tbw, tbf, cor, drx, odd
+				size_t n[8]    = {0,0,0,0,0,0,0,0};         // in order : error, empty, tbs, tbt, cor, drx, drx8, odd
+				size_t last[8] = {0,0,0,0,0,0,0,0};         // in order : error, empty, tbs, tbt, cor, drx, drx8, odd
+				int    sz[8]   = {0,-1,TBS_FRAME_SIZE,TBT_FRAME_SIZE,COR_FRAME_SIZE,DRX_FRAME_SIZE,DRX8_FRAME_SIZE,-2}; // in order : error, empty, tbs, tbt, tbf, cor, drx, drx8, odd
 				size_t curIdx;
 				// count packet sizes
 				for (size_t j=0; j<(size_t) res; j++){
 					switch(t->mhdrs[j].msg_len){
-						case    0:           n[IDX_EMPTY]++;   last[IDX_EMPTY]=j; break;
-						case TBS_FRAME_SIZE: n[IDX_TBS]++;     last[IDX_TBS]=j; break;
-						case TBT_FRAME_SIZE: n[IDX_TBT]++;     last[IDX_TBT]=j; break;
-						case COR_FRAME_SIZE: n[IDX_COR]++;     last[IDX_COR]=j; break;
-						case DRX_FRAME_SIZE: n[IDX_DRX]++;     last[IDX_DRX]=j; break;
+						case    0:            n[IDX_EMPTY]++;   last[IDX_EMPTY]=j; break;
+						case TBS_FRAME_SIZE:  n[IDX_TBS]++;     last[IDX_TBS]=j; break;
+						case TBT_FRAME_SIZE:  n[IDX_TBT]++;     last[IDX_TBT]=j; break;
+						case COR_FRAME_SIZE:  n[IDX_COR]++;     last[IDX_COR]=j; break;
+						case DRX_FRAME_SIZE:  n[IDX_DRX]++;     last[IDX_DRX]=j; break;
+						case DRX8_FRAME_SIZE: n[IDX_DRX8]++;    last[IDX_DRX8]=j;  break;
 						default:
 							LOGC(L_DEBUG, "Bad size: " + LXS(t->mhdrs[j].msg_len), TRACE_COLORS);
 							n[IDX_ODDBALL]++; last[IDX_ODDBALL]=j; break;
 					}
 				}
 				switch(t->fsize){
-					case    0:           curIdx = IDX_EMPTY;   break;
-					case TBS_FRAME_SIZE: curIdx = IDX_TBS;     break;
-					case TBT_FRAME_SIZE: curIdx = IDX_TBT;     break;
-					case COR_FRAME_SIZE: curIdx = IDX_COR;     break;
-					case DRX_FRAME_SIZE: curIdx = IDX_DRX;     break;
-					default:             curIdx = IDX_ODDBALL; break;
+					case    0:            curIdx = IDX_EMPTY;   break;
+					case TBS_FRAME_SIZE:  curIdx = IDX_TBS;     break;
+					case TBT_FRAME_SIZE:  curIdx = IDX_TBT;     break;
+					case COR_FRAME_SIZE:  curIdx = IDX_COR;     break;
+					case DRX_FRAME_SIZE:  curIdx = IDX_DRX;     break;
+					case DRX8_FRAME_SIZE: curIdx = IDX_DRX8;    break;
+					default:              curIdx = IDX_ODDBALL; break;
 				}
 				
 				// find the maximum count of packets whose size is not our current size
@@ -428,6 +460,7 @@ public:
 					LOGC(L_FATAL, "[Receiver] n[4]  " + LXS(n[4]), FATAL_COLORS );
 					LOGC(L_FATAL, "[Receiver] n[5]  " + LXS(n[5]), FATAL_COLORS );
 					LOGC(L_FATAL, "[Receiver] n[6]  " + LXS(n[6]), FATAL_COLORS );
+					LOGC(L_FATAL, "[Receiver] n[7]  " + LXS(n[7]), FATAL_COLORS );
 					CANCEL_TICKET();
 					RESUME_RECEPTION();
 					/* CONTINUE_WITH_TICKET(); */
@@ -442,7 +475,8 @@ public:
 				}
 				
 				// get the new format based on deeper packet inspection once we know the new size
-				DrxFrame* f; // only drx might require looking at the actual frame
+				DrxFrame* f; // only drx and drx8 might require looking at the actual frame
+				Drx8Frame* f8;
 				switch(new_frame_size){
 					case    0:
 						// ignore, not a mode change
@@ -475,9 +509,10 @@ public:
 						newFormat = DataFormat::getFormatByName("DEFAULT_COR");
 						break;
 					case DRX_FRAME_SIZE:
-						// changed to DRX
+					case DRX8_FRAME_SIZE:
+						// changed to DRX or DRX8
 						f = (DrxFrame*) t->frames[last_seen];
-						if (!setNewFmtDrx(bswap16(f->header.decFactor))){
+						if (!setNewFmtDrx(bswap16(f->header.decFactor), f->header.drx_is_adp)){
 							CANCEL_TICKET();
 							RESUME_RECEPTION();
 							/* CONTINUE_WITH_TICKET(); */
@@ -562,6 +597,7 @@ private:
 	size_t                         bufsize;
 	size_t                         transferSize;
 	int                            currentDrxDecFactor; // to detect mode changes
+	bool                           currentIsDrx8; // to detect mode changes
 
 	// buffer geometry change stuff
 	volatile bool                  resetRequired;
@@ -720,6 +756,7 @@ private:
 		this->currentFormat       = newFormat;
 		this->transferSize        = newTransferSize;
 		this->currentDrxDecFactor = newFormat.getDecFactor();
+		this->currentIsDrx8       = (newFormat.getBitDepth() == 8);
 		this->resetRequired       = false;
 		return true;
 

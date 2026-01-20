@@ -51,26 +51,31 @@
 #include "LwaDataFormats.h"
 
 DataFormat::FormatList DataFormat::knownFormats = map_list_of
-	("DEFAULT_DRX",   DataFormat("DRX_GENERIC",  4128ll,   79014048ll, PT_DRX,     -1 ))
-	("DEFAULT_TBT",   DataFormat("DEFAULT_TBT",  (28ll+TBX_STAND_COUNT*TBT_SAMPLES_PER_STAND),  117440512ll, PT_TBT,     -1 ))
-	("DEFAULT_TBS",   DataFormat("DEFAULT_TBS",  (28ll+TBX_STAND_COUNT*TBS8_SAMPLES_PER_STAND),   98976999ll, PT_TBS,     -1 ))
-	("DEFAULT_COR",   DataFormat("DEFAULT_COR",  2336ll,  117440512ll, PT_FSC,     -1 ))
+	("DEFAULT_DRX",   DataFormat("DRX_GENERIC",  4128ll,   79014048ll, PT_DRX,     -1, 4 ))
+	("DEFAULT_TBT",   DataFormat("DEFAULT_TBT",  (28ll+TBX_STAND_COUNT*TBT_SAMPLES_PER_STAND),   117440512ll, PT_TBT,     -1, 4 ))
+	("DEFAULT_TBS",   DataFormat("DEFAULT_TBS",  (28ll+TBX_STAND_COUNT*TBS8_SAMPLES_PER_STAND),   98976999ll, PT_TBS,     -1, 4 ))
+	("DEFAULT_COR",   DataFormat("DEFAULT_COR",  2336ll,  117440512ll, PT_FSC,     -1, 4 ))
+	("DEFAULT_DRX8",  DataFormat("DRX8_GENERIC", 8224ll,  157415584ll, PT_DRX8,    -1, 8 ))
 
-	("TBS_FILT_8",    DataFormat("TBS_FILT_8",   (28ll+TBX_STAND_COUNT*TBS8_SAMPLES_PER_STAND),   98976999ll, PT_TBS,     -1 ))
+	("TBS_FILT_8",    DataFormat("TBS_FILT_8",   (28ll+TBX_STAND_COUNT*TBS8_SAMPLES_PER_STAND),   98976999ll, PT_TBS,     -1, 4 ))
 
-	("DRX_FILT_1",    DataFormat("DRX_FILT_1",   4128ll,    1011360ll, PT_DRX,    784 ))
-	("DRX_FILT_2",    DataFormat("DRX_FILT_2",   4128ll,    2018592ll, PT_DRX,    392 ))
-	("DRX_FILT_3",    DataFormat("DRX_FILT_3",   4128ll,    4033056ll, PT_DRX,    196 ))
-	("DRX_FILT_4",    DataFormat("DRX_FILT_4",   4128ll,    8066112ll, PT_DRX,     98 ))
-	("DRX_FILT_5",    DataFormat("DRX_FILT_5",   4128ll,   19756608ll, PT_DRX,     40 ))
-	("DRX_FILT_6",    DataFormat("DRX_FILT_6",   4128ll,   39509088ll, PT_DRX,     20 ))
-	("DRX_FILT_7",    DataFormat("DRX_FILT_7",   4128ll,   79014048ll, PT_DRX,     10 ))
+	("DRX_FILT_1",    DataFormat("DRX_FILT_1",   4128ll,    1011360ll, PT_DRX,    784, 4 ))
+	("DRX_FILT_2",    DataFormat("DRX_FILT_2",   4128ll,    2018592ll, PT_DRX,    392, 4 ))
+	("DRX_FILT_3",    DataFormat("DRX_FILT_3",   4128ll,    4033056ll, PT_DRX,    196, 4 ))
+	("DRX_FILT_4",    DataFormat("DRX_FILT_4",   4128ll,    8066112ll, PT_DRX,     98, 4 ))
+	("DRX_FILT_5",    DataFormat("DRX_FILT_5",   4128ll,   19756608ll, PT_DRX,     40, 4 ))
+	("DRX_FILT_6",    DataFormat("DRX_FILT_6",   4128ll,   39509088ll, PT_DRX,     20, 4 ))
+	("DRX_FILT_7",    DataFormat("DRX_FILT_7",   4128ll,   79014048ll, PT_DRX,     10, 4 ))
+
+	("DRX8_FILT_1",   DataFormat("DRX8_FILT_1",  8224ll,    2006656ll, PT_DRX8,   784, 8 ))
+	("DRX8_FILT_2",   DataFormat("DRX8_FILT_2",  8224ll,    4013312ll, PT_DRX8,   392, 8 ))
+	("DRX8_FILT_3",   DataFormat("DRX8_FILT_3",  8224ll,    8026624ll, PT_DRX8,   196, 8 ))
+	("DRX8_FILT_4",   DataFormat("DRX8_FILT_4",  8224ll,   16061472ll, PT_DRX8,    98, 8 ))
+	("DRX8_FILT_5",   DataFormat("DRX8_FILT_5",  8224ll,   39351840ll, PT_DRX8,    40, 8 ))
+	("DRX8_FILT_6",   DataFormat("DRX8_FILT_6",  8224ll,   78703680ll, PT_DRX8,    20, 8 ))
+	("DRX8_FILT_7",   DataFormat("DRX8_FILT_7",  8224ll,  157415584ll, PT_DRX8,    10, 8 ))
 
 ;
 const string DataFormat::defaultFormatName = "DRX_FILT_7";
 
 INIT_ACCESS_MUTEX_ST(DataFormat);
-
-
-
-

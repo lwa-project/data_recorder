@@ -10,7 +10,7 @@
 #define FREQ_FROM_FREQ_CODE(f) (((double)f) * FREQ_CODE_FACTOR)
 #define SAMPLES_PER_SECOND     196000000l
 
-enum Mode {DRX, TBS, TBT, COR, RAW};
+enum Mode {DRX, DRX8, TBS, TBT, COR, RAW};
 
 #ifndef TBX_STAND_COUNT
 #define TBX_STAND_COUNT 256
@@ -26,6 +26,10 @@ enum Mode {DRX, TBS, TBT, COR, RAW};
 
 #ifndef DRXFRAME_H_
 	#include "DrxFrame.h"
+#endif
+
+#ifndef DRX8FRAME_H_
+	#include "Drx8Frame.h"
 #endif
 
 #ifndef CORFRAME_H_

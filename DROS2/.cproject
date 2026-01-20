@@ -63,7 +63,7 @@
 									<listOptionValue builtIn="false" value="pthread"/>
 									<listOptionValue builtIn="false" value="fftw3f"/>
 								</option>
-								<option id="gnu.cpp.link.option.flags.2143618899" name="Linker flags" superClass="gnu.cpp.link.option.flags" value="-pthread  -std=c++11   -march=native -rdynamic" valueType="string"/>
+								<option id="gnu.cpp.link.option.flags.2143618899" name="Linker flags" superClass="gnu.cpp.link.option.flags" value="-pthread  -std=c++17   -march=native -rdynamic" valueType="string"/>
 								<option id="gnu.cpp.link.option.debugging.gprof.1873732752" name="Generate gprof information (-pg)" superClass="gnu.cpp.link.option.debugging.gprof" value="true" valueType="boolean"/>
 								<option id="gnu.cpp.link.option.debugging.prof.1032163262" name="Generate prof information (-p)" superClass="gnu.cpp.link.option.debugging.prof" value="true" valueType="boolean"/>
 								<inputType id="cdt.managedbuild.tool.gnu.cpp.linker.input.1382640020" superClass="cdt.managedbuild.tool.gnu.cpp.linker.input">

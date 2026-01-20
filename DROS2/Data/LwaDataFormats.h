@@ -60,4 +60,7 @@
 #include "TbsFrame.h"
 #include "CorFrame.h"
 
+// NDP
+#include "Drx8Frame.h"
+
 #endif /* LWADATAFORMATS_H_ */

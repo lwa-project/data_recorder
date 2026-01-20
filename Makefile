@@ -60,7 +60,7 @@ install: backup_config
 		$(FILES)/uploadLogfile.sh \
 		$(WORKSPACE)/DROS2/Scripts/StorageControl.sh
 	install -b -g root -o root -m 644 -t /etc/systemd/system \
-	  $(FILES)/dros-dr*.service
+		$(FILES)/dros-dr*.service
 	@if [ -f "/BACKUP.defaults_v2.cfg" ]; then echo "Restoring current configuration..."; cp /BACKUP.defaults_v2.cfg $(INSTALL_LOCATION)/config/defaults_v2.cfg; fi
 	@echo 
 	@echo "################################################################"

@@ -137,6 +137,36 @@ void Plugin::stop(){
 
 
 
+void* Plugin::peekNextIn(size_t size){
+	if (!in.t){
+		bool done=false;
+		while (!done){
+			in.t = QueuedSubscriber::getNext();
+			if (!in.t){
+				return NULL;
+			}
+			if (in.t->cnt_used == 0){
+				in.t->put();
+				continue;
+			}
+			if (in.t->fsize < size){
+				in.t->put();
+				continue;
+			}
+			in.next=0;
+			in.done=0;
+			done=true;
+		}
+	}
+	if (!in.t){
+		return NULL;
+	}
+	if (in.next == in.t->cnt_used){
+		return NULL;
+	}
+	return in.t->iovs[in.next].iov_base;
+}
+
 void* Plugin::getNextIn(size_t size){
 	if (!in.t){
 		bool done=false;
@@ -267,5 +297,3 @@ size_t Plugin::getSendRate(){
 	last=present;
 	return temp;
 }
-
-

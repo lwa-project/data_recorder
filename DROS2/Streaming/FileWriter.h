@@ -334,6 +334,9 @@ private:
 				case DRX_FRAME_SIZE:
 					sid = (size_t*)(&((DrxFrame*)t->iovs[i].iov_base)->samples[0]);
 					break;
+				case DRX8_FRAME_SIZE:
+					sid = (size_t*)(&((Drx8Frame*)t->iovs[i].iov_base)->samples[0]);
+					break;
 				default:
 					sid=NULL;
 					break;
