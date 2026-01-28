@@ -21,6 +21,10 @@ jobs:
             pkg-config \
             software-properties-common
       - uses: actions/checkout@v3
-      - name: "Build"
+      - name: "Build - Single Instance"
         run: |
           make all
+      - name: "Build - Multiple Instances"
+        run: |
+           make clean
+           ./build_helper.py 1 2 
