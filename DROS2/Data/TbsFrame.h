@@ -63,6 +63,8 @@ extern "C"{
 
 #define Fs_Day (196l* 1000000l * 60l *60l * 24l) /*16934400000000l*/
 
+#define TBS_PKTS_PER_SEC 23926 /* Really 196e6 / 8192  = 23925.78125 */
+
 #include <fftw3.h>
 #include <stdint.h>
 #include "Complex.h"
@@ -122,11 +124,30 @@ typedef struct __UnpackedTbs12Frame{
 	UnpackedSample  samples[TBS12_SAMPLES_PER_STAND*TBX_STAND_COUNT];
 } __attribute__((packed)) UnpackedTbs12Frame;
 
+#define TBS4_FRAME_SIZE (sizeof(Tbs4Frame))
+#define TBS4_TUNINGS            2l
+#define TBS4_POLARIZATIONS      2l
+#define TBS4_STREAMS            (TBS4_TUNINGS*TBS4_POLARIZATIONS)
+#define TBS4_DRATE              (TBS4_FRAME_SIZE*TBS_PKTS_PER_SEC)
 
+#define TBS8_FRAME_SIZE (sizeof(Tbs8Frame))
+#define TBS8_TUNINGS            2l
+#define TBS8_POLARIZATIONS      2l
+#define TBS8_STREAMS            (TBS8_TUNINGS*TBS8_POLARIZATIONS)
+#define TBS8_DRATE              (TBS8_FRAME_SIZE*TBS_PKTS_PER_SEC)
+
+// same as the above
 #define TBS_FRAME_SIZE (sizeof(TbsFrame))
-#define TBS_TUNINGS            	2l
-#define TBS_POLARIZATIONS     	2l
-#define TBS_STREAMS            	(TBS_TUNINGS*TBS_POLARIZATIONS)
+#define TBS_TUNINGS             2l
+#define TBS_POLARIZATIONS       2l
+#define TBS_STREAMS             (TBS_TUNINGS*TBS_POLARIZATIONS)
+#define TBS_DRATE               (TBS_FRAME_SIZE*TBS_PKTS_PER_SEC)
+
+#define TBS12_FRAME_SIZE (sizeof(Tbs12Frame))
+#define TBS12_TUNINGS           2l
+#define TBS12_POLARIZATIONS     2l
+#define TBS12_STREAMS           (TBS12_TUNINGS*TBS12_POLARIZATIONS)
+#define TBS12_DRATE             (TBS12_FRAME_SIZE*TBS_PKTS_PER_SEC)
 
 
 #ifdef __cplusplus

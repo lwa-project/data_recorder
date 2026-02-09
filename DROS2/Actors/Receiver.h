@@ -134,6 +134,7 @@ public:
 		transferSize(0),
 		currentDrxDecFactor(-1),
 		currentIsDrx8(false),
+		currentTbsNChan(-1),
 		resetRequired(true),
 		newFormat(DataFormat::getFormatByName(DataFormat::defaultFormatName)),
 		newTransferSize(IDEAL_TRANSFER_SIZE),
@@ -198,6 +199,27 @@ public:
 			}
 			newFormat = DataFormat::getFormatByName("DEFAULT_DRX");
 		}
+		return true;
+	}
+
+	bool setNewFmtTbs(int nChan){
+		static TimeStamp lastErrorLogged = Time::now();
+		static size_t errCount = 0;
+		switch(nChan){
+			case 12: newFormat = DataFormat::getFormatByName("TBS_FILT_9"); return true; break;
+			case 8:  newFormat = DataFormat::getFormatByName("TBS_FILT_8"); return true; break;
+			case 4:  newFormat = DataFormat::getFormatByName("TBS_FILT_7"); return true; break;
+			default:
+				if (Time::compareTimestamps(Time::addTime(lastErrorLogged, 5000), Time::now()) <=0){
+					lastErrorLogged = Time::now();
+					LOGC(L_FATAL, "[Receiver] Bad TBS channel count: " + LXS(nChan) + " {"+LXS(errCount)+" previous occurrences}", FATAL_COLORS );
+						errCount = 0;
+				} else {
+					errCount++;
+				}
+				break;
+		}
+		newFormat = DataFormat::getFormatByName("DEFAULT_TBS");
 		return true;
 	}
 
@@ -327,12 +349,14 @@ public:
 				}
 			} else {
 			// something received
-				size_t fsize         = currentFormat.getFrameSize();
-				bool   lookMore      = false;
-				bool   drxRateChange = false;
-				size_t cnt           = (size_t) res;
+				size_t fsize          = currentFormat.getFrameSize();
+				bool   lookMore       = false;
+				bool   drxRateChange  = false;
+				bool   tbsChanChange = false;
+				size_t cnt            = (size_t) res;
 				uint16_t newDrxDecFactor;
 				bool isDrx8 = false;
+				uint16_t newTbsNChan;
 				for (size_t c=0; c<(size_t)res; c++){
 					bytesReceived += t->mhdrs[c].msg_len;
 				}
@@ -341,19 +365,21 @@ public:
 				size_t tt = 0;
 				switch(fsize){
 					case DRX_FRAME_SIZE:
+					case DRX8_FRAME_SIZE:
+						// Headers are the same
 						tt = __builtin_bswap64(*((size_t*)(&((DrxFrame*)t->iovs[cnt-1].iov_base)->header.timeTag)));
 						break;
-					case TBS_FRAME_SIZE:
-						tt = __builtin_bswap64(*((size_t*)(&((TbsFrame*)t->iovs[cnt-1].iov_base)->header.timeTag)));
+					case TBS4_FRAME_SIZE:
+					case TBS8_FRAME_SIZE:
+					case TBS12_FRAME_SIZE:
+						// Headers are the same
+						tt = __builtin_bswap64(*((size_t*)(&((Tbs4Frame*)t->iovs[cnt-1].iov_base)->header.timeTag)));
 						break;
 					case TBT_FRAME_SIZE:
 						tt = __builtin_bswap64(*((size_t*)(&((TbtFrame*)t->iovs[cnt-1].iov_base)->header.timeTag)));
 					case COR_FRAME_SIZE:
 						tt = __builtin_bswap64(*((size_t*)(&((CorFrame*)t->iovs[cnt-1].iov_base)->header.timeTag)));
 					  break;
-					case DRX8_FRAME_SIZE:
-						tt = __builtin_bswap64(*((size_t*)(&((Drx8Frame*)t->iovs[cnt-1].iov_base)->header.timeTag)));
-						break;
 					default : break;
 				}
 				if (tt!=0){
@@ -376,6 +402,12 @@ public:
 							drxRateChange=true;
 						}
 					}
+					if (fsize == TBS4_FRAME_SIZE || fsize == TBS8_FRAME_SIZE || fsize == TBS12_FRAME_SIZE ) {
+						newTbsNChan = bswap16(((Tbs4Frame*) t->frames[j])->header.nChan);
+						if (newTbsNChan != currentTbsNChan){
+							tbsChanChange=true;
+						}
+					}
 					if ((size_t) t->mhdrs[j].msg_len != fsize){
 						lookMore=true;
 						break;
@@ -385,6 +417,15 @@ public:
 				// check in case drx rate changed
 				if ((fsize == DRX_FRAME_SIZE || fsize == DRX8_FRAME_SIZE) && drxRateChange && !lookMore){
 					if (!setNewFmtDrx(newDrxDecFactor, isDrx8)){
+						CANCEL_TICKET();
+						RESUME_RECEPTION();
+						/* CONTINUE_WITH_TICKET(); */
+					}
+				}
+				
+				// check in case tbs channel count changed
+				if ((fsize == TBS4_FRAME_SIZE || fsize == TBS8_FRAME_SIZE || fsize == TBS12_FRAME_SIZE) && tbsChanChange && !lookMore) {
+					if (!setNewFmtTbs(newTbsNChan)){
 						CANCEL_TICKET();
 						RESUME_RECEPTION();
 						/* CONTINUE_WITH_TICKET(); */
@@ -409,30 +450,34 @@ public:
 				// some count variables for deeper inspection
 				size_t n[8]    = {0,0,0,0,0,0,0,0};         // in order : error, empty, tbs, tbt, cor, drx, drx8, odd
 				size_t last[8] = {0,0,0,0,0,0,0,0};         // in order : error, empty, tbs, tbt, cor, drx, drx8, odd
-				int    sz[8]   = {0,-1,TBS_FRAME_SIZE,TBT_FRAME_SIZE,COR_FRAME_SIZE,DRX_FRAME_SIZE,DRX8_FRAME_SIZE,-2}; // in order : error, empty, tbs, tbt, tbf, cor, drx, drx8, odd
+				int    sz[8]   = {0,-1,TBS8_FRAME_SIZE,TBT_FRAME_SIZE,COR_FRAME_SIZE,DRX_FRAME_SIZE,DRX8_FRAME_SIZE,-2}; // in order : error, empty, tbs, tbt, tbf, cor, drx, drx8, odd
 				size_t curIdx;
 				// count packet sizes
 				for (size_t j=0; j<(size_t) res; j++){
 					switch(t->mhdrs[j].msg_len){
-						case    0:            n[IDX_EMPTY]++;   last[IDX_EMPTY]=j; break;
-						case TBS_FRAME_SIZE:  n[IDX_TBS]++;     last[IDX_TBS]=j; break;
-						case TBT_FRAME_SIZE:  n[IDX_TBT]++;     last[IDX_TBT]=j; break;
-						case COR_FRAME_SIZE:  n[IDX_COR]++;     last[IDX_COR]=j; break;
-						case DRX_FRAME_SIZE:  n[IDX_DRX]++;     last[IDX_DRX]=j; break;
-						case DRX8_FRAME_SIZE: n[IDX_DRX8]++;    last[IDX_DRX8]=j;  break;
+						case    0:             n[IDX_EMPTY]++;   last[IDX_EMPTY]=j; break;
+						case TBS4_FRAME_SIZE:  // fall through
+						case TBS8_FRAME_SIZE:  // fall through
+						case TBS12_FRAME_SIZE: n[IDX_TBS]++;     last[IDX_TBS]=j; break;
+						case TBT_FRAME_SIZE:   n[IDX_TBT]++;     last[IDX_TBT]=j; break;
+						case COR_FRAME_SIZE:   n[IDX_COR]++;     last[IDX_COR]=j; break;
+						case DRX_FRAME_SIZE:   n[IDX_DRX]++;     last[IDX_DRX]=j; break;
+						case DRX8_FRAME_SIZE:  n[IDX_DRX8]++;    last[IDX_DRX8]=j;  break;
 						default:
 							LOGC(L_DEBUG, "Bad size: " + LXS(t->mhdrs[j].msg_len), TRACE_COLORS);
 							n[IDX_ODDBALL]++; last[IDX_ODDBALL]=j; break;
 					}
 				}
 				switch(t->fsize){
-					case    0:            curIdx = IDX_EMPTY;   break;
-					case TBS_FRAME_SIZE:  curIdx = IDX_TBS;     break;
-					case TBT_FRAME_SIZE:  curIdx = IDX_TBT;     break;
-					case COR_FRAME_SIZE:  curIdx = IDX_COR;     break;
-					case DRX_FRAME_SIZE:  curIdx = IDX_DRX;     break;
-					case DRX8_FRAME_SIZE: curIdx = IDX_DRX8;    break;
-					default:              curIdx = IDX_ODDBALL; break;
+					case    0:             curIdx = IDX_EMPTY;   break;
+					case TBS4_FRAME_SIZE:  // fall through
+					case TBS8_FRAME_SIZE:  // fall through
+					case TBS12_FRAME_SIZE: curIdx = IDX_TBS;     break;
+					case TBT_FRAME_SIZE:   curIdx = IDX_TBT;     break;
+					case COR_FRAME_SIZE:   curIdx = IDX_COR;     break;
+					case DRX_FRAME_SIZE:   curIdx = IDX_DRX;     break;
+					case DRX8_FRAME_SIZE:  curIdx = IDX_DRX8;    break;
+					default:               curIdx = IDX_ODDBALL; break;
 				}
 				
 				// find the maximum count of packets whose size is not our current size
@@ -475,8 +520,9 @@ public:
 				}
 				
 				// get the new format based on deeper packet inspection once we know the new size
-				DrxFrame* f; // only drx and drx8 might require looking at the actual frame
+				DrxFrame* f; // only drx, drx8, and tbs might require looking at the actual frame
 				Drx8Frame* f8;
+				Tbs4Frame* ft;
 				switch(new_frame_size){
 					case    0:
 						// ignore, not a mode change
@@ -496,9 +542,17 @@ public:
 						CANCEL_TICKET();
 						RESUME_RECEPTION();
 						/* CONTINUE_WITH_TICKET(); */
-					case TBS_FRAME_SIZE:
+					case TBS4_FRAME_SIZE:
+					case TBS8_FRAME_SIZE:
+					case TBS12_FRAME_SIZE:
 						// changed to TBS
 						newFormat = DataFormat::getFormatByName("DEFAULT_TBS");
+						ft = (Tbs4Frame*) t->frames[last_seen];
+						if (!setNewFmtTbs(bswap16(ft->header.nChan))){
+							CANCEL_TICKET();
+							RESUME_RECEPTION();
+							/* CONTINUE_WITH_TICKET(); */
+						}
 						break;
 					case TBT_FRAME_SIZE:
 						// changed to TBT
@@ -598,6 +652,7 @@ private:
 	size_t                         transferSize;
 	int                            currentDrxDecFactor; // to detect mode changes
 	bool                           currentIsDrx8; // to detect mode changes
+	int                            currentTbsNChan; // to detect mode changes
 
 	// buffer geometry change stuff
 	volatile bool                  resetRequired;
