@@ -32,7 +32,7 @@ deps:
 	sudo apt-get install build-essential libgdbm-dev libgdbm3 libfuse-dev libfuse2 lm-sensors smartmontools mdadm libboost-all-dev libfftw3-dev
 
 backup_config:
-	@if [ -f "$(INSTALL_LOCATION)/config/defaults_v2.cfg" ]; then echo "Backing up current configuration..."; cp $(INSTALL_LOCATION)/config/defaults_v2.cfg /BACKUP.defaults_v2.cfg; fi
+	@if [ -f "$(INSTALL_LOCATION)/config/defaults_v2.cfg" ]; then echo "Backing up current configuration..."; cp $(INSTALL_LOCATION)/config/defaults_v2.cfg ./BACKUP.defaults_v2.cfg; fi
 
 install: backup_config
 #	cp $(INSTALL_LOCATION)/config/formats.cfg ./formats.cfg
@@ -61,7 +61,7 @@ install: backup_config
 		$(WORKSPACE)/DROS2/Scripts/StorageControl.sh
 	install -b -g root -o root -m 644 -t /etc/systemd/system \
 		$(FILES)/dros-dr*.service
-	@if [ -f "/BACKUP.defaults_v2.cfg" ]; then echo "Restoring current configuration..."; cp /BACKUP.defaults_v2.cfg $(INSTALL_LOCATION)/config/defaults_v2.cfg; fi
+	@if [ -f "./BACKUP.defaults_v2.cfg" ]; then echo "Restoring current configuration..."; cp ./BACKUP.defaults_v2.cfg $(INSTALL_LOCATION)/config/defaults_v2.cfg; rm -f ./BACKUP.defaults_v2.cfg; fi
 	@echo 
 	@echo "################################################################"
 	@echo "# Notice:"
@@ -72,7 +72,7 @@ install: backup_config
 	@echo "# The default configuration files are installed to:"
 	@echo "#       $(INSTALL_LOCATION)/config/"
 	@echo "# "
-	@echo "# You must modify defaults.cfg.example to reflect your network environment."
+	@echo "# You must modify defaults_v2.cfg.example to reflect your network environment."
 	@echo "# "
 	@echo "# To launch the software, execute:"
 	@echo "#       $(INSTALL_LOCATION)/bin/DROS2"
