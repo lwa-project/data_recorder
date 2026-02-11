@@ -1,0 +1,172 @@
+% appendix-c.tex - Data Formats Reference
+
+\chapter{Data Formats Reference}
+\label{app:data-formats}
+
+\begin{newInVersion}{2.4.1}
+This appendix is new in version~2.4.1.  It provides a complete reference of all
+data formats supported by DROS2.  The previously supported TBN and TBW formats
+have been removed; DRX8, TBT, TBS, and COR formats have been added.
+\end{newInVersion}
+
+\section{Format Summary}
+
+All data formats consist of a frame header followed by sample data transmitted
+as UDP packets from NDP.  The DR records complete frames (header~+ samples) to
+disk.  Table~\ref{tab:format-summary} summarizes the supported formats.
+
+\begin{longtable}{l r r l}
+\caption{Data Format Summary}
+\label{tab:format-summary} \\
+\toprule
+\textbf{Format Type} & \textbf{Frame Size (bytes)} & \textbf{Samples/Frame}
+    & \textbf{Sample Type} \\
+\midrule
+\endfirsthead
+\endhead
+\bottomrule
+\endfoot
+
+DRX  & 4128  & 4096 & 4-bit complex (PackedSample4)  \\
+DRX8 & 8224  & 4096 & 8-bit complex (PackedSample8)  \\
+TBT  & $28 + 256 \times 32 = 8220$ & $256 \times 32$ & 4-bit complex  \\
+TBS (4 ch)  & $28 + 256 \times 8 = 2076$   & $256 \times 8$  & 4-bit complex  \\
+TBS (8 ch)  & $28 + 256 \times 16 = 4124$  & $256 \times 16$ & 4-bit complex  \\
+TBS (12 ch) & $28 + 256 \times 24 = 6172$  & $256 \times 24$ & 4-bit complex  \\
+COR  & 2336  & 288  & 64-bit complex (PackedSample64) \\
+
+\end{longtable}
+
+\begin{noteBox}
+TBT and TBS frame sizes depend on the number of stands
+(\texttt{TBX\_STAND\_COUNT}), which defaults to 256.  The sizes shown above
+assume this default value.  TBT uses $16 \times 2 = 32$ samples per stand
+(16~time samples, 2~polarizations).  TBS uses $N_\text{chan} \times 2$
+samples per stand, where $N_\text{chan}$ is the number of frequency channels
+(4, 8, or~12).
+\end{noteBox}
+
+\section{DRX Formats}
+
+DRX carries 4-bit complex samples from the digital receiver.  Four streams
+are produced per beam (2~tunings $\times$ 2~polarizations).  The seven filter
+(decimation) settings listed in Table~\ref{tab:drx-formats} are available, corresponding to sample rates from
+250~kHz to 19.6~MHz.
+
+\begin{longtable}{l r r l}
+\caption{DRX Data Formats}
+\label{tab:drx-formats} \\
+\toprule
+\textbf{Format Name} & \textbf{Dec.\ Factor} & \textbf{Rate (bytes/s)}
+    & \textbf{Sample Rate} \\
+\midrule
+\endfirsthead
+\endhead
+\bottomrule
+\endfoot
+
+\texttt{DRX\_FILT\_1}  & 784 &   1,011,360 & 250~kHz  \\
+\texttt{DRX\_FILT\_2}  & 392 &   2,018,592 & 500~kHz  \\
+\texttt{DRX\_FILT\_3}  & 196 &   4,033,056 & 1~MHz    \\
+\texttt{DRX\_FILT\_4}  &  98 &   8,066,112 & 2~MHz    \\
+\texttt{DRX\_FILT\_5}  &  40 &  19,756,608 & 4.9~MHz  \\
+\texttt{DRX\_FILT\_6}  &  20 &  39,509,088 & 9.8~MHz  \\
+\texttt{DRX\_FILT\_7}  &  10 &  79,014,048 & 19.6~MHz \\
+\texttt{DEFAULT\_DRX}  &  -- &  79,014,048 & 19.6~MHz (default) \\
+
+\end{longtable}
+
+\section{DRX8 Formats}
+
+DRX8 is identical to DRX except that samples are 8-bit complex instead of
+4-bit complex, resulting in approximately double the data rate
+(Table~\ref{tab:drx8-formats}).
+
+\begin{longtable}{l r r l}
+\caption{DRX8 Data Formats}
+\label{tab:drx8-formats} \\
+\toprule
+\textbf{Format Name} & \textbf{Dec.\ Factor} & \textbf{Rate (bytes/s)}
+    & \textbf{Sample Rate} \\
+\midrule
+\endfirsthead
+\endhead
+\bottomrule
+\endfoot
+
+\texttt{DRX8\_FILT\_1} & 784 &   2,006,656 & 250~kHz  \\
+\texttt{DRX8\_FILT\_2} & 392 &   4,013,312 & 500~kHz  \\
+\texttt{DRX8\_FILT\_3} & 196 &   8,026,624 & 1~MHz    \\
+\texttt{DRX8\_FILT\_4} &  98 &  16,061,472 & 2~MHz    \\
+\texttt{DRX8\_FILT\_5} &  40 &  39,351,840 & 4.9~MHz  \\
+\texttt{DRX8\_FILT\_6} &  20 &  78,703,680 & 9.8~MHz  \\
+\texttt{DRX8\_FILT\_7} &  10 & 157,415,584 & 19.6~MHz \\
+\texttt{DEFAULT\_DRX8} &  -- & 157,415,584 & 19.6~MHz (default) \\
+
+\end{longtable}
+
+\section{TBT Format}
+
+TBT (Transient Buffer --- Triggered) carries time-domain voltage data for all stands
+at a single tuning (Table~\ref{tab:tbt-format}).  Each frame contains data for all stands with 16~time
+samples per channel (2~channels per stand, corresponding to 2~polarizations).
+
+\begin{longtable}{l r}
+\caption{TBT Data Format}
+\label{tab:tbt-format} \\
+\toprule
+\textbf{Format Name} & \textbf{Rate (bytes/s)} \\
+\midrule
+\endfirsthead
+\endhead
+\bottomrule
+\endfoot
+
+\texttt{DEFAULT\_TBT} & 117,440,512 \\
+
+\end{longtable}
+
+\section{TBS Format}
+
+TBS (Transient Buffer --- Streaming) carries channelized voltage data for all stands
+(Table~\ref{tab:tbs-formats}).
+Three channel configurations are supported (4, 8, and 12~channels per
+polarization per stand); the default is 12~channels.
+
+\begin{longtable}{l l r}
+\caption{TBS Data Formats}
+\label{tab:tbs-formats} \\
+\toprule
+\textbf{Format Name} & \textbf{Channels} & \textbf{Rate (bytes/s)} \\
+\midrule
+\endfirsthead
+\endhead
+\bottomrule
+\endfoot
+
+\texttt{TBS\_FILT\_7}  &  4 &  49,670,376 \\
+\texttt{TBS\_FILT\_8}  &  8 &  98,670,824 \\
+\texttt{TBS\_FILT\_9}  & 12 & 147,671,272 \\
+\texttt{DEFAULT\_TBS}  & 12 & 147,671,272 (default) \\
+
+\end{longtable}
+
+\section{COR Format}
+
+COR (Correlator) carries correlation products (Table~\ref{tab:cor-format}).  Each frame contains 288
+64-bit complex samples.
+
+\begin{longtable}{l r}
+\caption{COR Data Format}
+\label{tab:cor-format} \\
+\toprule
+\textbf{Format Name} & \textbf{Rate (bytes/s)} \\
+\midrule
+\endfirsthead
+\endhead
+\bottomrule
+\endfoot
+
+\texttt{DEFAULT\_COR} & 117,440,512 \\
+
+\end{longtable}

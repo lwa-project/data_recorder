@@ -1,0 +1,50 @@
+% 05-safety.tex - Safety Interface
+
+\chapter{Safety Interface}
+\label{sec:safety}
+
+The DR is primarily a software system running on standard PC hardware and does
+not present significant physical safety hazards beyond those associated with
+normal computing equipment.  The following monitoring and protection mechanisms
+are provided.
+
+\section{Temperature Monitoring}
+
+CPU core temperatures are monitored via the \mib{CPU-COUNT} and
+\mib{CPU-TEMP-\{n\}} MIB entries (Section~\ref{mib:cpu-count}).  Hard drive
+temperatures are monitored via the \mib{HDD-COUNT} and \mib{HDD-TEMP-\{n\}} MIB
+entries (Section~\ref{mib:hdd-count}).  MCS or an external monitoring system
+may poll these entries to detect overheating conditions.
+
+Temperature monitoring depends on hardware support.  Some hardware may not
+report HDD temperatures; in such cases, the \mib{HDD-TEMP-\{n\}} response may be
+empty.
+
+\section{Storage Monitoring}
+
+Available storage space is tracked through the \mib{TOTAL-STORAGE} and
+\mib{REMAINING-STORAGE} MIB entries (Sections~\ref{mib:total-storage}
+and~\ref{mib:remaining-storage}).  The \cmd{REC} command checks for
+sufficient free space before scheduling a recording and rejects the request
+with an ``Insufficient Drive Space'' error if storage is insufficient.
+
+Per-device storage is also available through the \mib{DEVICE-COUNT} and
+\mib{DEVICE-STORAGE-\{n\}} MIB entries for external devices.
+
+\section{Error Recovery}
+
+If the DR enters an error state, the \cmd{INI} command
+(Section~\ref{cmd:ini}) can be used to re-initialize the system without
+requiring a full reboot.  The \texttt{-{}-flush-log} and
+\texttt{-{}-flush-data} flags provide additional control over what is reset
+during re-initialization.
+
+When deployed as a \texttt{systemd} service, DROS2 is configured to restart
+automatically after an unexpected exit, with a 60-second delay between restart
+attempts.
+
+\section{Power}
+Standard computer power safety practices apply. No special power conditioning
+or UPS is required by the DR itself, although site-level power protection is
+recommended to avoid data loss from unexpected power failure during recording
+operations.

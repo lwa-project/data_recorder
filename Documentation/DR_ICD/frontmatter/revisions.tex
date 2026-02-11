@@ -1,0 +1,89 @@
+% revisions.tex - Change record for DR ICD
+
+\changerecordheader
+
+\begin{longtable}{|p{1.2cm}|p{2.5cm}|p{2.5cm}|p{8cm}|}
+\hline
+\textbf{Version} & \textbf{Date} & \textbf{Affected Sections} & \textbf{Reason / Description} \\
+\hline
+\endfirsthead
+
+\hline
+\textbf{Version} & \textbf{Date} & \textbf{Affected Sections} & \textbf{Reason / Description} \\
+\hline
+\endhead
+
+\hline
+\endfoot
+
+0.1 & 2009-09-12 & All &
+    Initial and second drafts; corrected typos, removed extraneous material. \\
+\hline
+
+0.2 & 2009-09-24 & All &
+    Third draft; restructured MIB, removed DFD command, added mechanical/electrical
+    figures, use-case examples. \\
+\hline
+
+0.3 & 2009-10-04 & All &
+    Fourth draft; removed image matte, removed dev-stage diagnostics (except TST),
+    revised electrical connections, updated formats. \\
+\hline
+
+0.4 & 2009-10-10 & MIB, Commands &
+    Final draft; removed EJT command and OP-ERROR MIB entry. \\
+\hline
+
+0.5 & 2010-01-28 & -- &
+    Added BUF and SEL commands.  Added DRSU-COUNT, DRSU-SELECTED, DRSU-INFO-\{n\},
+    BUFFER, BUFFER-RESTRICT MIB entries.  Added NTP synchronization description.
+    Fixed formatting. \\
+\hline
+
+1.0 & 2010-02-21 & MIB, Commands &
+    Fixed typos.  UP command no longer returns TOTAL-STORAGE, no \texttt{-F} option.
+    DWN faster.  HDD-TEMP-\{n\} updated for non-reporting hardware. \\
+\hline
+
+1.1 & 2010-07-02 & \S4, MIB, Commands &
+    Partition/drive identification improved, added RAID volume support as external
+    storage devices. \\
+\hline
+
+1.2 & 2010-08-25 & MIB &
+    Fixed errors in SCHEDULE-ENTRY-\{n\} and DIRECTORY-ENTRY-\{n\} MIB response formats. \\
+\hline
+
+1.3 & 2012-02-06 & Commands &
+    Added SPC command (spectrometer) and BUF update, removed language regarding
+    deprecated data formats. \\
+\hline
+
+1.4 & 2012-03-02 & Commands, \S6 &
+    Changed spectrometer command to uniquely identify recordings.  Fixed typos in
+    spectrometer file format section. \\
+\hline
+
+2.4.1 & 2026-02-06 & All &
+    Major revision matching DROS version 2.4.1.0:
+    \begin{itemize}[nosep,leftmargin=*]
+        \item Reformatted to \texttt{lwa-icd.cls} template.
+        \item Replaced DP references with NDP throughout.
+        \item Removed TBN, TBW, and TBF data formats.
+        \item Added DRX8, TBT, TBS, and COR data format support.
+        \item Updated spectrometer documentation: multiple Stokes products
+              (XXYY, CRCI, IQUV, IV, XXCRCIYY, I), flexible FFT length and
+              integration count, Stokes metadata parameter.
+        \item Added multi-DR deployment documentation
+              (\texttt{build\_helper.py}, per-instance configuration).
+        \item Updated storage documentation: single drives preferred,
+              RAID-0 arrays still supported for legacy DRSU compatibility.
+        \item Updated configuration parameters for \texttt{defaults\_v2.cfg}.
+        \item Updated system requirements for modern Linux.
+        \item Added systemd service deployment documentation.
+        \item Added SHT, PNG, and RPT commands to command summary.
+        \item Added Appendix~C (data format reference).
+    \end{itemize} \\
+\hline
+
+\end{longtable}

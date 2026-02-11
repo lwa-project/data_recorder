@@ -1,0 +1,125 @@
+% 02-abbreviations.tex - Abbreviations, Definitions, and Conventions
+
+\chapter{Document Conventions}
+\label{sec:abbreviations}
+
+\section{Abbreviations and Acronyms}
+
+\begin{longtable}{l p{10cm}}
+\toprule
+\textbf{Abbreviation} & \textbf{Definition} \\
+\midrule
+\endfirsthead
+
+\toprule
+\textbf{Abbreviation} & \textbf{Definition} \\
+\midrule
+\endhead
+
+\bottomrule
+\endfoot
+
+AVX     & Advanced Vector Extensions \\
+COR     & Correlator (data format) \\
+DR      & Data Recorder \\
+DROS    & Data Recorder Operating Software \\
+DRX     & Digital Receiver (4-bit data format) \\
+DRX8    & Digital Receiver 8-bit (data format) \\
+DRSU    & Data Recorder Storage Unit \\
+EXT4    & Fourth Extended File System \\
+FFT     & Fast Fourier Transform \\
+FFTW    & Fastest Fourier Transform in the West (FFT library) \\
+GbE     & Gigabit Ethernet \\
+ICD     & Interface Control Document \\
+LWA     & Long Wavelength Array \\
+MCS     & Monitor and Control System \\
+MIB     & Management Information Base \\
+MJD     & Modified Julian Day \\
+MPM     & Milliseconds Past Midnight \\
+NDP     & Next-generation Digital Processor \\
+NTP     & Network Time Protocol \\
+RAID    & Redundant Array of Independent Disks \\
+SPC     & Spectrometer Command \\
+SSE     & Streaming SIMD Extensions \\
+TBS     & Transient Buffer --- Streaming (data format) \\
+TBT     & Transient Buffer --- Triggered (data format) \\
+UDP     & User Datagram Protocol \\
+
+\end{longtable}
+
+\section{Command Parameter Types}
+
+The following parameter types are used to describe command arguments and MIB
+response fields throughout this document:
+
+\begin{description}
+    \item[\textbf{uint8}:] Unsigned integer, 8~bits wide.
+
+    \item[\textbf{uint16}:] Unsigned integer, 16~bits wide.
+
+    \item[\textbf{uint32}:] Unsigned integer, 32~bits wide.
+
+    \item[\textbf{uint64}:] Unsigned integer, 64~bits wide.
+
+    \item[\textbf{ASCII-\textit{XXX}-\#}:] An ASCII string exactly \textit{XXX}
+        characters in length which is interpreted as a number.  Valid characters
+        are digits and right-padding spaces only.
+
+    \item[\textbf{ASCII-\textit{XXX}-A}:] An ASCII string exactly \textit{XXX}
+        characters in length which is interpreted as a text string.  Unless
+        otherwise noted, valid characters are letters, numbers, the underscore
+        character, and periods.
+\end{description}
+
+\section{Mark-up Conventions}
+
+\begin{longtable}{l p{4.5cm} p{6cm}}
+\toprule
+\textbf{Symbol} & \textbf{Meaning} & \textbf{Example} \\
+\midrule
+\endfirsthead
+
+\toprule
+\textbf{Symbol} & \textbf{Meaning} & \textbf{Example} \\
+\midrule
+\endhead
+
+\bottomrule
+\endfoot
+
+\textit{italics}
+    & Variable or parameter name
+    & \textit{Start MPM} \\[4pt]
+
+\texttt{fixed-width}
+    & Literal parameter or format value.
+      A single-quote (\texttt{'}) in a
+      literal format denotes a space.
+    & \texttt{AB'\_} = ``A'' + ``B'' + space + ``\_'' \\[4pt]
+
+\texttt{<\ldots>}
+    & Variable substitution; brackets
+      omitted from actual format
+    & \texttt{A<B>\_} = ``A'' + value of \textit{B} + ``\_'' \\[4pt]
+
+\texttt{[\ldots]}
+    & Optional parameter; brackets
+      omitted from actual format
+    & \texttt{A[B]\_} = ``A'' + optional \textit{B} + ``\_'' \\
+
+\end{longtable}
+
+\section{Numeric Representation Convention}
+
+Numbers, units, and their associated prefixes and suffixes conform to the
+standard of IEC~60027-2.  Specifically:
+
+\begin{itemize}
+    \item Prefixes Ki, Mi, Gi, and Ti refer to $2^{10}$, $2^{20}$, $2^{30}$,
+          and $2^{40}$, respectively.
+    \item Prefixes K, M, G, and T refer to $10^{3}$, $10^{6}$, $10^{9}$,
+          and $10^{12}$, respectively.
+    \item For binary size or rate: uppercase B represents a byte, lowercase b
+          indicates a bit (e.g., MB = megabyte = $1{,}000{,}000$~bytes;
+          Kib = kibibit = $1{,}024$~bits).
+\end{itemize}

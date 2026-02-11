@@ -1,0 +1,1213 @@
+% 04-monitor-control.tex - Monitor and Control Interface
+
+\chapter{Monitor and Control Interface}
+\label{sec:monitor-control}
+
+\section{Overview}
+
+Control and monitoring of the DR is performed by two classes of messages:
+
+\begin{enumerate}
+    \item \textbf{Monitoring messages} request system status information from the
+          DR via the Management Information Base (MIB).
+    \item \textbf{Command messages} request that the DR execute some action.
+\end{enumerate}
+
+All messages are exchanged over UDP using the format defined in the MCS Common
+ICD (LWA Engineering Memo MCS0005).  If the DR cannot comply with a request, a rejection
+response containing an error message (see Appendix~\ref{app:errors}) is
+returned.
+
+\section{System Configuration}
+\label{sec:config}
+
+DROS2 is configured through the \texttt{defaults\_v2.cfg} file, read on
+startup or when manually reinitialized via the \cmd{INI} command
+(Section~\ref{cmd:ini}).  The configuration parameters are described in
+Section~\ref{sec:configuration}.
+
+\begin{newInVersion}{2.4.1}
+The configuration file has been renamed from \texttt{defaults.cfg} to
+\texttt{defaults\_v2.cfg}.  The \texttt{MessageOutURL} parameter has been
+removed; responses are sent to the originating IP address of each request.
+\end{newInVersion}
+
+In a multi-DR deployment (Section~\ref{sec:multi-dr}), each DR instance has its
+own configuration directory with a separate \texttt{defaults\_v2.cfg} file.
+
+\section{Time Synchronization}
+
+The DR uses \texttt{ntpd} or \texttt{systemd-timesyncd} for time
+synchronization.  The DR also synchronizes its internal clock to station time
+on each boot-up.  The \cmd{SYN} command (Section~\ref{cmd:syn}) explicitly re-synchronizes time, as does the \cmd{INI} command (Section~\ref{cmd:ini}).
+
+\section{Timing Restrictions}
+
+\begin{itemize}
+    \item The DR supports up to 100 commands per second.
+    \item Commands that schedule recording must allow at least 5~seconds between
+          receipt and start of recording.
+    \item Recordings may not be scheduled to begin within 5~seconds of the
+          termination of a prior recording session.
+\end{itemize}
+
+
+%% ===========================================================================
+%%  MIB
+%% ===========================================================================
+
+\section{MIB Structure}
+\label{sec:mib}
+
+The Management Information Base is organized as shown in
+Table~\ref{tab:mib-summary}.  Each entry is queried using the \cmd{RPT}
+command with the entry label as the data field.
+
+\begin{longtable}{l l l p{5.5cm}}
+\caption{DR MIB Structure}
+\label{tab:mib-summary} \\
+\toprule
+\textbf{Index} & \textbf{Label} & \textbf{Type} & \textbf{Description} \\
+\midrule
+\endfirsthead
+
+\toprule
+\textbf{Index} & \textbf{Label} & \textbf{Type} & \textbf{Description} \\
+\midrule
+\endhead
+
+\bottomrule
+\endfoot
+
+\multicolumn{4}{l}{\textbf{1.\ MCS-Required Entries}} \\
+1.1     & \mib{SUMMARY}    & Status & Current system status \\
+1.2     & \mib{INFO}       & Status & Detailed status information \\
+1.3     & \mib{LASTLOG}    & Status & Last log entry \\
+1.4     & \mib{SUBSYSTEM}  & Status & Subsystem identifier \\
+1.5     & \mib{SERIALNO}   & Status & Serial number \\
+1.6     & \mib{VERSION}    & Status & Software version \\
+\midrule
+
+\multicolumn{4}{l}{\textbf{2.\ Current Operation}} \\
+2.1     & \mib{OP-TYPE}          & Status & Current operation type \\
+2.2     & \mib{OP-SCHEDULE}      & Status & Operation start and stop times \\
+2.2.1   & \mib{OP-START}         & Status & Operation start time \\
+2.2.2   & \mib{OP-STOP}          & Status & Operation expected stop time \\
+2.3     & \mib{OP-REFERENCE}     & Status & Command reference number \\
+2.4.1   & \mib{OP-TAG}           & Status & Internal file tag \\
+2.4.2   & \mib{OP-FORMAT}        & Status & Data format in use \\
+2.4.3   & \mib{OP-POSITION}  & Status & File position info \\
+2.5.1   & \mib{OP-FILENAME}      & Status & External file name and device \\
+2.5.2   & \mib{OP-FILEINDEX}     & Status & File series index \\
+\midrule
+
+\multicolumn{4}{l}{\textbf{3.\ Schedule}} \\
+3.1     & \mib{SCHEDULE-COUNT}   & Status & Count of scheduled operations \\
+3.2.\{n\}   & \mib{SCHEDULE-ENTRY-\{n\}} & Status & \{n\}th scheduled operation \\
+\midrule
+
+\multicolumn{4}{l}{\textbf{4.\ Directory}} \\
+4.1     & \mib{DIRECTORY-COUNT}  & Status & Count of stored recordings \\
+4.2.\{n\}   & \mib{DIRECTORY-ENTRY-\{n\}}& Status & \{n\}th recording entry \\
+\midrule
+
+\multicolumn{4}{l}{\textbf{5.\ Storage}} \\
+5.1     & \mib{TOTAL-STORAGE}    & Status & Total internal storage (bytes) \\
+5.2     & \mib{REMAINING-STORAGE}& Status & Available internal storage (bytes) \\
+5.3     & \mib{CONTIGUOUS-STORAGE}& Status & Deprecated; always returns~0 \\
+\midrule
+
+\multicolumn{4}{l}{\textbf{6.\ Removable Devices}} \\
+6.1     & \mib{DEVICE-COUNT}     & Status & Number of external devices \\
+6.2.\{n\}   & \mib{DEVICE-ID-\{n\}}     & Status & Device ID of \{n\}th device \\
+6.3.\{n\}   & \mib{DEVICE-STORAGE-\{n\}} & Status & Free space on \{n\}th device \\
+6.4.\{n\}   & \mib{DEVICE-BARCODE-\{n\}} & Status & Volume name of \{n\}th device \\
+\midrule
+
+\multicolumn{4}{l}{\textbf{7.\ CPU Info}} \\
+7.1     & \mib{CPU-COUNT}        & Status & Number of CPU cores \\
+7.2.\{n\}   & \mib{CPU-TEMP-\{n\}}       & Status & Temperature of core \{n\} \\
+\midrule
+
+\multicolumn{4}{l}{\textbf{8.\ HDD Info}} \\
+8.1     & \mib{HDD-COUNT}        & Status & Number of hard drives \\
+8.2.\{n\}   & \mib{HDD-TEMP-\{n\}}       & Status & Temperature of HDD \{n\} \\
+\midrule
+
+\multicolumn{4}{l}{\textbf{9.\ Data Formats}} \\
+9.1     & \mib{FORMAT-COUNT}     & Status & Number of supported formats \\
+9.2.\{n\}   & \mib{FORMAT-NAME-\{n\}}    & Status & Name of \{n\}th format \\
+9.3.\{n\}   & \mib{FORMAT-PAYLOAD-\{n\}} & Status & UDP payload size of \{n\}th format \\
+9.4.\{n\}   & \mib{FORMAT-RATE-\{n\}}    & Status & Data rate of \{n\}th format \\
+\midrule
+
+\multicolumn{4}{l}{\textbf{10.\ System Log}} \\
+10.1    & \mib{LOG-COUNT}        & Status & Number of log entries \\
+10.2.\{n\}  & \mib{LOG-ENTRY-\{n\}}      & Status & \{n\}th log entry \\
+\midrule
+
+\multicolumn{4}{l}{\textbf{11.\ Live Buffer}} \\
+11.1    & \mib{BUFFER}           & Data   & Deprecated; see Section~\ref{mib:buffer} \\
+11.2    & \mib{BUFFER-RESTRICT}  & Data   & Deprecated; see Section~\ref{mib:buffer-restrict} \\
+\midrule
+
+\multicolumn{4}{l}{\textbf{12.\ DRSU Status}} \\
+12.1    & \mib{DRSU-COUNT}       & Status & Number of detected DRSUs \\
+12.2    & \mib{DRSU-SELECTED}    & Status & Currently selected DRSU \\
+12.3    & \mib{DRSU-BARCODE}     & Status & Barcode of selected DRSU \\
+12.4.\{n\}  & \mib{DRSU-INFO-\{n\}}      & Status & Info on \{n\}th detected DRSU \\
+\midrule
+
+\multicolumn{4}{l}{\textbf{13.\ Timing}} \\
+13.1    & \mib{TT-LAG}           & Status & Current time-tag lag \\
+13.2    & \mib{TT-LAG-INITIAL}   & Status & Initial time-tag lag \\
+
+\end{longtable}
+
+
+%% ===========================================================================
+%%  MIB ENTRIES IN DETAIL
+%% ===========================================================================
+
+\section{MIB Entries in Detail}
+\label{sec:mib-detail}
+
+\subsection{SUMMARY}
+\label{mib:summary}
+\begin{description}[style=nextline]
+    \item[Index:] 1.1
+    \item[Description:]
+        Reports the current system status.
+    \item[Response Format:] \texttt{<Status>}
+    \item[Response Element:]
+        Status (ASCII-7-A): One of the values in Section~\ref{sec:states}.
+\end{description}
+
+\subsection{INFO}
+\label{mib:info}
+\begin{description}[style=nextline]
+    \item[Index:] 1.2
+    \item[Description:]
+        Reports detailed status information.  The content varies depending on
+        the current system state.
+    \item[Response Format:] \texttt{<Info>}
+    \item[Response Element:]
+        Info (ASCII-256-A): Human-readable status detail.
+\end{description}
+
+\subsection{LASTLOG}
+\label{mib:lastlog}
+\begin{description}[style=nextline]
+    \item[Index:] 1.3
+    \item[Description:]
+        Reports the most recent system log entry.
+    \item[Response Format:] \texttt{<Log Entry>}
+    \item[Response Element:]
+        Log Entry (ASCII-256-A): Last log message.
+\end{description}
+
+\subsection{SUBSYSTEM}
+\label{mib:subsystem}
+\begin{description}[style=nextline]
+    \item[Index:] 1.4
+    \item[Description:]
+        Reports the subsystem reference designator.
+    \item[Response Format:] \texttt{<Designator>}
+    \item[Response Element:]
+        Designator (ASCII-3-A): Subsystem identifier (e.g., \texttt{DR1}).
+\end{description}
+
+\subsection{SERIALNO}
+\label{mib:serialno}
+\begin{description}[style=nextline]
+    \item[Index:] 1.5
+    \item[Description:]
+        Reports the DR serial number as configured in \texttt{defaults\_v2.cfg}.
+    \item[Response Format:] \texttt{<Serial Number>}
+    \item[Response Element:]
+        Serial Number (ASCII-20-A).
+\end{description}
+
+\subsection{VERSION}
+\label{mib:version}
+\begin{description}[style=nextline]
+    \item[Index:] 1.6
+    \item[Description:]
+        Reports the DROS2 software version.
+    \item[Response Format:] \texttt{<Version>}
+    \item[Response Element:]
+        Version (ASCII-256-A): Software version string.
+\end{description}
+
+\subsection{OP-TYPE}
+\label{mib:op-type}
+\begin{description}[style=nextline]
+    \item[Index:] 2.1
+    \item[Description:]
+        Reports the current operation type.  If no operation is in progress,
+        reports idle state.
+    \item[Response Format:] \texttt{<Operation Type>}
+    \item[Response Element:]
+        Operation Type (ASCII-11-A) --- one of the values in
+        Table~\ref{tab:op-types}.
+\end{description}
+
+\begin{table}[h]
+\centering
+\caption{Operation Type Values}
+\label{tab:op-types}
+\begin{tabular}{l l}
+\toprule
+\textbf{Value} & \textbf{Meaning} \\
+\midrule
+\texttt{Idle}        & No operation in progress \\
+\texttt{Record}      & Recording NDP data \\
+\texttt{Spectrometr} & Computing spectrometer output \\
+\texttt{Copy}        & Copying recording to external storage \\
+\texttt{Dump}        & Dumping blocks to external storage \\
+\texttt{Format}      & Formatting storage device \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{OP-SCHEDULE}
+\label{mib:op-schedule}
+\begin{description}[style=nextline]
+    \item[Index:] 2.2
+    \item[Description:]
+        Reports the start and stop times of the current operation as a
+        single combined response.  Not valid if operation is \texttt{Idle}.
+    \item[Response Format:] \texttt{<Start MJD>'<Start MPM>'<Stop MJD>'<Stop MPM>}
+    \item[Response Elements:]~\\
+        Start MJD (ASCII-6-\#): MJD when operation began. \\
+        Start MPM (ASCII-9-\#): MPM when operation began. \\
+        Stop MJD (ASCII-6-\#): MJD when operation will end. \\
+        Stop MPM (ASCII-9-\#): MPM when operation will end.
+\end{description}
+
+\subsection{OP-START}
+\label{mib:op-start}
+\begin{description}[style=nextline]
+    \item[Index:] 2.2.1
+    \item[Description:]
+        Reports the time at which the current operation began.  Not valid if
+        operation is \texttt{Idle}.
+    \item[Response Format:] \texttt{<Start MJD>'<Start MPM>}
+    \item[Response Elements:]~\\
+        Start MJD (ASCII-6-\#): MJD when operation began. \\
+        Start MPM (ASCII-9-\#): MPM when operation began.
+\end{description}
+
+\subsection{OP-STOP}
+\label{mib:op-stop}
+\begin{description}[style=nextline]
+    \item[Index:] 2.2.2
+    \item[Description:]
+        Reports the scheduled/expected end time of the current operation.
+        Only valid for \texttt{Record}, \texttt{Spectrometr}, \texttt{Copy},
+        or \texttt{Dump} operations.
+    \item[Response Format:] \texttt{<Stop MJD>'<Stop MPM>}
+    \item[Response Elements:]~\\
+        Stop MJD (ASCII-6-\#): MJD when operation will end. \\
+        Stop MPM (ASCII-9-\#): MPM when operation will end.
+\end{description}
+
+\subsection{OP-REFERENCE}
+\label{mib:op-reference}
+\begin{description}[style=nextline]
+    \item[Index:] 2.3
+    \item[Description:]
+        Reports the reference number of the command message that
+        initiated/scheduled the current operation.  Not valid if operation
+        is \texttt{Idle}.
+    \item[Response Format:] \texttt{<Reference Number>}
+    \item[Response Element:]
+        Reference Number (ASCII-9-\#).
+\end{description}
+
+\subsection{OP-TAG}
+\label{mib:op-tag}
+\begin{description}[style=nextline]
+    \item[Index:] 2.4.1
+    \item[Description:]
+        Reports the tag value identifying the file in use.  Only valid for
+        \texttt{Record}, \texttt{Spectrometr}, \texttt{Copy}, or \texttt{Dump}
+        operations.
+    \item[Response Format:] \texttt{<Tag>}
+    \item[Response Element:]
+        Tag (ASCII-16-A): filename tag in the form
+        \texttt{<MJD>\_<Reference Number>} including the literal underscore.
+\end{description}
+
+\subsection{OP-FORMAT}
+\label{mib:op-format}
+\begin{description}[style=nextline]
+    \item[Index:] 2.4.2
+    \item[Description:]
+        Reports the data format in use.  For \texttt{Record} operations,
+        this is the format being recorded.  For \texttt{Copy}/\texttt{Dump},
+        it is the format specified by the originating \cmd{REC} command.
+    \item[Response Format:] \texttt{<Data Format>}
+    \item[Response Element:]
+        Data Format (ASCII-32-A).
+\end{description}
+
+\subsection{OP-POSITION}
+\label{mib:op-fileposition}
+\begin{description}[style=nextline]
+    \item[Index:] 2.4.3
+    \item[Description:]
+        Reports start position, length, and current position of the file in
+        use.  Current Position is the offset relative to Start Position.
+        Valid for \texttt{Record}, \texttt{Copy}, \texttt{Dump} operations.
+        In \texttt{Spectrometr} mode, Start Position and Length are not valid,
+        but Current Position reflects the current output file size.
+    \item[Response Format:]
+        \texttt{<Start Position>'<Length>'<Current Position>}
+    \item[Response Elements:]~\\
+        Start Position (ASCII-15-\#): Position of first byte (always 0 for Recording). \\
+        Length (ASCII-15-\#): Copy: bytes to copy; Dump: chunk size; Record: expected file size. \\
+        Current Position (ASCII-15-\#): Position of most recent byte written/read.
+\end{description}
+
+\subsection{OP-FILENAME}
+\label{mib:op-filename}
+\begin{description}[style=nextline]
+    \item[Index:] 2.5.1
+    \item[Description:]
+        Reports the file name and external storage device ID.  Only valid for
+        \texttt{Copy} or \texttt{Dump} operations.  For \texttt{Dump}, the
+        returned file name is the series name; individual files are named
+        \texttt{<Filename>.X} with a zero-padded serial identifier.
+    \item[Response Format:] \texttt{<Storage ID>'<Filename>}
+    \item[Response Elements:]~\\
+        Storage ID (ASCII-64-A): Linux partition or mount point. \\
+        Filename (ASCII-128-A): File or series name.
+\end{description}
+
+\subsection{OP-FILEINDEX}
+\label{mib:op-fileindex}
+\begin{description}[style=nextline]
+    \item[Index:] 2.5.2
+    \item[Description:]
+        Reports which file of a file series is being written to.
+        Only valid for \texttt{Dump} operations.
+    \item[Response Format:] \texttt{<File Index>}
+    \item[Response Element:]
+        File Index (ASCII-9-\#).
+\end{description}
+
+\subsection{SCHEDULE-COUNT}
+\label{mib:schedule-count}
+\begin{description}[style=nextline]
+    \item[Index:] 3.1
+    \item[Description:]
+        Reports the count of all scheduled operations, including the current
+        operation if one is in progress.
+    \item[Response Format:] \texttt{<Count>}
+    \item[Response Element:]
+        Count (ASCII-6-\#).
+\end{description}
+
+\subsection{SCHEDULE-ENTRY-\{n\}}
+\label{mib:schedule-entry}
+\begin{description}[style=nextline]
+    \item[Index:] 3.2.\{n\}
+    \item[Description:]
+        Reports relevant information for the \{n\}th scheduled operation.
+    \item[Response Format:]
+        \texttt{<Operation Type>'<Reference Number>'<Start MJD>'<Start MPM>'<Stop MJD>'<Stop MPM>'<Data Format>}
+    \item[Response Elements:]~\\
+        Operation Type (ASCII-11-A). \\
+        Reference Number (ASCII-9-\#). \\
+        Start MJD (ASCII-6-\#). \\
+        Start MPM (ASCII-9-\#). \\
+        Stop MJD (ASCII-6-\#). \\
+        Stop MPM (ASCII-9-\#). \\
+        Data Format (ASCII-32-A).
+\end{description}
+
+\subsection{DIRECTORY-COUNT}
+\label{mib:directory-count}
+\begin{description}[style=nextline]
+    \item[Index:] 4.1
+    \item[Description:]
+        Reports the number of recordings contained on internal storage.
+    \item[Response Format:] \texttt{<Count>}
+    \item[Response Element:]
+        Count (ASCII-6-\#).
+\end{description}
+
+\subsection{DIRECTORY-ENTRY-\{n\}}
+\label{mib:directory-entry}
+\begin{description}[style=nextline]
+    \item[Index:] 4.2.\{n\}
+    \item[Description:]
+        Reports pertinent information for the \{n\}th recording on internal storage.
+    \item[Response Format:]
+        \texttt{<Tag>'<Start MJD>'<Start MPM>'<Stop MJD>'<Stop MPM>'<Data Format>'<Size>'<Disk Usage>'<Complete>}
+    \item[Response Elements:]~\\
+        Tag (ASCII-16-A): Form \texttt{<MJD>\_<Reference Number>}. \\
+        Start MJD (ASCII-6-\#). \\
+        Start MPM (ASCII-9-\#). \\
+        Stop MJD (ASCII-6-\#). \\
+        Stop MPM (ASCII-9-\#). \\
+        Data Format (ASCII-32-A): Format used when recorded. \\
+        Size (ASCII-15-\#): Bytes written to disk. \\
+        Disk Usage (ASCII-15-\#): Total bytes occupied on disk. \\
+        Complete (ASCII-3-A): \texttt{YES} or \texttt{NO~}.
+\end{description}
+
+\subsection{TOTAL-STORAGE}
+\label{mib:total-storage}
+\begin{description}[style=nextline]
+    \item[Index:] 5.1
+    \item[Description:]
+        Reports total storage capacity of internal storage in bytes.  Returns 0
+        when storage is offline or unavailable.
+    \item[Response Format:] \texttt{<Size>}
+    \item[Response Element:]
+        Size (ASCII-15-\#): Total internal storage in bytes.
+\end{description}
+
+\subsection{REMAINING-STORAGE}
+\label{mib:remaining-storage}
+\begin{description}[style=nextline]
+    \item[Index:] 5.2
+    \item[Description:]
+        Reports available bytes on internal storage.
+    \item[Response Format:] \texttt{<Available>}
+    \item[Response Element:]
+        Available (ASCII-15-\#): Unused internal storage in bytes.
+\end{description}
+
+\subsection{CONTIGUOUS-STORAGE}
+\label{mib:contiguous-storage}
+\begin{description}[style=nextline]
+    \item[Index:] 5.3
+    \item[Description:]
+        Deprecated.  Always returns~0.  Retained for backward compatibility
+        with older MCS implementations.
+    \item[Response Format:] \texttt{<Size>}
+    \item[Response Element:]
+        Size (ASCII-15-\#): Always~0.
+\end{description}
+
+\subsection{DEVICE-COUNT}
+\label{mib:device-count}
+\begin{description}[style=nextline]
+    \item[Index:] 6.1
+    \item[Description:]
+        Reports the number of available external storage devices.
+    \item[Response Format:] \texttt{<Count>}
+    \item[Response Element:]
+        Count (ASCII-6-\#).
+\end{description}
+
+\subsection{DEVICE-ID-\{n\}}
+\label{mib:device-id}
+\begin{description}[style=nextline]
+    \item[Index:] 6.2.\{n\}
+    \item[Description:]
+        Reports the device ID of the \{n\}th external storage device.
+    \item[Response Format:] \texttt{<Storage ID>}
+    \item[Response Element:]
+        Storage ID (ASCII-64-A): Linux partition (e.g., \texttt{/dev/sdf1}).
+\end{description}
+
+\subsection{DEVICE-STORAGE-\{n\}}
+\label{mib:device-storage}
+\begin{description}[style=nextline]
+    \item[Index:] 6.3.\{n\}
+    \item[Description:]
+        Reports free storage space on the \{n\}th external storage device.
+    \item[Response Format:] \texttt{<Available>}
+    \item[Response Element:]
+        Available (ASCII-15-\#): Unused bytes.  Returns 0 if the device is
+        not properly formatted or uses an unsupported file system.
+\end{description}
+
+\subsection{DEVICE-BARCODE-\{n\}}
+\label{mib:device-barcode}
+\begin{description}[style=nextline]
+    \item[Index:] 6.4.\{n\}
+    \item[Description:]
+        Reports the volume name (barcode) of the \{n\}th external storage device.
+    \item[Response Format:] \texttt{<Volume Name>}
+    \item[Response Element:]
+        Volume Name (ASCII-64-A): Volume label of the device.
+\end{description}
+
+\subsection{CPU-COUNT}
+\label{mib:cpu-count}
+\begin{description}[style=nextline]
+    \item[Index:] 7.1
+    \item[Description:]
+        Reports the number of CPU cores.
+    \item[Response Format:] \texttt{<Count>}
+    \item[Response Element:]
+        Count (ASCII-3-\#).
+\end{description}
+
+\subsection{CPU-TEMP-\{n\}}
+\label{mib:cpu-temp}
+\begin{description}[style=nextline]
+    \item[Index:] 7.2.\{n\}
+    \item[Description:]
+        Reports the temperature of CPU core \{n\}.
+    \item[Response Format:] \texttt{<Core \{n\} Temp>}
+    \item[Response Element:]
+        Core \{n\} Temp (ASCII-3-\#): Temperature in degrees Celsius.
+\end{description}
+
+\subsection{HDD-COUNT}
+\label{mib:hdd-count}
+\begin{description}[style=nextline]
+    \item[Index:] 8.1
+    \item[Description:]
+        Reports the number of hard drives comprising internal storage.
+    \item[Response Format:] \texttt{<Count>}
+    \item[Response Element:]
+        Count (ASCII-3-\#).
+\end{description}
+
+\subsection{HDD-TEMP-\{n\}}
+\label{mib:hdd-temp}
+\begin{description}[style=nextline]
+    \item[Index:] 8.2.\{n\}
+    \item[Description:]
+        Reports the temperature of the \{n\}th hard drive.  Some hardware may not
+        support temperature reporting; in such cases the response may be empty.
+    \item[Response Format:] \texttt{<HDD \{n\} Temp>}
+    \item[Response Element:]
+        HDD \{n\} Temp (ASCII-3-\#): Temperature in degrees Celsius.
+\end{description}
+
+\subsection{FORMAT-COUNT}
+\label{mib:format-count}
+\begin{description}[style=nextline]
+    \item[Index:] 9.1
+    \item[Description:]
+        Returns the number of recording formats supported.
+    \item[Response Format:] \texttt{<Count>}
+    \item[Response Element:]
+        Count (ASCII-6-\#).
+\end{description}
+
+\subsection{FORMAT-NAME-\{n\}}
+\label{mib:format-name}
+\begin{description}[style=nextline]
+    \item[Index:] 9.2.\{n\}
+    \item[Description:]
+        Returns the name of the \{n\}th recording format.
+    \item[Response Format:] \texttt{<Format Name>}
+    \item[Response Element:]
+        Format Name (ASCII-32-A).
+\end{description}
+
+\subsection{FORMAT-PAYLOAD-\{n\}}
+\label{mib:format-payload}
+\begin{description}[style=nextline]
+    \item[Index:] 9.3.\{n\}
+    \item[Description:]
+        Returns the UDP packet payload size of the \{n\}th recording format.
+    \item[Response Format:] \texttt{<UDP Payload Size>}
+    \item[Response Element:]
+        UDP Payload Size (ASCII-4-\#): Bytes of payload.
+\end{description}
+
+\subsection{FORMAT-RATE-\{n\}}
+\label{mib:format-rate}
+\begin{description}[style=nextline]
+    \item[Index:] 9.4.\{n\}
+    \item[Description:]
+        Returns the data rate of the \{n\}th recording format in bytes per second.
+    \item[Response Format:] \texttt{<Rate>}
+    \item[Response Element:]
+        Rate (ASCII-9-\#): Overall data rate (MAC/UDP headers excluded).
+\end{description}
+
+\subsection{LOG-COUNT}
+\label{mib:log-count}
+\begin{description}[style=nextline]
+    \item[Index:] 10.1
+    \item[Description:]
+        Reports the number of system log entries.
+    \item[Response Format:] \texttt{<Count>}
+    \item[Response Element:]
+        Count (ASCII-6-\#).
+\end{description}
+
+\subsection{LOG-ENTRY-\{n\}}
+\label{mib:log-entry}
+\begin{description}[style=nextline]
+    \item[Index:] 10.2.\{n\}
+    \item[Description:]
+        Reports the \{n\}th entry in the system log.
+    \item[Response Format:]
+        \texttt{<MJD>'<MPM>'<Message Class>'<Message>}
+    \item[Response Elements:]~\\
+        MJD (ASCII-6-\#): MJD when entry was logged. \\
+        MPM (ASCII-9-\#): MPM when entry was logged. \\
+        Message Class (ASCII-7-A): \texttt{info~~~}, \texttt{warning}, or
+            \texttt{error~~} (trailing spaces pad to 7~characters). \\
+        Message (ASCII-234-A): Human-readable description ($\le 234$~characters).
+\end{description}
+
+\subsection{BUFFER}
+\label{mib:buffer}
+\begin{description}[style=nextline]
+    \item[Index:] 11.1
+    \item[Description:]
+        Deprecated.  Returns a deprecation notice.  This entry was previously
+        used to return the contents of the live capture buffer.
+
+\begin{calloutBox}{Deprecation Notice}{orange}
+The \mib{BUFFER} MIB entry is deprecated in the current DROS2 implementation.
+Queries will receive a rejection response.
+\end{calloutBox}
+\end{description}
+
+\subsection{BUFFER-RESTRICT}
+\label{mib:buffer-restrict}
+\begin{description}[style=nextline]
+    \item[Index:] 11.2
+    \item[Description:]
+        Deprecated.  Returns a deprecation notice.  This entry was previously
+        used to return live capture buffer contents limited to one data packet.
+
+\begin{calloutBox}{Deprecation Notice}{orange}
+The \mib{BUFFER-RESTRICT} MIB entry is deprecated in the current DROS2 implementation.
+Queries will receive a rejection response.
+\end{calloutBox}
+\end{description}
+
+\subsection{DRSU-COUNT}
+\label{mib:drsu-count}
+\begin{description}[style=nextline]
+    \item[Index:] 12.1
+    \item[Description:]
+        Reports the number of detected DRSUs.
+    \item[Response Format:] \texttt{<Count>}
+    \item[Response Element:]
+        Count (ASCII-2-\#).
+\end{description}
+
+\subsection{DRSU-SELECTED}
+\label{mib:drsu-selected}
+\begin{description}[style=nextline]
+    \item[Index:] 12.2
+    \item[Description:]
+        Reports which DRSU is currently active.  If internal storage is down,
+        reflects the last valid selection.
+    \item[Response Format:] \texttt{<DRSU Number>}
+    \item[Response Element:]
+        DRSU Number (ASCII-2-\#).
+\end{description}
+
+\subsection{DRSU-BARCODE}
+\label{mib:drsu-barcode}
+\begin{description}[style=nextline]
+    \item[Index:] 12.3
+    \item[Description:]
+        Reports the barcode (volume name) of the currently selected DRSU.
+    \item[Response Format:] \texttt{<Barcode>}
+    \item[Response Element:]
+        Barcode (ASCII-64-A): Volume label of the selected DRSU.
+\end{description}
+
+\subsection{DRSU-INFO-\{n\}}
+\label{mib:drsu-info}
+\begin{description}[style=nextline]
+    \item[Index:] 12.4.\{n\}
+    \item[Description:]
+        Reports information on the \{n\}th detected DRSU.
+    \item[Response Format:] \texttt{<Name>'<Partition>'<Unformatted Size>}
+    \item[Response Elements:]~\\
+        Name (ASCII-6-A): DRSU name (e.g., \texttt{DRSU00}). \\
+        Partition (ASCII-64-A): Partition on which the DRSU resides. \\
+        Unformatted Size (ASCII-16-\#): Size in bytes before formatting.
+\end{description}
+
+\subsection{TT-LAG}
+\label{mib:tt-lag}
+\begin{description}[style=nextline]
+    \item[Index:] 13.1
+    \item[Description:]
+        Reports the current time-tag lag of the data receiver.  The lag is
+        the difference between the expected and observed time tags in the
+        incoming NDP data stream, expressed in NDP clock ticks.
+    \item[Response Format:] \texttt{<Lag>}
+    \item[Response Element:]
+        Lag (ASCII-15-\#): Current time-tag lag in clock ticks.
+\end{description}
+
+\subsection{TT-LAG-INITIAL}
+\label{mib:tt-lag-initial}
+\begin{description}[style=nextline]
+    \item[Index:] 13.2
+    \item[Description:]
+        Reports the time-tag lag measured at the start of the most recent
+        recording session.
+    \item[Response Format:] \texttt{<Lag>}
+    \item[Response Element:]
+        Lag (ASCII-15-\#): Initial time-tag lag in clock ticks.
+\end{description}
+
+
+%% ===========================================================================
+%%  COMMANDS
+%% ===========================================================================
+
+\section{Control Commands Summary}
+\label{sec:commands}
+
+Table~\ref{tab:commands} lists the control commands supported by the DR.
+
+\begin{longtable}{l l l}
+\caption{DR Control Commands}
+\label{tab:commands} \\
+\toprule
+\textbf{Command} & \textbf{Description} & \textbf{Section} \\
+\midrule
+\endfirsthead
+
+\toprule
+\textbf{Command} & \textbf{Description} & \textbf{Section} \\
+\midrule
+\endhead
+
+\bottomrule
+\endfoot
+
+\cmd{INI} & Initialize / restore to boot-up state         & \ref{cmd:ini} \\
+\cmd{REC} & Schedule a recording                          & \ref{cmd:rec} \\
+\cmd{DEL} & Delete a recording                            & \ref{cmd:del} \\
+\cmd{STP} & Stop a scheduled or in-progress operation     & \ref{cmd:stp} \\
+\cmd{GET} & Retrieve portion of a recording               & \ref{cmd:get} \\
+\cmd{CPY} & Copy recording to external storage            & \ref{cmd:cpy} \\
+\cmd{DMP} & Dump recording to file series                 & \ref{cmd:dmp} \\
+\cmd{FMT} & Format storage device                         & \ref{cmd:fmt} \\
+\cmd{DWN} & Bring internal storage offline                & \ref{cmd:dwn} \\
+\cmd{UP}  & Bring internal storage online                 & \ref{cmd:up}  \\
+\cmd{SEL} & Select DRSU                                   & \ref{cmd:sel} \\
+\cmd{BUF} & Set up live capture buffer                    & \ref{cmd:buf} \\
+\cmd{SYN} & Synchronize with NTP server                   & \ref{cmd:syn} \\
+\cmd{SPC} & Schedule spectrometer recording               & \ref{cmd:spc} \\
+\cmd{SHT} & Shut down DROS2                               & \ref{cmd:sht} \\
+\cmd{PNG} & Ping (status query)                           & \ref{cmd:png} \\
+\cmd{RPT} & Report (MIB query)                            & \ref{cmd:rpt} \\
+\cmd{TST} & Self-test (development only)                  & \ref{cmd:tst} \\
+
+\end{longtable}
+
+
+%% ===========================================================================
+%%  COMMANDS IN DETAIL
+%% ===========================================================================
+
+\section{Control Commands in Detail}
+\label{sec:commands-detail}
+
+For each command below, the argument format and response format are described.
+If no arguments are specified, none are required.  If no response format is
+described, the R-COMMENT field is empty on success.  Failed commands return
+\texttt{R} in R-RESPONSE with an error message in R-COMMENT
+(see Appendix~\ref{app:errors}).
+
+% ---- INI ----
+\subsection{INI --- Initialize}
+\label{cmd:ini}
+\begin{description}[style=nextline]
+    \item[Description:]
+        Restores the DR to its initial boot-up state except for the system log
+        and internal storage contents.
+    \item[Argument Format:] \texttt{<Flags>}
+    \item[Argument:]
+        Flags (ASCII-256-A): Specify \texttt{-{}-flush-log} or \texttt{-L} to
+        force system log re-initialization; \texttt{-{}-flush-data} or
+        \texttt{-D} to force internal storage re-initialization.  The field
+        need not be padded; flag order does not matter.
+\end{description}
+
+% ---- REC ----
+\subsection{REC --- Record}
+\label{cmd:rec}
+\begin{description}[style=nextline]
+    \item[Description:]
+        Schedules or initiates recording of NDP data.  Upon success, returns a
+        tag value uniquely identifying the recorded file.
+
+    \item[Argument Format:]
+        \texttt{<Start MJD>'<Start MPM>'<Length>'<Data Format>}
+
+    \item[Arguments:]~\\
+        Start MJD (ASCII-6-\#): Modified Julian Day; not $>24$~hours in the future. \\
+        Start MPM (ASCII-9-\#): Milliseconds past midnight; not within 5~s of
+            a prior operation's termination. \\
+        Length (ASCII-9-\#): Duration in milliseconds. \\
+        Data Format (ASCII-32-A): Pre-configured format name (see
+            Section~\ref{mib:format-name} and Appendix~\ref{app:data-formats}).
+
+    \item[Response Format:] \texttt{<Tag>}
+    \item[Response Element:]
+        Tag (ASCII-16-A): Form \texttt{<MJD>\_<Reference Number>}.
+\end{description}
+
+\begin{newInVersion}{2.4.1}
+The supported data format names have been updated.  The following formats are
+available:
+\texttt{DEFAULT\_DRX},
+\texttt{DRX\_FILT\_1} through \texttt{DRX\_FILT\_7},
+\texttt{DEFAULT\_DRX8},
+\texttt{DRX8\_FILT\_1} through \texttt{DRX8\_FILT\_7},
+\texttt{DEFAULT\_TBT},
+\texttt{DEFAULT\_TBS},
+\texttt{TBS\_FILT\_7} through \texttt{TBS\_FILT\_9},
+\texttt{DEFAULT\_COR}.
+The previously supported \texttt{DEFAULT\_TBN} and \texttt{DEFAULT\_TBW} formats
+have been removed.  See Appendix~\ref{app:data-formats} for details.
+\end{newInVersion}
+
+\begin{noteBox}
+\textbf{Example:} To schedule a 30-second DRX recording starting at MJD~60700,
+MPM~43200000 with reference number 42:
+
+\texttt{REC 060700 043200000 000030000 DEFAULT\_DRX}
+
+Response: \texttt{060700\_000000042}
+\end{noteBox}
+
+% ---- DEL ----
+\subsection{DEL --- Delete}
+\label{cmd:del}
+\begin{description}[style=nextline]
+    \item[Description:]
+        Deletes a recording from internal storage.
+    \item[Argument Format:] \texttt{<Tag>}
+    \item[Argument:]
+        Tag (ASCII-16-A): Form \texttt{<MJD>\_<Reference Number>}.
+\end{description}
+
+% ---- STP ----
+\subsection{STP --- Stop}
+\label{cmd:stp}
+\begin{description}[style=nextline]
+    \item[Description:]
+        Halts or prevents a specified operation.  If the operation is scheduled
+        but not yet in progress, it is deleted from the schedule and disk space
+        is freed.  If it is in progress, it is halted and the file is closed
+        but not deleted.  Also stops scheduled or in-progress spectrometer
+        operations.
+    \item[Argument Format:] \texttt{<Tag>}
+    \item[Argument:]
+        Tag (ASCII-16-A): Form \texttt{<MJD>\_<Reference Number>}.
+\end{description}
+
+% ---- GET ----
+\subsection{GET --- Get}
+\label{cmd:get}
+\begin{description}[style=nextline]
+    \item[Description:]
+        Retrieves a portion of a specified recording.
+    \item[Argument Format:] \texttt{<Tag>'<Start Byte>'<Length>}
+    \item[Arguments:]~\\
+        Tag (ASCII-16-A): Form \texttt{<MJD>\_<Reference Number>}. \\
+        Start Byte (ASCII-15-\#): Byte offset within the file. \\
+        Length (ASCII-15-\#): Bytes to return; limited to 8146~bytes.
+    \item[Response Format:] \texttt{<Data>}
+    \item[Response Element:]
+        Data (uint8)$\times$Length: Requested bytes from the file.
+\end{description}
+
+% ---- CPY ----
+\subsection{CPY --- Copy}
+\label{cmd:cpy}
+\begin{description}[style=nextline]
+    \item[Description:]
+        Copies a portion of a recording to a file on external storage.
+        Existing files are overwritten without warning.  Not available if
+        recordings are scheduled.
+    \item[Argument Format:]
+        \texttt{<Tag>'<Start Byte>'<Length>'<Device ID>'<Filename>}
+    \item[Arguments:]~\\
+        Tag (ASCII-16-A): Form \texttt{<MJD>\_<Reference Number>}. \\
+        Start Byte (ASCII-15-\#): Byte offset within the file. \\
+        Length (ASCII-15-\#): Bytes to copy. \\
+        Storage ID (ASCII-64-A): Target device partition. \\
+        Filename (ASCII-128-A): Destination file name.
+\end{description}
+
+% ---- DMP ----
+\subsection{DMP --- Dump}
+\label{cmd:dmp}
+\begin{description}[style=nextline]
+    \item[Description:]
+        Copies data blocks from a recording to a series of files on external
+        storage.  Files are named \texttt{<Filename>.X} with a zero-padded
+        serial identifier.  Not available if recordings are scheduled.
+    \item[Argument Format:]
+        \texttt{<Tag>'<Start Byte>'<Length>'<Block Size>'<Device ID>'<Filename>}
+    \item[Arguments:]~\\
+        Tag (ASCII-16-A): Form \texttt{<MJD>\_<Reference Number>}. \\
+        Start Byte (ASCII-15-\#): Byte offset within the file. \\
+        Length (ASCII-15-\#): Bytes to copy. \\
+        Block Size (ASCII-15-\#): Bytes per output file. \\
+        Storage ID (ASCII-64-A): Target device partition. \\
+        Filename (ASCII-128-A): Series name.
+\end{description}
+
+% ---- FMT ----
+\subsection{FMT --- Format}
+\label{cmd:fmt}
+\begin{description}[style=nextline]
+    \item[Description:]
+        Formats an internal or external storage device.  This is a destructive
+        operation that erases all data on the target device.  External
+        formatting may require substantial time proportional to device size.
+    \item[Argument Format:] \texttt{[Storage ID]}
+    \item[Argument:]
+        Storage ID (ASCII-64-A): Optional external device partition.
+        If omitted, internal storage is formatted.
+\end{description}
+
+% ---- DWN ----
+\subsection{DWN --- Down}
+\label{cmd:dwn}
+\begin{description}[style=nextline]
+    \item[Description:]
+        Prepares internal storage for removal or replacement.  Executes
+        immediately; requires a few seconds for completion.  Wait at least
+        1~minute after \cmd{DWN} before physically disconnecting storage.
+\end{description}
+
+% ---- UP ----
+\subsection{UP --- Up}
+\label{cmd:up}
+\begin{description}[style=nextline]
+    \item[Description:]
+        Scans for internal storage and brings it online.  If file system
+        information cannot be determined, the command is rejected.
+\end{description}
+
+% ---- SEL ----
+\subsection{SEL --- Select DRSU}
+\label{cmd:sel}
+\begin{description}[style=nextline]
+    \item[Description:]
+        Selects an alternate DRSU for internal storage.  The DR must be idle
+        with no scheduled operations.  DRSUs must have been previously detected
+        by DROS2 (see \mib{DRSU-INFO-\{n\}}).
+    \item[Argument Format:] \texttt{<DRSU Identifier>}
+    \item[Argument:]
+        DRSU Identifier: Either a 0-based numeric index (DRSU to activate;
+        0~= first, 1~= second, etc.) or a DRSU barcode string matching the
+        volume name reported by \mib{DRSU-BARCODE}.
+\end{description}
+
+% ---- BUF ----
+\subsection{BUF --- Live Capture Buffer Setup}
+\label{cmd:buf}
+\begin{description}[style=nextline]
+    \item[Description:]
+        Initializes the live capture buffer parameters for the next recording
+        start.  The buffer stores up to 100~ms of data and can trigger once
+        or periodically.  Parameters are reused with subsequent recordings.
+        Buffer contents are overwritten unless retrieved via the
+        \mib{BUFFER} or \mib{BUFFER-RESTRICT} MIB entries; if retrieved,
+        contents are held and subsequent captures go to a shadow buffer.
+    \item[Argument Format:]
+        \texttt{<OffsetType><WidthType><Retrigger><Order><Behaviour>'<Offset>'<Width>'<Interval>}
+    \item[Arguments:]~\\
+        OffsetType (ASCII-1-A): \texttt{T} = milliseconds, \texttt{I} = packet
+            counts (applies to Offset and Interval). \\
+        WidthType (ASCII-1-A): \texttt{T} = milliseconds, \texttt{I} = packet
+            counts (applies to Width). \\
+        Retrigger (ASCII-1-A): \texttt{A} = periodic, \texttt{N} = one-shot. \\
+        Order (ASCII-1-A): Deprecated; supply \texttt{A} or \texttt{B}
+            (ignored). \\
+        Behaviour (ASCII-1-A): \texttt{D} = delete/reuse, \texttt{H} =
+            hold/reuse, \texttt{R} = hold/no-reuse. \\
+        Offset (ASCII-16-\#): Milliseconds or packets from recording start. \\
+        Width (ASCII-16-\#): Capture length in milliseconds or packets. \\
+        Interval (ASCII-16-\#): Milliseconds or packets between captures
+            (when Retrigger = \texttt{A}); should be much greater than Width.
+\end{description}
+
+
+\begin{calloutBox}{Implementation Note}{blue}
+The \cmd{BUF} command is only functional when DROS2 is built in LiveBuffer mode.
+\end{calloutBox}
+
+% ---- SYN ----
+\subsection{SYN --- Synchronize}
+\label{cmd:syn}
+\begin{description}[style=nextline]
+    \item[Description:]
+        Explicitly synchronizes the DR clock with the station NTP time server.
+        Executing while operations are scheduled or in progress may result in
+        recording more or less data than desired.
+\end{description}
+
+% ---- SPC ----
+\subsection{SPC --- Spectrometer}
+\label{cmd:spc}
+
+\begin{description}[style=nextline]
+    \item[Description:]
+        Schedules an integrated spectra recording session.  The spectrometer
+        computes power spectra for each tuning and polarization of beam data
+        (NDP DRX or DRX8 output) without windowing.  Non-beam data formats
+        (TBT, TBS, COR) are not supported by the spectrometer.  Output is stored on the internal
+        storage under the spectrometer directory.  The tag value uniquely
+        identifies the output file.  The file format is defined in
+        Appendix~\ref{app:spectrometer}.
+
+    \item[Argument Format:]
+        \texttt{<Start MJD>'<Start MPM>'<Length>'<Transform Length>'<Integration Count>'[Minimum Fill]'[Highwater Threshold]}
+
+    \item[Arguments:]~\\
+        Start MJD (ASCII-6-\#): Modified Julian Day; not $>24$~hours in the future. \\
+        Start MPM (ASCII-9-\#): Milliseconds past midnight. \\
+        Length (ASCII-9-\#): Duration in milliseconds.  Same restrictions as
+            \cmd{REC}. \\
+        Transform Length (ASCII-6-\#): FFT length in channels.
+            Valid range: 32--16384. \\
+        Integration Count (ASCII-8-\#): Number of consecutive spectra to
+            integrate.  Valid range: 384--24576. \\
+        Minimum Fill (ASCII-8-\#): Optional (default = Integration Count / 2).
+            Minimum number of samples in a ``cell'' for valid output.
+            Range: 2 to Integration Count. \\
+        Highwater Threshold (ASCII-4-\#): Optional (default = 128).
+            Minimum buffered ``blocks'' before partial processing.
+
+    \item[Validation:]
+        The product (Transform Length $\times$ Integration Count) must be an
+        integral multiple of 4096 (the DRX samples-per-frame count).
+
+    \item[Response Format:] \texttt{<Tag>}
+    \item[Response Element:]
+        Tag (ASCII-16-A): Form \texttt{<MJD>\_<Reference Number>}.
+
+\end{description}
+
+\begin{calloutBox}{Implementation Note}{blue}
+The \cmd{SPC} command is only available when DROS2 is built in Spectrometer mode.
+\end{calloutBox}
+
+\begin{newInVersion}{2.4.1}
+The spectrometer has been significantly enhanced since version~1.4:
+\begin{itemize}
+    \item \textbf{Stokes products:} The output Stokes product is selected via
+        the \texttt{Stokes} metadata field in the MCS message.
+        Supported values: \texttt{XXYY} (default), \texttt{CRCI},
+        \texttt{IQUV}, \texttt{IV}, \texttt{XXCRCIYY}, \texttt{I}.
+    \item \textbf{Flexible FFT parameters:} The Transform Length and Integration
+        Count are now fully configurable within the supported ranges
+        (32--16384 channels, 384--24576 integrations).  The previous restriction
+        to 32~channels and 6144~integrations has been removed.
+    \item \textbf{DRX and DRX8 input:} The spectrometer accepts both DRX
+        (4-bit) and DRX8 (8-bit) input data.
+\end{itemize}
+\end{newInVersion}
+
+\begin{noteBox}
+\textbf{Example:} To schedule a 60-second spectrometer session at MJD~60700,
+MPM~43200000 with 256~channels, 4096~integrations, and XXYY Stokes output:
+
+\texttt{SPC 060700 043200000 000060000 000256 00004096}
+
+Response: \texttt{060700\_000000042}
+\end{noteBox}
+
+% ---- SHT ----
+\subsection{SHT --- Shutdown}
+\label{cmd:sht}
+\begin{description}[style=nextline]
+    \item[Description:]
+        Initiates a shutdown of DROS2.  The system state transitions
+        to \texttt{SHUTDWN} and all resources are released.  When deployed as
+        a \texttt{systemd} service, the process will be restarted automatically
+        after the configured delay.
+    \item[Argument Format:] \texttt{[Mode]}
+    \item[Argument:]
+        Mode (ASCII-7-A): Optional.  \texttt{SCRAM} for an immediate shutdown
+        that bypasses normal cleanup.  \texttt{RESTART} to request a clean
+        restart.  If omitted, an orderly shutdown is performed.
+\end{description}
+
+% ---- PNG ----
+\subsection{PNG --- Ping}
+\label{cmd:png}
+\begin{description}[style=nextline]
+    \item[Description:]
+        Returns the current system state in the R-COMMENT field.  Used as a
+        simple connectivity and status check.
+    \item[Response Format:] \texttt{<System State>}
+    \item[Response Element:]
+        System State (ASCII-7-A): One of the values in
+        Section~\ref{sec:states}.
+\end{description}
+
+% ---- RPT ----
+\subsection{RPT --- Report}
+\label{cmd:rpt}
+\begin{description}[style=nextline]
+    \item[Description:]
+        Queries a MIB entry and returns its value.  The MIB entry label is
+        supplied as the data field of the command message.
+    \item[Argument Format:] \texttt{<MIB Label>}
+    \item[Argument:]
+        MIB Label: The label of the MIB entry to query (see
+        Section~\ref{sec:mib}).
+    \item[Response:]
+        The response data field contains the MIB entry value as described in
+        Section~\ref{sec:mib-detail}.
+\end{description}
+
+% ---- TST ----
+\subsection{TST --- Self Test}
+\label{cmd:tst}
+\begin{description}[style=nextline]
+    \item[Description:]
+        Performs a system self-test.  This command is for development purposes
+        only and is not supported by this ICD.
+\end{description}
+
+
+%% ===========================================================================
+%%  SYSTEM STATES
+%% ===========================================================================
+
+\section{System States}
+\label{sec:states}
+
+The DR reports one of the following system states in response to \cmd{PNG}
+commands and in the R-SUMMARY field of all responses:
+
+\begin{longtable}{l p{10cm}}
+\toprule
+\textbf{State} & \textbf{Description} \\
+\midrule
+\endfirsthead
+\endhead
+\bottomrule
+\endfoot
+
+\texttt{SHUTDWN} &
+    The DR is in the process of shutting down. \\
+
+\texttt{BOOTING} &
+    The DR is initializing (scanning storage, starting services). \\
+
+\texttt{NORMAL~} &
+    The DR is operating normally and ready to accept commands. \\
+
+\texttt{WARNING} &
+    The DR has detected a non-critical condition (e.g., elevated temperature,
+    low storage space). \\
+
+\texttt{ERROR~~} &
+    The DR has detected a critical error preventing normal operation. \\
+
+\end{longtable}

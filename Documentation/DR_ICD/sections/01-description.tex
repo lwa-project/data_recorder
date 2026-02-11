@@ -1,0 +1,99 @@
+% 01-description.tex - Description and Scope
+
+\chapter{Description}
+\label{sec:description}
+
+\section{Purpose}
+
+This document defines the interface between the Data Recorder (DR) subsystem and
+other Long Wavelength Array (LWA) station subsystems.  The DR records the output
+of the Next-generation Digital Processor (NDP) subsystem and is controlled by the
+Monitor and Control System (MCS).  Whereas station architecture and subsystem ICDs
+may refer to DR as a whole, this ICD applies to a single DR instance.
+
+\begin{newInVersion}{2.4.1}
+In previous versions of this document, the upstream digital processor was referred
+to as DP (Digital Processing).  All references have been updated to NDP
+(Next-generation Digital Processor) to reflect the current system architecture.
+\end{newInVersion}
+
+\section{Scope}
+
+This ICD describes the DR's physical and electrical connections, software
+interfacing, and control methods.  It covers:
+\begin{itemize}
+    \item Physical and network connections between DR and other station subsystems.
+    \item The MCS message-based command and monitoring interface.
+    \item Configuration parameters and system requirements.
+    \item Data format specifications for recorded and spectrometer output files.
+\end{itemize}
+
+\section{System Overview}
+
+The DR runs the Data Recorder Operating Software version~2 (DROS2), which
+provides all ICD-specified functionality including MCS message processing,
+data recording, spectrometer computation, and storage management.
+
+The build system compiles two DROS2 binaries from the same source code:
+
+\begin{enumerate}
+    \item \textbf{Spectrometer mode} (primary): The DR records raw NDP data
+          streams and can compute integrated power spectra of beam data in real
+          time using the \cmd{SPC} command.  This is the standard deployment mode.
+    \item \textbf{LiveBuffer mode} (secondary): The DR provides a live capture
+          buffer for on-the-fly packet capture via the \cmd{BUF} command and
+          \mib{BUFFER} MIB entries.  This mode is not the standard deployment.
+\end{enumerate}
+
+The active mode is a runtime selection controlled by the contents of the
+\texttt{/LWA/config/binary-mode} file, which specifies either
+\texttt{Spectrometer} or \texttt{LiveBuffer}.  The corresponding binary is
+launched when the DROS2 service starts; switching modes requires only updating
+this file and restarting the service.
+DROS2 is deployed as a \texttt{systemd} service (\texttt{dros.service}) that
+starts automatically on boot, restarts on failure, and logs to the system
+journal.
+
+\section{Multi-DR Deployment}
+\label{sec:multi-dr}
+
+\begin{newInVersion}{2.4.1}
+A station may deploy multiple DR instances on a single host, each recording from
+one or more NDP data streams.  Multi-DR deployment is the preferred configuration
+and is managed through the \texttt{build\_helper.py} utility, which creates
+per-instance build directories with separate:
+
+\begin{itemize}
+    \item Installation paths (\texttt{/LWA/DR\textit{N}/})
+    \item Storage mount points (\texttt{/LWA\_STORAGE/DR\textit{N}/})
+    \item Configuration files (\texttt{/LWA/DR\textit{N}/config/})
+    \item Runtime directories (\texttt{/LWA/DR\textit{N}/runtime/})
+    \item Service files (\texttt{dros-dr\textit{N}.service})
+\end{itemize}
+
+Each DR instance has its own \texttt{defaults\_v2.cfg} configuration file
+specifying a unique reference designator (e.g., \texttt{DR1}, \texttt{DR2}),
+IP address, and port numbers.  When running in a single-DR configuration, the
+default installation paths (\texttt{/LWA/}, \texttt{/LWA\_STORAGE/}) are used
+directly.
+\end{newInVersion}
+
+\section{Document Organization}
+
+The remainder of this document is organized as follows:
+
+\begin{description}
+    \item[Section~\ref{sec:abbreviations}] defines abbreviations, acronyms, and
+        conventions used throughout this document.
+    \item[Section~\ref{sec:physical}] describes the physical and electrical
+        interfaces of the DR.
+    \item[Section~\ref{sec:monitor-control}] describes the monitor and control
+        interface, including configuration, MIB structure, and control commands.
+    \item[Section~\ref{sec:safety}] describes the safety monitoring interface.
+    \item[Section~\ref{sec:references}] lists references and related documents.
+    \item[Appendix~\ref{app:spectrometer}] defines the spectrometer data file
+        format.
+    \item[Appendix~\ref{app:errors}] lists error messages.
+    \item[Appendix~\ref{app:data-formats}] provides a reference of all supported
+        data formats.
+\end{description}

@@ -1,0 +1,39 @@
+% DR_ICD.tex - DR Interface Control Document
+% Version 2.4.1 - February 2026
+%
+% Long Wavelength Array Project
+% Data Recorder (DR) Interface Control Document
+
+\documentclass{lwa-icd}
+
+% Project-specific configuration
+\input{config/packages}
+\input{config/macros}
+\input{config/metadata}
+
+\begin{document}
+
+% Title page
+\makeICDtitlepage
+
+% Change record
+\input{frontmatter/revisions}
+
+% Table of contents
+\makeICDtoc
+
+% Main content
+\input{sections/01-description}
+\input{sections/02-abbreviations}
+\input{sections/03-physical}
+\input{sections/04-monitor-control}
+\input{sections/05-safety}
+\input{sections/06-references}
+
+% Appendices
+\appendix
+\input{appendices/appendix-a}
+\input{appendices/appendix-b}
+\input{appendices/appendix-c}
+
+\end{document}

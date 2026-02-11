@@ -1,0 +1,143 @@
+% 06-references.tex - References
+
+\chapter{References}
+\label{sec:references}
+
+\section{LWA Documentation}
+
+\begin{enumerate}
+    \item MCS Common ICD (LWA Engineering Memo MCS0005)
+    \item MCS-NDP Interface Control Document
+    \item J.~Craig, ``Long Wavelength Array Station Architecture,'' Ver.~2.0, LWA Memo~161, Feb.~26, 2009.
+    \item C.~Wolfe, S.~Ellingson, C.~Patterson, ``MCS Data Recorder Preliminary Design \& Verification,'' Ver.~1.0, LWA Memo~165, Aug.~26, 2009.
+    \item C.~Wolfe, S.~Ellingson, C.~Patterson, ``MCS-DR Storage Unit,'' LWA Engineering Memo MCS0019, Sep.~23, 2009.
+\end{enumerate}
+
+\section{Standards}
+
+\begin{enumerate}
+    \item IEC~60027-2, ``Letter symbols to be used in electrical technology --- Part~2: Telecommunications and electronics,'' Third Ed., 2005.
+\end{enumerate}
+
+\section*{Software Components}
+
+\begin{longtable}{l p{9cm}}
+\toprule
+\textbf{Component} & \textbf{Description} \\
+\midrule
+\endfirsthead
+\endhead
+\bottomrule
+\endfoot
+
+DROS2          & Main Data Recorder Operating Software.  Provides all
+                 ICD-specified functionality. \\
+
+Msender        & Command-line utility to send MCS messages to and receive
+                 responses from the DR.  Intended for operating the DR in
+                 the absence of MCS. \\
+
+DataSource2    & Simulated NDP data source for testing.  Emulates NDP
+                 output in DRX, DRX8, TBT, TBS, and COR formats. \\
+
+SpectrogramViewer & GUI utility for viewing spectrometer output files
+                    produced by DROS2. \\
+
+build\_helper.py & Build configuration utility for multi-DR deployments.
+                   Creates per-instance build directories with separate
+                   installation paths and service files. \\
+
+\end{longtable}
+
+\section*{Configuration Files}
+
+\begin{longtable}{l p{9cm}}
+\toprule
+\textbf{File} & \textbf{Description} \\
+\midrule
+\endfirsthead
+\endhead
+\bottomrule
+\endfoot
+
+\texttt{defaults\_v2.cfg}
+    & Main system configuration (Section~\ref{sec:configuration}). \\
+
+\texttt{binary-mode}
+    & Selects the active DROS2 operating mode
+      (\texttt{Spectrometer} or \texttt{LiveBuffer}). \\
+
+\texttt{dros.service}
+    & \texttt{systemd} unit file for single-DR deployment. \\
+
+\texttt{dros-dr\textit{N}.service}
+    & \texttt{systemd} unit file for multi-DR deployment
+      (one per DR instance). \\
+
+\end{longtable}
+
+\section{Configuration Parameters}
+\label{sec:configuration}
+
+DROS2 configuration is stored in a key-value text file
+(\texttt{defaults\_v2.cfg}).  Table~\ref{tab:config} lists the supported
+parameters in the order they appear in the configuration file.
+
+\begin{longtable}{l l p{6.5cm}}
+\caption{DR Configuration Parameters (\texttt{defaults\_v2.cfg})}
+\label{tab:config} \\
+\toprule
+\textbf{Parameter} & \textbf{Type} & \textbf{Description} \\
+\midrule
+\endfirsthead
+
+\toprule
+\textbf{Parameter} & \textbf{Type} & \textbf{Description} \\
+\midrule
+\endhead
+
+\bottomrule
+\endfoot
+
+\texttt{MyReferenceDesignator}
+    & string
+    & Subsystem reference designator (e.g., \texttt{DR1}).
+      Messages with non-matching designators (other than
+      \texttt{ALL}) are ignored. \\
+
+\texttt{SelfIp}
+    & IP address
+    & DR control interface IP address. \\
+
+\texttt{TimeAuthority}
+    & IP or hostname
+    & NTP time server used for synchronization on boot
+      and via the \cmd{SYN} command. \\
+
+\texttt{SerialNumber}
+    & string
+    & Serial number identifying this DR instance. \\
+
+\texttt{ArraySelect}
+    & string
+    & DRSU to select on startup.  May be a 0-based index or a
+      DRSU barcode. \\
+
+\texttt{MessageInPort}
+    & integer
+    & UDP port for receiving MCS messages. \\
+
+\texttt{MessageOutPort}
+    & integer
+    & UDP port for sending MCS responses. \\
+
+\texttt{DataInIp}
+    & IP address
+    & IP address to bind for receiving NDP data frames.
+      Defaults to the value of \texttt{SelfIp}. \\
+
+\texttt{DataInPort}
+    & integer
+    & UDP port for receiving NDP data frames. \\
+
+\end{longtable}

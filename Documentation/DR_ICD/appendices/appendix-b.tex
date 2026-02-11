@@ -1,0 +1,122 @@
+% appendix-b.tex - Error Messages
+
+\chapter{Error Messages}
+\label{app:errors}
+
+When a command cannot be executed, the DR returns \texttt{R} in the R-RESPONSE
+field with an error message in the R-COMMENT field.
+Table~\ref{tab:errors} lists the defined error messages.
+
+\begin{longtable}{l p{8cm}}
+\caption{DR Error Messages}
+\label{tab:errors} \\
+\toprule
+\textbf{Error Message} & \textbf{Description} \\
+\midrule
+\endfirsthead
+
+\toprule
+\textbf{Error Message} & \textbf{Description} \\
+\midrule
+\endhead
+
+\bottomrule
+\endfoot
+
+\texttt{Operation not permitted}
+    & Operations are scheduled or in progress that prevent execution
+      of the requested command. \\
+
+\texttt{Invalid Name}
+    & The specified format name contains illegal characters. \\
+
+\texttt{Format Already Defined}
+    & The specified format name is already in use. \\
+
+\texttt{Invalid Size}
+    & The specified UDP packet payload size exceeds the maximum
+      (8192~bytes accounting for headers). \\
+
+\texttt{Invalid Rate}
+    & The specified data rate exceeds system capabilities. \\
+
+\texttt{Already Up}
+    & Internal storage is already online. \\
+
+\texttt{Not Detected}
+    & Internal storage was not detected. \\
+
+\texttt{Cannot Start}
+    & File system information could not be determined on the
+      specified device. \\
+
+\texttt{Already Down}
+    & Internal storage is already offline. \\
+
+\texttt{Invalid Storage ID}
+    & The specified storage ID does not exist. \\
+
+\texttt{File not found}
+    & The specified tag value does not refer to any file on
+      internal storage. \\
+
+\texttt{Invalid Filename}
+    & The specified filename contains illegal characters. \\
+
+\texttt{Invalid Position}
+    & The requested start byte and length exceed the file size. \\
+
+\texttt{Invalid Range}
+    & The requested length exceeds response size limitations. \\
+
+\texttt{Not Scheduled}
+    & The specified tag does not refer to any scheduled or
+      existing recording. \\
+
+\texttt{Already Stopped}
+    & The specified tag refers to an already-completed recording. \\
+
+\texttt{Invalid Time}
+    & The requested time frame is in the past or too far in the
+      future. \\
+
+\texttt{Time Conflict: <Op>}
+    & The requested time frame overlaps with a scheduled operation.
+      The first conflicting operation is listed in SCHEDULE-ENTRY-\{n\}
+      format. \\
+
+\texttt{Unknown Format: <Fmt>}
+    & The specified data format is undefined or unusable. \\
+
+\texttt{Insufficient Drive Space}
+    & The storage required exceeds the remaining internal storage. \\
+
+\texttt{Component Not Available: <X>}
+    & Internal component X is unavailable, unusable, or
+      malfunctioning. \\
+
+\texttt{Bad format: bad argument count}
+    & The command arguments could not be parsed; wrong number of
+      fields supplied. \\
+
+\texttt{Unsupported channel count}
+    & The specified FFT length is outside the valid range
+      (32--16384). \\
+
+\texttt{Unsupported integration count}
+    & The specified integration count is outside the valid range
+      (384--24576). \\
+
+\texttt{Unsupported geometry}
+    & The product of Transform Length and Integration Count is not
+      an integral multiple of the frame sample count. \\
+
+\texttt{Unknown Stokes output type}
+    & The specified Stokes product name in the metadata is not
+      recognized. \\
+
+\texttt{Unsupported Stokes output type}
+    & The specified Stokes product is recognized but not
+      supported. \\
+
+\end{longtable}
