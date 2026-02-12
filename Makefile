@@ -51,7 +51,6 @@ install: backup_config
 		$(WORKSPACE)/SpectrogramViewer/Release/SpectrogramViewer 
 	install -b -g root -o root -m 644 -t $(INSTALL_LOCATION)/config \
 		$(FILES)/defaults_v2.cfg.example \
-		$(FILES)/defaults_v2.cfg \
 		$(FILES)/netperformance.sysctl.conf
 	install -b -g root -o root -m 544 -t $(INSTALL_LOCATION)/scripts \
 		$(FILES)/installStartupScript.sh \
