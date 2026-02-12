@@ -47,71 +47,112 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef COMPLEX_H_
-#define COMPLEX_H_
+
+
+#ifndef TBSFRAME_H_
+#define TBSFRAME_H_
+
 
 #ifdef __cplusplus
 extern "C"{
 #endif
-#include <stdint.h>
+
+#define TBS4_SAMPLES_PER_STAND (4*2)
+#define TBS8_SAMPLES_PER_STAND (8*2)
+#define TBS12_SAMPLES_PER_STAND (12*2)
+
+#define Fs_Day (196l* 1000000l * 60l *60l * 24l) /*16934400000000l*/
+
+#define TBS_PKTS_PER_SEC 23926 /* Really 196e6 / 8192  = 23925.78125 */
+
 #include <fftw3.h>
+#include <stdint.h>
+#include "Complex.h"
 
-// define the type of datums (float)
-typedef fftwf_complex 	 ComplexType;
-typedef float			 RealType;
-typedef union __PackedSample4{
-	struct {
-		int8_t q:4;
-		int8_t i:4;
-	};
-	struct {
-		int8_t im:4;
-		int8_t re:4;
-	};
-	uint8_t packed;
-}__attribute__((packed)) PackedSample4;
 
-// NOTE: little-endian packing
-typedef union __PackedSample8{
-	struct {
-		int8_t i;
-		int8_t q;
+typedef struct __TbsFrameHeader{
+	uint32_t syncCode;
+	union {
+		uint8_t  id;
+		uint32_t frameCount;
 	};
-	struct {
-		int8_t re;
-		int8_t im;
-	};
-	uint16_t packed;
-}__attribute__((packed)) PackedSample8;
+	uint32_t secondsCount;
+	uint32_t freq_chan;
+	uint16_t nStand;
+    uint16_t nChan;
+	uint64_t timeTag;
+}__attribute__((packed)) TbsFrameHeader;
 
-// NOTE: little-endian packing
-typedef union __PackedSample64{
-    struct {
-        float i;
-        float q;
-    };
-    struct {
-        float re;
-        float im;
-    };
-    uint16_t packed;
-}__attribute__((packed)) PackedSample64;
 
-// define union type for an unpacked sample
-typedef union __UnpackedSample{
-	struct {
-		RealType i;
-		RealType q;
-	};
-	struct {
-		RealType re;
-		RealType im;
-	};
-	ComplexType packed;
-}__attribute__((packed)) UnpackedSample;
+// TBS frame as received - 4 channels
+typedef struct __Tbs4Frame{
+	TbsFrameHeader  header;
+	PackedSample4   samples[TBS4_SAMPLES_PER_STAND*TBX_STAND_COUNT];
+} __attribute__((packed)) Tbs4Frame;
+
+typedef struct __UnpackedTbs4Frame{
+	TbsFrameHeader  header;
+	UnpackedSample  samples[TBS4_SAMPLES_PER_STAND*TBX_STAND_COUNT];
+} __attribute__((packed)) UnpackedTbs4Frame;
+
+
+// TBS frame as received - 8 channels (default)
+typedef struct __Tbs8Frame{
+	TbsFrameHeader  header;
+	PackedSample4   samples[TBS8_SAMPLES_PER_STAND*TBX_STAND_COUNT];
+} __attribute__((packed)) Tbs8Frame;
+// alias to the above
+typedef Tbs8Frame	TbsFrame;
+typedef Tbs8Frame	PackedTbsFrame;
+
+typedef struct __UnpackedTbs8Frame{
+	TbsFrameHeader  header;
+	UnpackedSample  samples[TBS8_SAMPLES_PER_STAND*TBX_STAND_COUNT];
+} __attribute__((packed)) UnpackedTbs8Frame;
+// alias to the above
+typedef UnpackedTbs8Frame	UnpackedTbsFrame;
+
+
+// TBS frame as received - 12 channels
+typedef struct __Tbs12Frame{
+	TbsFrameHeader  header;
+	PackedSample4   samples[TBS12_SAMPLES_PER_STAND*TBX_STAND_COUNT];
+} __attribute__((packed)) Tbs12Frame;
+
+typedef struct __UnpackedTbs12Frame{
+	TbsFrameHeader  header;
+	UnpackedSample  samples[TBS12_SAMPLES_PER_STAND*TBX_STAND_COUNT];
+} __attribute__((packed)) UnpackedTbs12Frame;
+
+#define TBS4_FRAME_SIZE (sizeof(Tbs4Frame))
+#define TBS4_TUNINGS            2l
+#define TBS4_POLARIZATIONS      2l
+#define TBS4_STREAMS            (TBS4_TUNINGS*TBS4_POLARIZATIONS)
+#define TBS4_DRATE              (TBS4_FRAME_SIZE*TBS_PKTS_PER_SEC)
+
+#define TBS8_FRAME_SIZE (sizeof(Tbs8Frame))
+#define TBS8_TUNINGS            2l
+#define TBS8_POLARIZATIONS      2l
+#define TBS8_STREAMS            (TBS8_TUNINGS*TBS8_POLARIZATIONS)
+#define TBS8_DRATE              (TBS8_FRAME_SIZE*TBS_PKTS_PER_SEC)
+
+// same as the above
+#define TBS_FRAME_SIZE (sizeof(TbsFrame))
+#define TBS_TUNINGS             2l
+#define TBS_POLARIZATIONS       2l
+#define TBS_STREAMS             (TBS_TUNINGS*TBS_POLARIZATIONS)
+#define TBS_DRATE               (TBS_FRAME_SIZE*TBS_PKTS_PER_SEC)
+
+#define TBS12_FRAME_SIZE (sizeof(Tbs12Frame))
+#define TBS12_TUNINGS           2l
+#define TBS12_POLARIZATIONS     2l
+#define TBS12_STREAMS           (TBS12_TUNINGS*TBS12_POLARIZATIONS)
+#define TBS12_DRATE             (TBS12_FRAME_SIZE*TBS_PKTS_PER_SEC)
+
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* COMPLEX_H_ */
+
+#endif /* TBFFRAME_H_ */

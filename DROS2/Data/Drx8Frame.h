@@ -47,71 +47,122 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef COMPLEX_H_
-#define COMPLEX_H_
-
+#ifndef DRX8FRAME_H_
+#define DRX8FRAME_H_
 #ifdef __cplusplus
 extern "C"{
 #endif
-#include <stdint.h>
+
+#define DRX8_SAMPLES_PER_FRAME 4096
+
+#define Fs_Day (196l* 1000000l * 60l *60l * 24l) /*16934400000000l*/
+
 #include <fftw3.h>
+#include <stdint.h>
+#include "Complex.h"
 
-// define the type of datums (float)
-typedef fftwf_complex 	 ComplexType;
-typedef float			 RealType;
-typedef union __PackedSample4{
-	struct {
-		int8_t q:4;
-		int8_t i:4;
-	};
-	struct {
-		int8_t im:4;
-		int8_t re:4;
-	};
-	uint8_t packed;
-}__attribute__((packed)) PackedSample4;
 
-// NOTE: little-endian packing
-typedef union __PackedSample8{
-	struct {
-		int8_t i;
-		int8_t q;
+typedef struct __Drx8FrameHeader{
+	uint32_t syncCode;
+	union {
+		union {
+			uint8_t  id;
+			struct {
+				uint8_t drx_beam:3;
+				uint8_t drx_tuning:3;
+				uint8_t drx_is_adp:1;
+				uint8_t drx_polarization:1;
+			};
+		};
+		uint32_t frameCount;
 	};
-	struct {
-		int8_t re;
-		int8_t im;
-	};
-	uint16_t packed;
-}__attribute__((packed)) PackedSample8;
+	uint32_t secondsCount;
+	uint16_t decFactor;
+	uint16_t timeOffset;
+	uint64_t timeTag;
+	uint32_t freqCode;
+	uint32_t statusFlags;
+}__attribute__((packed)) Drx8FrameHeader;
 
-// NOTE: little-endian packing
-typedef union __PackedSample64{
-    struct {
-        float i;
-        float q;
-    };
-    struct {
-        float re;
-        float im;
-    };
-    uint16_t packed;
-}__attribute__((packed)) PackedSample64;
+// DRX8 frame as received
+typedef struct __Drx8Frame{ // Modified version of Jake's drx frame struct
+	Drx8FrameHeader header;
+	PackedSample8  samples[DRX8_SAMPLES_PER_FRAME];
+	void fixByteOrder(){
+		header.freqCode   = __builtin_bswap32(header.freqCode);
+		header.decFactor  = (header.decFactor << 8)  | (header.decFactor >> 8);
+		header.timeOffset = (header.timeOffset << 8) | (header.timeOffset >> 8);
+		header.timeTag    = __builtin_bswap64(header.timeTag);
+	}
+	void unfixByteOrder(){
+		fixByteOrder();
+	}
+} __attribute__((packed)) Drx8Frame;
+// alias to the above
+typedef Drx8Frame	PackedDrx8Frame;
 
-// define union type for an unpacked sample
-typedef union __UnpackedSample{
-	struct {
-		RealType i;
-		RealType q;
-	};
-	struct {
-		RealType re;
-		RealType im;
-	};
-	ComplexType packed;
-}__attribute__((packed)) UnpackedSample;
+typedef struct __UnpackedDrx8Frame{
+	Drx8FrameHeader header;
+	UnpackedSample   samples[DRX8_SAMPLES_PER_FRAME];
+} __attribute__((packed)) UnpackedDrx8Frame;
+
+#define DRX8_FRAME_SIZE (sizeof(Drx8Frame))
+#define DRX8_TUNINGS       2l
+#define DRX8_POLARIZATIONS 2l
+#define DRX8_STREAMS       4l
+
+const uint64_t Drx8SampleRates[] = {
+	  250000lu,
+	  500000lu,
+	 1000000lu,
+	 2000000lu,
+	 4900000lu,
+	 9800000lu,
+	19600000lu
+};
+
+const uint64_t Drx8DecFactors[] = {
+	784lu,
+	392lu,
+	196lu,
+	 98lu,
+	 40lu,
+	 20lu,
+	 10lu
+};
+
+const uint64_t Drx8TimeTagSteps[] = {
+		DRX8_SAMPLES_PER_FRAME * 784lu,
+		DRX8_SAMPLES_PER_FRAME * 392lu,
+		DRX8_SAMPLES_PER_FRAME * 196lu,
+		DRX8_SAMPLES_PER_FRAME *  98lu,
+		DRX8_SAMPLES_PER_FRAME *  40lu,
+		DRX8_SAMPLES_PER_FRAME *  20lu,
+		DRX8_SAMPLES_PER_FRAME *  10lu
+};
+const uint64_t Drx8DataRates[] = {
+		((  250000lu * DRX8_STREAMS * DRX8_FRAME_SIZE) / DRX8_SAMPLES_PER_FRAME),
+		((  500000lu * DRX8_STREAMS * DRX8_FRAME_SIZE) / DRX8_SAMPLES_PER_FRAME),
+		(( 1000000lu * DRX8_STREAMS * DRX8_FRAME_SIZE) / DRX8_SAMPLES_PER_FRAME),
+		(( 2000000lu * DRX8_STREAMS * DRX8_FRAME_SIZE) / DRX8_SAMPLES_PER_FRAME),
+		(( 4900000lu * DRX8_STREAMS * DRX8_FRAME_SIZE) / DRX8_SAMPLES_PER_FRAME),
+		(( 9800000lu * DRX8_STREAMS * DRX8_FRAME_SIZE) / DRX8_SAMPLES_PER_FRAME),
+		((19600000lu * DRX8_STREAMS * DRX8_FRAME_SIZE) / DRX8_SAMPLES_PER_FRAME)
+};
+const double Drx8TimeSteps[] = {
+		1.0f /  250000.0f,
+		1.0f /  500000.0f,
+		1.0f / 1000000.0f,
+		1.0f / 2000000.0f,
+		1.0f / 4900000.0f,
+		1.0f / 9800000.0f,
+		1.0f /19600000.0f,
+};
+
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* COMPLEX_H_ */
+
+#endif /* DRX8FRAME_H_ */

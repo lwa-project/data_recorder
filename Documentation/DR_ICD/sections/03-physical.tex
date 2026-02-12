@@ -1,0 +1,88 @@
+% 03-physical.tex - Physical System Interfaces
+
+\chapter{Physical System Interfaces}
+\label{sec:physical}
+
+\section{Mechanical Interface}
+
+\begin{newInVersion}{2.4.1}
+The DR consists of a 1U rack-mount server (e.g., Gigabyte R152-Z30) with
+internal hot-swap drive bays for storage.  No specific server model is required;
+any x86\_64 system with sufficient CPU cores, RAM, and drive bays is suitable.
+The server is mounted in a standard EIA 19'' rack.
+\end{newInVersion}
+
+\section{Network Interfaces}
+
+The DR server connects to the station network with two Ethernet interfaces:
+
+\begin{longtable}{l l p{7.5cm}}
+\toprule
+\textbf{Interface} & \textbf{Speed} & \textbf{Purpose} \\
+\midrule
+\endfirsthead
+\endhead
+\bottomrule
+\endfoot
+
+Data interface    & 10~GbE (or faster)  &
+    Receives data frames from NDP.  Connected to the NDP data network.
+    The UDP port is configured by the \texttt{DataInPort} parameter
+    in \texttt{defaults\_v2.cfg}. \\
+
+Control interface & 1~GbE              &
+    Sends and receives MCS command/response messages.  Connected to the
+    station control network.  The UDP ports are configured by the
+    \texttt{MessageInPort} and \texttt{MessageOutPort} parameters
+    in \texttt{defaults\_v2.cfg}. \\
+
+\end{longtable}
+
+\section{Storage}
+
+\begin{newInVersion}{2.4.1}
+The DR supports two storage configurations.  Single-drive storage is preferred
+for new deployments; RAID-0 arrays remain supported for legacy DRSU
+compatibility.
+\end{newInVersion}
+
+\subsection{Preferred: Single Drives}
+
+Individual hard drives are installed in internal hot-swap bays and formatted
+with the EXT4 file system.  Each drive is mounted under the
+\texttt{/LWA\_STORAGE/} hierarchy and managed independently by DROS2.
+This configuration simplifies drive replacement and eliminates the risk of
+array-wide data loss from a single drive failure.
+
+\subsection{Supported: RAID-0 Arrays (Legacy DRSU)}
+
+For compatibility with existing Data Recorder Storage Units (DRSUs), DROS2
+also supports RAID-0 arrays constructed with \texttt{mdadm}.  A DRSU
+typically consists of multiple drives combined into a single \texttt{/dev/md}
+device, formatted with EXT4, and mounted under \texttt{/LWA\_STORAGE/}.
+
+RAID-0 arrays provide higher sequential write bandwidth but offer no
+redundancy: failure of any constituent drive results in loss of all data on
+the array.
+
+\subsection{Storage Hierarchy}
+
+Regardless of configuration, all storage is mounted under
+\texttt{/LWA\_STORAGE/} with the following structure:
+
+\begin{lstlisting}
+/LWA_STORAGE/
+  Internal/
+    0/DROS/Rec/       # Raw recordings
+    0/DROS/Spec/      # Spectrometer output
+  External/
+    0/DROS/           # External storage (copy/dump targets)
+\end{lstlisting}
+
+In a multi-DR deployment (Section~\ref{sec:multi-dr}), each instance uses a
+separate storage root, e.g., \texttt{/LWA\_STORAGE/DR1/},
+\texttt{/LWA\_STORAGE/DR2/}.
+
+Storage setup (partitioning, formatting, and mounting) is managed by the
+\texttt{StorageControl.sh} script included with DROS2.  DROS2 itself writes
+to mounted file systems and does not perform low-level storage management.

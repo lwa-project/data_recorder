@@ -73,8 +73,8 @@ typedef struct __DrxSpectraHeader{
 	uint32_t			fills[4];
 	uint8_t				errors[4];
 	uint8_t 			beam;
-	uint8_t         stokes_format;
-	uint8_t             spec_version;
+	uint8_t 			stokes_format;
+	uint8_t 			spec_version;
 	union{
 		struct {
 			uint8_t     flag_xcp:1;
@@ -197,13 +197,19 @@ public:
 	virtual void run_slave();
 
 	// input-thread methods
-	bool     insert(DrxFrame* f);
+	template<typename FrameType>
+	bool     insert(FrameType* f);
 	uint64_t nextTimeTagAfterBlock(DrxBlockSetup* bs);
-	void     initBlockSetup(DrxBlockSetup* toPrepare, DrxFrame* f, DrxBlockSetup* predecessor = NULL);
-	bool     blockMatch(DrxFrame* f, DrxBlockSetup* bs);
-	int      compare(DrxFrame* f, DrxBlockSetup* bs);
-	bool     unpack(DrxFrame* f, DrxBlockSetup* bs);
-	bool     frameIsLegal(DrxFrame* f);
+	template<typename FrameType>
+	void     initBlockSetup(DrxBlockSetup* toPrepare, FrameType* f, DrxBlockSetup* predecessor = NULL);
+	template<typename FrameType>
+	bool     blockMatch(FrameType* f, DrxBlockSetup* bs);
+	template<typename FrameType>
+	int      compare(FrameType* f, DrxBlockSetup* bs);
+	template<typename FrameType>
+	bool     unpack(FrameType* f, DrxBlockSetup* bs);
+	template<typename FrameType>
+	bool     frameIsLegal(FrameType* f);
 
 	// output-thread methods
 	void startBlock(DrxBlockSetup* bs, DrxSpectraHeader* dsh, float* aData);
@@ -224,7 +230,8 @@ public:
 	SpectrometerCounters* getCounters();
 	void   printSpecSetup();
 	void   printBlockSetup(DrxBlockSetup* bs);
-	void   printFrameSetup(DrxFrame* f, DrxBlockSetup* bs=NULL);
+	template<typename FrameType>
+	void   printFrameSetup(FrameType* f, DrxBlockSetup* bs=NULL);
 	string specReport();
 	//void   generateTestPattern(float* specdata);
 	void   doPeriodicReport();

@@ -47,91 +47,92 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef PLUGIN_H_
-#define PLUGIN_H_
-
-#include "QueuedSubscriber.h"
-#include "TicketBuffer.h"
-#include "../Threading/ThreadPair.h"
-
-//enum PluginState{PS_PROCESSING, PS_FLUSHING, PS_DONE};
 
 
-
-class Plugin: public TicketBuffer, public QueuedSubscriber, public ThreadPair{
-public:
-	typedef struct __TicketTracker{
-		TicketBuffer::Ticket* t;
-		size_t                next;
-		size_t                done;
-	}TicketTracker;
+#ifndef TBSFRAME_H_
+#define TBSFRAME_H_
 
 
-	Plugin(const string& _name, TicketBuffer* _source, const TB_Geometry& _outputBufferGeometry);
-	virtual ~Plugin();
+#ifdef __cplusplus
+extern "C"{
+#endif
 
-	// derived class monitor thread funciton
-	virtual bool monitor(){return true;}
+#define TBS4_SAMPLES_PER_STAND (4*2)
+#define TBS8_SAMPLES_PER_STAND (8*2)
+#define TBS12_SAMPLES_PER_STAND (12*2)
 
-	// used by the derived class to get data to work with
-	void* peekNextIn(size_t size);
-	void* getNextIn(size_t size);
-	void  doneIn(bool release = false);
-	void* getNextOut(size_t size);
-	void  doneOut(bool release = false);
+#define Fs_Day (196l* 1000000l * 60l *60l * 24l) /*16934400000000l*/
 
-	// derived class input handling thread method
-	virtual void run_master();  // base version just consumes inbound tickets
-
-	// derived class output handling thread method
-	virtual void run_slave();   // base version terminates immediately
-
-	// to approximate bandwidth in/out
-	size_t getReceiveRate();
-	size_t getSendRate();
+#include <fftw3.h>
+#include <stdint.h>
+#include "../Signals/Complex.h"
 
 
-	// overrides of start and stop behavior to connect/disconnect on start/stop
-	virtual void start();
-	virtual void stop();
+typedef struct __TbsFrameHeader{
+	uint32_t syncCode;
+	union {
+		uint8_t  id;
+		uint32_t frameCount;
+	};
+	uint32_t secondsCount;
+	uint32_t freq_chan;
+	uint16_t nStand;
+    uint16_t nChan;
+	uint64_t timeTag;
+}__attribute__((packed)) TbsFrameHeader;
 
 
+// TBS frame as received - 4 channels
+typedef struct __Tbs4Frame{
+	TbsFrameHeader  header;
+	PackedSample4   samples[TBS4_SAMPLES_PER_STAND*TBX_STAND_COUNT];
+} __attribute__((packed)) Tbs4Frame;
+
+typedef struct __UnpackedTbs4Frame{
+	TbsFrameHeader  header;
+	UnpackedSample  samples[TBS4_SAMPLES_PER_STAND*TBX_STAND_COUNT];
+} __attribute__((packed)) UnpackedTbs4Frame;
 
 
-private:
-	Plugin();
-	DECLARE_ACCESS_MUTEX();
-	TicketBuffer* source;                // the upstream buffer
-	TB_Geometry outputBufferGeometry;
+// TBS frame as received - 8 channels (default)
+typedef struct __Tbs8Frame{
+	TbsFrameHeader  header;
+	PackedSample4   samples[TBS8_SAMPLES_PER_STAND*TBX_STAND_COUNT];
+} __attribute__((packed)) Tbs8Frame;
+// alias to the above
+typedef Tbs8Frame	TbsFrame;
+typedef Tbs8Frame	PackedTbsFrame;
 
-	/*
-	volatile bool haveUpstreamTicket;
-	volatile bool upstreamTicketBusy;
-	TicketBuffer::Ticket* cur_in;          // the current input ticket
-	size_t                cur_in_next;     // frame number of the next available frame in the current input ticket
-	size_t                cur_in_done;     // frame number of the next-to-complete frame in the current input ticket
-
-
-
-	volatile bool haveDownstreamTicket;
-	volatile bool downstreamTicketBusy;
-	TicketBuffer::Ticket* cur_out;         // the current output ticket
-	size_t                cur_out_next;    // frame number of the next available frame in the current input ticket
-	size_t                cur_out_done;    // frame number of the next-to-complete frame in the current input ticket
-	*/
-
-	size_t                bytesReceived;
-	size_t                bytesSent;
+typedef struct __UnpackedTbs8Frame{
+	TbsFrameHeader  header;
+	UnpackedSample  samples[TBS8_SAMPLES_PER_STAND*TBX_STAND_COUNT];
+} __attribute__((packed)) UnpackedTbs8Frame;
+// alias to the above
+typedef UnpackedTbs8Frame	UnpackedTbsFrame;
 
 
+// TBS frame as received - 12 channels
+typedef struct __Tbs12Frame{
+	TbsFrameHeader  header;
+	PackedSample4   samples[TBS12_SAMPLES_PER_STAND*TBX_STAND_COUNT];
+} __attribute__((packed)) Tbs12Frame;
 
-	TicketTracker in;
-	TicketTracker out;
+typedef struct __UnpackedTbs12Frame{
+	TbsFrameHeader  header;
+	UnpackedSample  samples[TBS12_SAMPLES_PER_STAND*TBX_STAND_COUNT];
+} __attribute__((packed)) UnpackedTbs12Frame;
 
-	// clear the tick in preparation for use
-	void initializeDownstreamTicket(TicketBuffer::Ticket*& _t);
+
+#define TBS_SAMPLES_PER_FRAME	(TBS8_SAMPLES_PER_STAND*TBX_STAND_COUNT)
+#define TBS_FRAME_SIZE (sizeof(TbsFrame))
+#define TBS_TUNINGS            	2l
+#define TBS_POLARIZATIONS     	2l
+#define TBS_STREAMS            	(TBS_TUNINGS*TBS_POLARIZATIONS)
 
 
-};
+#ifdef __cplusplus
+}
+#endif
 
-#endif /* PLUGIN_H_ */
+
+#endif /* TBFFRAME_H_ */

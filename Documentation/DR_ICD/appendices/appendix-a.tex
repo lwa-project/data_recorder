@@ -1,0 +1,147 @@
+% appendix-a.tex - Spectrometer Data File Format
+
+\chapter{Spectrometer Data File Format}
+\label{app:spectrometer}
+
+Spectrometer output files consist of a sequence of blocks.  Each block contains
+a header followed by spectral data.  For each ``block'' that produces spectra
+for all tuning/polarization combinations, one header structure and associated
+spectral data are written.
+
+\section{Header Structure}
+
+The header is defined by the following C structure (packed, no padding):
+
+\begin{lstlisting}[language=C]
+typedef struct __DrxSpectraHeader {
+    uint32_t  MAGIC1;           // must always equal 0xC0DEC0DE
+    uint64_t  timeTag0;         // time tag of first frame in block
+    uint16_t  timeOffset;       // time offset reported by NDP
+    uint16_t  decFactor;        // decimation factor
+    uint32_t  freqCode[2];      // NDP frequency codes for each tuning
+                                //   index: 0..1 = Tuning 1..2
+    uint32_t  fills[4];         // fill counts per pol/tuning combination
+                                //   index: 0..3 = X0, Y0, X1, Y1
+    uint8_t   errors[4];        // error flag per pol/tuning combination
+                                //   index: 0..3 = X0, Y0, X1, Y1
+    uint8_t   beam;             // beam number
+    uint8_t   stokes_format;    // Stokes output product identifier
+    uint8_t   spec_version;     // spectrometer version byte
+    uint8_t   reserved;         // reserved flags (includes kurtosis)
+    uint32_t  nFreqs;           // Transform Length (number of channels)
+    uint32_t  nInts;            // Integration Count
+    uint32_t  satCount[4];      // saturation counts per pol/tuning
+                                //   index: 0..3 = X0, Y0, X1, Y1
+    uint32_t  MAGIC2;           // must always equal 0xED0CED0C
+} __attribute__((packed)) DrxSpectraHeader;
+\end{lstlisting}
+
+\begin{newInVersion}{2.4.1}
+The header structure has been extended from the version~1.4 definition:
+\begin{itemize}
+    \item Added \texttt{stokes\_format} field to identify the Stokes output
+          product.
+    \item Added \texttt{spec\_version} byte.
+    \item Added \texttt{reserved} flags byte (includes kurtosis flag).
+    \item Added \texttt{satCount[4]} array for per-cell saturation counts.
+\end{itemize}
+\end{newInVersion}
+
+\section{Stokes Output Products}
+\label{sec:stokes-products}
+
+The \texttt{stokes\_format} field in the header identifies the output product
+(Table~\ref{tab:stokes}).
+The number of output products per block determines how many floating-point
+spectra follow the header.
+
+\begin{longtable}{l l c p{5.5cm}}
+\caption{Supported Stokes Products}
+\label{tab:stokes} \\
+\toprule
+\textbf{Name} & \textbf{Hex Code} & \textbf{Products} & \textbf{Output Order} \\
+\midrule
+\endfirsthead
+\endhead
+\bottomrule
+\endfoot
+
+\texttt{XXYY}     & \hex{09} & 2 & $|X|^2$, $|Y|^2$ \\
+\texttt{CRCI}     & \hex{06} & 2 & $\text{Re}(XY^*)$, $\text{Im}(XY^*)$ \\
+\texttt{IQUV}     & \hex{F0} & 4 & $I$, $Q$, $U$, $V$ \\
+\texttt{IV}       & \hex{90} & 2 & $I$, $V$ \\
+\texttt{XXCRCIYY} & \hex{0F} & 4 & $|X|^2$, $\text{Re}(XY^*)$,
+                                     $\text{Im}(XY^*)$, $|Y|^2$ \\
+\texttt{I}        & \hex{10} & 1 & $I$ \\
+
+\end{longtable}
+
+\section{Spectral Data Layout}
+
+Immediately following the header, the spectral data for each tuning/stream
+are written as 32-bit floating-point values.  For a spectrometer with
+$N_\text{streams}$ streams (typically 2 for DRX, corresponding to the two
+tunings), $N_\text{products}$ output products, and $N_\text{freqs}$ frequency
+channels, the data following each header consists of:
+
+\[
+    N_\text{streams} \times N_\text{products} \times N_\text{freqs}
+    \text{ 32-bit floats}
+\]
+
+The data are organized as: for each stream, for each product, $N_\text{freqs}$
+float values.  The frequency channels are arranged with the DC component at
+the center (the output is ``fftshifted'').
+
+\section{Resolution}
+
+The spectral and temporal resolution of the spectrometer output are determined
+by the DRX/DRX8 sample rate~$f_D$, the Transform Length (number of
+channels)~$N_\text{chan}$, and the Integration Count~$N_\text{int}$.
+
+The input sample rate is set by the DRX filter code in use:
+\[
+    f_D = \frac{f_s}{D}
+\]
+where $f_s = 196$~MHz is the NDP sample clock and $D$ is the
+decimation factor for the active filter code (see
+Appendix~\ref{app:data-formats}, Tables~\ref{tab:drx-formats}
+and~\ref{tab:drx8-formats}).
+
+The spectral resolution (channel width) is:
+\[
+    \Delta f = \frac{f_D}{N_\text{chan}}
+\]
+
+The temporal resolution (integration time per output spectrum) is:
+\[
+    \Delta t = \frac{N_\text{chan} \times N_\text{int}}{f_D}
+\]
+
+\begin{noteBox}
+\textbf{Example:} With $f_D = 19.6$~MHz (filter code~7, $D = 10$),
+$N_\text{chan} = 256$ channels, and $N_\text{int} = 4096$ integrations:
+
+$\Delta f = 19.6\text{~MHz} / 256 = 76.5625$~kHz per channel
+
+$\Delta t = 256 \times 4096 / 19.6\text{~MHz} \approx 53.5$~ms per spectrum
+\end{noteBox}
+
+\section{Error Handling}
+
+\begin{itemize}
+    \item If an error occurs in ``cell'' $n$: \texttt{fills[n]} is set to~0,
+          all spectral data for that cell are set to~0.0, and
+          \texttt{errors[n]} is set to~1.
+    \item If cell $n$ is not completely filled: \texttt{fills[n]} reflects the
+          number of complete transforms performed.  The spectral data are
+          \emph{not} normalized by \texttt{fills[n]}; the caller must perform
+          this normalization.
+\end{itemize}
+
+\section{Time Continuity}
+
+Generally, consecutive spectra blocks are continuous in time.  NDP resets,
+time-tag rollover, or frame receive errors may cause non-integral time-tag
+steps between consecutive blocks.  Only events giving rise to error flags
+are explicitly flagged.

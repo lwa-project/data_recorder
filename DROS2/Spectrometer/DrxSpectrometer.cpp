@@ -201,9 +201,13 @@ bool DrxSpectrometer::isShutDown(){
 bool DrxSpectrometer::isValid(){
 	return valid;
 }
-bool DrxSpectrometer::frameIsLegal(DrxFrame* f){
+template<typename FrameType>
+bool DrxSpectrometer::frameIsLegal(FrameType* f){
+	static constexpr bool is_drx8 = std::is_same<FrameType, Drx8Frame>::value;
+  
 	return
 			(f->header.decFactor != 0) &&
+			(f->header.drx_is_adp == is_drx8) &&
 			(f->header.timeTag != 0) &&
 			(
 					(f->header.drx_tuning == 1) ||
@@ -220,31 +224,53 @@ bool DrxSpectrometer::frameIsLegal(DrxFrame* f){
 void DrxSpectrometer::run_master(){
 	LOGC(L_INFO, "["+getObjName()+"] Master thread started", ACTOR_COLORS);
 	DrxFrame* curFrame = NULL;
+	Drx8Frame* curFrame8 = NULL;
 	while (!isInterrupted() && (spc != NULL) && (blocks != NULL)){
 		if (curFrame == NULL && !doneReceiving){
-			curFrame = (DrxFrame*) Plugin::getNextIn(DRX_FRAME_SIZE);
+			curFrame = (DrxFrame*) Plugin::peekNextIn(DRX_FRAME_SIZE);
 			if (curFrame != NULL)
 				counters.framesReceived++;
 		}
 		if (curFrame != NULL){
-			curFrame->fixByteOrder();
-			if (frameIsLegal(curFrame)){
-				if (insert(curFrame)){
+			if (curFrame->header.drx_is_adp == 0) {
+				curFrame = (DrxFrame*) Plugin::getNextIn(DRX_FRAME_SIZE);
+				curFrame->fixByteOrder();
+				if (frameIsLegal(curFrame)){
+					if (insert(curFrame)){
+						Plugin::doneIn(doneReceiving);
+						curFrame=NULL;
+					} else {
+						curFrame->unfixByteOrder();
+					}
+				} else {
+					counters.illegalFrames++;
 					Plugin::doneIn(doneReceiving);
 					curFrame=NULL;
-				} else {
-					curFrame->unfixByteOrder();
 				}
 			} else {
-				counters.illegalFrames++;
-				Plugin::doneIn(doneReceiving);
-				curFrame=NULL;
+				curFrame8 = (Drx8Frame*) Plugin::getNextIn(DRX8_FRAME_SIZE);
+				if (curFrame8 != NULL){
+					curFrame8->fixByteOrder();
+					if (frameIsLegal(curFrame8)){
+						if (insert(curFrame8)){
+							Plugin::doneIn(doneReceiving);
+							curFrame8=NULL;
+						} else {
+							curFrame8->unfixByteOrder();
+						}
+					} else {
+						counters.illegalFrames++;
+						Plugin::doneIn(doneReceiving);
+						curFrame8=NULL;
+					}
+				}
 			}
 		}
 		if (doneReceiving){
-			if (curFrame != NULL){
+			if (curFrame != NULL || curFrame8 != NULL){
 				Plugin::doneIn(true);
 				curFrame=NULL;
+				curFrame8=NULL;
 			}
 			break;
 		}
@@ -412,7 +438,8 @@ uint64_t DrxSpectrometer::nextTimeTagAfterBlock(DrxBlockSetup* bs){
 	return bs->timeTagN + ((bs->decFactor * freqCount_or_samp_per_frame * intCount) / DRX_SAMPLES_PER_FRAME);
 }
 
-void DrxSpectrometer::initBlockSetup(DrxBlockSetup* toPrepare, DrxFrame* f, DrxBlockSetup* predecessor){
+template<typename FrameType>
+void DrxSpectrometer::initBlockSetup(DrxBlockSetup* toPrepare, FrameType* f, DrxBlockSetup* predecessor){
 	LOG_ASSERT(toPrepare->state == BS_UNUSED);
 	if (predecessor != NULL){
 		counters.framesInsertedStale++;
@@ -445,7 +472,8 @@ void DrxSpectrometer::initBlockSetup(DrxBlockSetup* toPrepare, DrxFrame* f, DrxB
 	toPrepare->data             = NULL;
 }
 
-bool DrxSpectrometer::blockMatch(DrxFrame* f, DrxBlockSetup* bs){
+template<typename FrameType>
+bool DrxSpectrometer::blockMatch(FrameType* f, DrxBlockSetup* bs){
 	LOG_ASSERT(spc!=NULL);
 	LOG_ASSERT(blocks!=NULL);
 	LOG_ASSERT(bs!=NULL);
@@ -462,7 +490,8 @@ bool DrxSpectrometer::blockMatch(DrxFrame* f, DrxBlockSetup* bs){
 	return compatible;
 }
 
-int DrxSpectrometer::compare(DrxFrame* f, DrxBlockSetup* bs){
+template<typename FrameType>
+int DrxSpectrometer::compare(FrameType* f, DrxBlockSetup* bs){
 	LOG_ASSERT(spc!=NULL);
 	LOG_ASSERT(blocks!=NULL);
 	LOG_ASSERT(bs!=NULL);
@@ -477,7 +506,8 @@ int DrxSpectrometer::compare(DrxFrame* f, DrxBlockSetup* bs){
 
 
 // we can drop the frame or insert it, or take no action; return true for the first two, false otherwise
-bool DrxSpectrometer::insert(DrxFrame* f){
+template<typename FrameType>
+bool DrxSpectrometer::insert(FrameType* f){
 	LOG_ASSERT(spc!=NULL);
 	LOG_ASSERT(blocks!=NULL);
 	LOG_ASSERT(f!=NULL);
@@ -629,7 +659,8 @@ bool DrxSpectrometer::insert(DrxFrame* f){
 	}
 }
 
-bool DrxSpectrometer::unpack(DrxFrame* f, DrxBlockSetup* bs){
+template<typename FrameType>
+bool DrxSpectrometer::unpack(FrameType* f, DrxBlockSetup* bs){
 	//printSpecSetup();
 	LOG_ASSERT(spc!=NULL);
 	LOG_ASSERT(blocks!=NULL);
@@ -665,17 +696,31 @@ bool DrxSpectrometer::unpack(DrxFrame* f, DrxBlockSetup* bs){
 	*fills += (DRX_SAMPLES_PER_FRAME / freqCount_or_samp_per_frame);
 
 	// unpack, counting saturation counts along the way
-	for (size_t i=0; i<DRX_SAMPLES_PER_FRAME; i++){
-		satsThisRound += (size_t) SatLUT[f->samples[i].packed];
-		#ifdef USE_LUTS
-			idata[i][0] = LUT[f->samples[i].packed][0];
-			idata[i][1] = LUT[f->samples[i].packed][1];
-		#else
-			signed char _i = (f->samples[i].packed & 0xf0);
-			signed char _q = (f->samples[i].packed & 0x0f)<<4;
-			idata[i][0]    = (float)(_i>>4);
-			idata[i][1]    = (float)(_q>>4);
-		#endif
+	if constexpr (std::is_same<FrameType, DrxFrame>::value) {
+		for (size_t i=0; i<DRX_SAMPLES_PER_FRAME; i++){
+			satsThisRound += (size_t) SatLUT[f->samples[i].packed];
+			#ifdef USE_LUTS
+				idata[i][0] = LUT[f->samples[i].packed][0];
+				idata[i][1] = LUT[f->samples[i].packed][1];
+			#else
+				signed char _i = (f->samples[i].packed & 0xf0);
+				signed char _q = (f->samples[i].packed & 0x0f)<<4;
+				idata[i][0]    = (float)(_i>>4);
+				idata[i][1]    = (float)(_q>>4);
+			#endif
+		}
+	} else {
+		for (size_t i=0; i<DRX_SAMPLES_PER_FRAME; i++){
+			signed char _i = f->samples[i].i;
+			signed char _q = f->samples[i].q;
+			if (_i == 127 || _i <= -127) {
+				satsThisRound += 1;
+			} else if (_q == 127 || _q <= -127) {
+				satsThisRound += 1;
+			}
+			idata[i][0]       = (float)_i;
+			idata[i][1]       = (float)_q;
+		}
 	}
 	// update sat counts
 	*sat_counts += satsThisRound;
@@ -791,11 +836,17 @@ void DrxSpectrometer::printBlockSetup(DrxBlockSetup* bs){
 	//cout << "ticketFrameIndex:  " << 		(ssize_t) bs->ticketFrameIndex << endl;
 	cout << "===============================================================" << endl;
 }
-void DrxSpectrometer::printFrameSetup(DrxFrame* f, DrxBlockSetup* bs){
+template<typename FrameType>
+void DrxSpectrometer::printFrameSetup(FrameType* f, DrxBlockSetup* bs){
 	cout << "======================= Frame Setup ===========================" << endl;
 
 	cout << "beam:                " << 		f->header.drx_beam << endl;
 	cout << "decFactor:           " << 		f->header.decFactor << endl;
+	if constexpr (std::is_same<FrameType, DrxFrame>::value) {
+		cout << "bitDepth:            " <<    4 << endl;
+	} else {
+		cout << "bitDepth:            " <<    8 << endl;
+	}
 	cout << "timeOffset:          " << 		f->header.timeOffset << endl;
 	size_t tts = f->header.decFactor*DRX_SAMPLES_PER_FRAME;
 	cout << "timeTagStep: (der'd) " << 		tts << endl;

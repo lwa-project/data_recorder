@@ -18,16 +18,12 @@ StandardOutput=syslog
 StandardError=syslog
 SyslogIdentifier=dros
 
-# Setup the environment
-Environment=PYTHONUNBUFFERED=1
-
 ExecStart=/bin/bash -ec '\
 if [ ! -f /LWA/config/binary-mode ]; then \
-        echo -n "Spectrometer" > /LWA/config/binary-mode \
-fi \
-source /LWA/config/Config.sh \
-DROS=/LWA/bin/DROS2-`cat /LWA/config/binary-mode | tr -d "\n"` \
-${DROS} > /LWA/runtime/console.log'
+        echo -n "Spectrometer" > /LWA/config/binary-mode; \
+fi && \
+DROS=/LWA/bin/DROS2-`cat /LWA/config/binary-mode | tr -d "\n"` && \
+$DROS > /LWA/runtime/console.log'
 
 [Install]
 WantedBy=multi-user.target

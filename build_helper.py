@@ -2,10 +2,38 @@
 
 import os
 import sys
+import argparse
 
 
-drs = sys.argv[1:]
-if len(drs) == 0:
+parser = argparse.ArgumentParser(
+            description='script to help build by DROS for one or DRs', 
+            formatter_class=argparse.ArgumentDefaultsHelpFormatter
+            )
+parser.add_argument('drs', type=int, nargs='*',
+                    help='Numeric DR Ids to build DROS for - empty for only a single DR')
+parser.add_argument('-n', '--n-stand', type=int, default=256,
+                    help='Number of stands in the station for the TBT/TBS modes')
+args = parser.parse_args()
+
+with open('DROS2/Data/LwaDataFormats.h', 'r') as ih:
+    with open('LwaDataFormats.h.tmp', 'w') as oh:
+        for line in ih:
+            if line.find('#define TBX_STAND_COUNT') != -1:
+                line = f"#define TBX_STAND_COUNT {args.n_stand}\n"
+            oh.write(line)
+os.rename('DROS2/Data/LwaDataFormats.h', 'DROS2/Data/LwaDataFormats.h.orig')
+os.rename('LwaDataFormats.h.tmp', 'DROS2/Data/LwaDataFormats.h')
+
+with open('DataSource2/source/Lwa/LWA.h', 'r') as ih:
+    with open('LWA.h.tmp', 'w') as oh:
+        for line in ih:
+            if line.find('#define TBX_STAND_COUNT') != -1:
+                line = f"#define TBX_STAND_COUNT {args.n_stand}\n"
+            oh.write(line)
+os.rename('DataSource2/source/Lwa/LWA.h', 'DataSource2/source/Lwa/LWA.h.orig')
+os.rename('LWA.h.tmp', 'DataSource2/source/Lwa/LWA.h')
+
+if len(args.drs) == 0:
     # Standard build
     os.system("make clean && make -j all")
 else:
@@ -14,14 +42,10 @@ else:
     orig_dir = os.getcwd()
     
     ## Iterate over DRs to build
-    for dr in drs:
+    for dr in args.drs:
         ### Name
-        try:
-            dr = int(dr, 10)
-            dr = f"DR{dr}"
-        except ValueError:
-            dr = dr.upper()
-            
+        dr = f"DR{dr}"
+        
         ### Build directory that we copy things into
         if not os.path.exists(f"build_{dr}"):
             os.mkdir(f"build_{dr}")

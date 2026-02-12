@@ -62,7 +62,7 @@ using namespace boost::assign;
 
 #define foreach BOOST_FOREACH
 
-enum PacketType{PT_DRX, PT_TBN, PT_TBW, PT_TBF, PT_FSC, PT_SPC, PT_COR};
+enum PacketType{PT_DRX, PT_TBT, PT_TBS, PT_FSC, PT_SPC, PT_COR, PT_DRX8};
 
 class DataFormat {
 public:
@@ -100,13 +100,14 @@ private:
 	static FormatList knownFormats;
 
 public:
-	DataFormat(string name, size_t frameSize, size_t dataRate, PacketType type, int decFactor):
+	DataFormat(string name, size_t frameSize, size_t dataRate, PacketType type, int decFactor, int bitDepth):
 		name(name),
 		frameSize(frameSize),
 		dataRate(dataRate),
 		frameRate((double)dataRate/(double)frameSize),
 		type(type),
-		decFactor(decFactor){
+		decFactor(decFactor),
+		bitDepth(bitDepth){
 	}
 	DataFormat():
 		name("Unknown Data Format"),
@@ -114,7 +115,8 @@ public:
 		dataRate(0),
 		frameRate(0),
 		type(PT_DRX),
-		decFactor(0){
+		decFactor(0),
+		bitDepth(4){
 	}
 
 	DataFormat(const DataFormat& tc):
@@ -123,7 +125,8 @@ public:
 		dataRate(tc.dataRate),
 		frameRate(tc.frameRate),
 		type(tc.type),
-		decFactor(tc.decFactor){
+		decFactor(tc.decFactor),
+		bitDepth(tc.bitDepth){
 	}
 
 	DataFormat& operator=(const DataFormat& tc){
@@ -134,6 +137,7 @@ public:
 		frameRate = tc.frameRate;
 		type      = tc.type;
 		decFactor = tc.decFactor;
+		bitDepth  = tc.bitDepth;
 		 return *this;
 	}
 
@@ -146,8 +150,9 @@ public:
 	size_t     getDataRate()     const {return dataRate;}
 	double     getFrameRate()    const {return frameRate;}
 	PacketType getPacketType()   const {return type;}
+	bool       isTBX()           const {return (type == PT_TBS) || (type == PT_TBT);}
 	int        getDecFactor()    const {return decFactor;}
-	int        getBitDepth()     const {return 4;}
+	int        getBitDepth()     const {return bitDepth;}
 
 	size_t estimateDataVolume(millisecond runtime, double percentOverallocate = 5.0){
 		return (size_t)( (((double)runtime)*((double)dataRate)/1000.0)*(1.0+(percentOverallocate/100.0)));
@@ -160,6 +165,7 @@ private:
 	double frameRate;
 	PacketType type;
 	int decFactor;
+	int bitDepth;
 
 };
 

@@ -21,8 +21,7 @@ RM := rm -rf
 
 all:
 	make -j 6 -C $(WORKSPACE)/Msender/Release
-	make -j 6 -C $(WORKSPACE)/DataSource/Release
-	make -j 6 -C $(WORKSPACE)/DataSource_v2/Debug
+	make -j 6 -C $(WORKSPACE)/DataSource2/Debug
 	make -j 6 -C $(WORKSPACE)/DROS2/Debug all
 	make -j 6 -C $(WORKSPACE)/SpectrogramViewer/Release
 
@@ -33,7 +32,7 @@ deps:
 	sudo apt-get install build-essential libgdbm-dev libgdbm3 libfuse-dev libfuse2 lm-sensors smartmontools mdadm libboost-all-dev libfftw3-dev
 
 backup_config:
-	@if [ -f "$(INSTALL_LOCATION)/config/defaults_v2.cfg" ]; then echo "Backing up current configuration..."; cp $(INSTALL_LOCATION)/config/defaults_v2.cfg /BACKUP.defaults_v2.cfg; fi
+	@if [ -f "$(INSTALL_LOCATION)/config/defaults_v2.cfg" ]; then echo "Backing up current configuration..."; cp $(INSTALL_LOCATION)/config/defaults_v2.cfg ./BACKUP.defaults_v2.cfg; fi
 
 install: backup_config
 #	cp $(INSTALL_LOCATION)/config/formats.cfg ./formats.cfg
@@ -46,23 +45,22 @@ install: backup_config
 	install -b -g root -o root -d $(INSTALL_LOCATION)/runtime
 	install -b -g root -o root -m 544 -t $(INSTALL_LOCATION)/bin \
 		$(WORKSPACE)/Msender/Release/Msender \
-		$(WORKSPACE)/DataSource/Release/DataSource \
-		$(WORKSPACE)/DataSource_v2/Debug/DataSource_v2 \
+		$(WORKSPACE)/DataSource2/Debug/DataSource2 \
 		$(WORKSPACE)/DROS2/Debug/DROS2-LiveBuffer \
 		$(WORKSPACE)/DROS2/Debug/DROS2-Spectrometer \
 		$(WORKSPACE)/SpectrogramViewer/Release/SpectrogramViewer 
 	install -b -g root -o root -m 644 -t $(INSTALL_LOCATION)/config \
 		$(FILES)/defaults_v2.cfg.example \
-		$(FILES)/defaults_v2.cfg \
 		$(FILES)/netperformance.sysctl.conf
 	install -b -g root -o root -m 544 -t $(INSTALL_LOCATION)/scripts \
 		$(FILES)/installStartupScript.sh \
 		$(FILES)/uninstallStartupScript.sh \
-		$(FILES)/StartDROS*.sh \
 		$(FILES)/uploadLogfile.py \
 		$(FILES)/uploadLogfile.sh \
-		$(WORKSPACE)/DROS2-Spectrometer/Scripts/StorageControl.sh
-	@if [ -f "/BACKUP.defaults_v2.cfg" ]; then echo "Restoring current configuration..."; cp /BACKUP.defaults_v2.cfg $(INSTALL_LOCATION)/config/defaults_v2.cfg; fi
+		$(WORKSPACE)/DROS2/Scripts/StorageControl.sh
+	install -b -g root -o root -m 644 -t /etc/systemd/system \
+		$(FILES)/dros-dr*.service
+	@if [ -f "./BACKUP.defaults_v2.cfg" ]; then echo "Restoring current configuration..."; cp ./BACKUP.defaults_v2.cfg $(INSTALL_LOCATION)/config/defaults_v2.cfg; rm -f ./BACKUP.defaults_v2.cfg; fi
 	@echo 
 	@echo "################################################################"
 	@echo "# Notice:"
@@ -73,20 +71,20 @@ install: backup_config
 	@echo "# The default configuration files are installed to:"
 	@echo "#       $(INSTALL_LOCATION)/config/"
 	@echo "# "
-	@echo "# You must modify defaults.cfg.example to reflect your network environment."
+	@echo "# You must modify defaults_v2.cfg.example to reflect your network environment."
 	@echo "# "
 	@echo "# To launch the software, execute:"
 	@echo "#       $(INSTALL_LOCATION)/bin/DROS2"
 	@echo "# "
 	@echo "# To install the software to run on-boot, execute:"
-	@echo "#       cd $(INSTALL_LOCATION)/scripts; ./installStartupScript.sh StartDROS.sh"
+	@echo "#       systemctl daemon-reload"
+	@echo "#       systemctl enable dros-dr*.service"
 	@echo "# "
 	@echo "################################################################"
 
 clean:
 	make -C $(WORKSPACE)/Msender/Release clean
-	make -C $(WORKSPACE)/DataSource/Release clean
-	make -C $(WORKSPACE)/DataSource_v2/Debug clean
+	make -C $(WORKSPACE)/DataSource2/Debug clean
 	make -C $(WORKSPACE)/DROS2/Debug clean
 	make -C $(WORKSPACE)/SpectrogramViewer/Release clean
 	-$(RM) $(WORKSPACE)/DROS2/Docs/*

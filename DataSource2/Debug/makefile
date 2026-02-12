@@ -8,19 +8,8 @@ RM := rm -rf
 
 # All of the sources participating in the build are defined here
 -include sources.mk
+-include source/Lwa/subdir.mk
 -include source/subdir.mk
--include Threading/subdir.mk
--include System/subdir.mk
--include Streaming/subdir.mk
--include Spectrometer/subdir.mk
--include Primitives/subdir.mk
--include Miscellaneous/subdir.mk
--include Messaging/subdir.mk
--include LiveBuffer/subdir.mk
--include Data/subdir.mk
--include Common/subdir.mk
--include Buffers/subdir.mk
--include Actors/subdir.mk
 -include subdir.mk
 -include objects.mk
 
@@ -50,28 +39,22 @@ endif
 # Add inputs and outputs from these tool invocations to the build variables 
 
 # All Target
-all: DROS2-LiveBuffer DROS2-Spectrometer
+all: DataSource2
 
 # Tool invocations
-DROS2-LiveBuffer: $(OBJS_L) $(USER_OBJS)
+DataSource2: $(OBJS) $(USER_OBJS)
 	@echo 'Building target: $@'
 	@echo 'Invoking: GCC C++ Linker'
-	g++ $(CPPFLAGS) -DDROS_LIVE_BUFFER -pthread -std=c++17 -march=native -rdynamic -p -pg -o "DROS2-LiveBuffer" $(OBJS_L) $(USER_OBJS) $(LIBS)
-	@echo 'Finished building target: $@'
-	@echo ' '
-
-DROS2-Spectrometer: $(OBJS_S) $(USER_OBJS)
-	@echo 'Building target: $@'
-	@echo 'Invoking: GCC C++ Linker'
-	g++ $(CPPFLAGS) -pthread -std=c++17 -march=native -rdynamic -p -pg -o "DROS2-Spectrometer" $(OBJS_S) $(USER_OBJS) $(LIBS)
+	g++  -o "DataSource2" $(OBJS) $(USER_OBJS) $(LIBS)
 	@echo 'Finished building target: $@'
 	@echo ' '
 
 # Other Targets
 clean:
-	-$(RM) $(OBJS_L)$(OBJS_S)$(C++_DEPS)$(C_DEPS)$(CC_DEPS)$(CPP_DEPS)$(EXECUTABLES)$(CXX_DEPS)$(C_UPPER_DEPS) DROS2-LiveBuffer DROS2-Spectrometer
+	-$(RM) $(OBJS)$(C++_DEPS)$(C_DEPS)$(CC_DEPS)$(CPP_DEPS)$(EXECUTABLES)$(CXX_DEPS)$(C_UPPER_DEPS) DataSource2
 	-@echo ' '
 
 .PHONY: all clean dependents
+.SECONDARY:
 
 -include ../makefile.targets

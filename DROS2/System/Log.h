@@ -51,7 +51,6 @@
 #define LOG_H_
 #include <boost/filesystem/operations.hpp>
 #include <boost/filesystem/path.hpp>
-#include <boost/progress.hpp>
 #include "../Primitives/StringList.h"
 #include "../Threading/LockHelper.h"
 #include <unistd.h>

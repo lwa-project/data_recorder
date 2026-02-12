@@ -63,13 +63,16 @@
 #include "../Common/misc.h"
 #include "../System/PeriodicReportTimer.h"
 
+#include <boost/preprocessor/stringize.hpp>
+
+
 
 #define RX_REPORT_INTERVAL 5000
 
 #define NSEC_PER_SEC (1000000000ll)
 #define IDEAL_TRANSFER_SIZE 4194304   /*4MB*/
 //#define INITIAL_BUFFER_SIZE 2147483648 /*2 GiB*/
-#define INITIAL_BUFFER_SIZE (1048576lu*2048lu)
+#define INITIAL_BUFFER_SIZE (1048576lu*4096lu)
 //#define INITIAL_BUFFER_SIZE 33554432 /*32MB*/
 
 
@@ -130,6 +133,8 @@ public:
 		bufsize(0),
 		transferSize(0),
 		currentDrxDecFactor(-1),
+		currentIsDrx8(false),
+		currentTbsNChan(-1),
 		resetRequired(true),
 		newFormat(DataFormat::getFormatByName(DataFormat::defaultFormatName)),
 		newTransferSize(IDEAL_TRANSFER_SIZE),
@@ -150,28 +155,71 @@ public:
 
 	}
 
-	bool setNewFmtDrx(int decFactor){
+	bool setNewFmtDrx(int decFactor, bool isDrx8){
 		static TimeStamp lastErrorLogged = Time::now();
 		static size_t errCount = 0;
-		switch(decFactor){
-			case 784: newFormat = DataFormat::getFormatByName("DRX_FILT_1"); return true; break;
-			case 392: newFormat = DataFormat::getFormatByName("DRX_FILT_2"); return true; break;
-			case 196: newFormat = DataFormat::getFormatByName("DRX_FILT_3"); return true; break;
-			case 98:  newFormat = DataFormat::getFormatByName("DRX_FILT_4"); return true; break;
-			case 40:  newFormat = DataFormat::getFormatByName("DRX_FILT_5"); return true; break;
-			case 20:  newFormat = DataFormat::getFormatByName("DRX_FILT_6"); return true; break;
-			case 10:  newFormat = DataFormat::getFormatByName("DRX_FILT_7"); return true; break;
+		if(isDrx8) {
+			switch(decFactor){
+				case 784: newFormat = DataFormat::getFormatByName("DRX8_FILT_1"); return true; break;
+				case 392: newFormat = DataFormat::getFormatByName("DRX8_FILT_2"); return true; break;
+				case 196: newFormat = DataFormat::getFormatByName("DRX8_FILT_3"); return true; break;
+				case 98:  newFormat = DataFormat::getFormatByName("DRX8_FILT_4"); return true; break;
+				case 40:  newFormat = DataFormat::getFormatByName("DRX8_FILT_5"); return true; break;
+				case 20:  newFormat = DataFormat::getFormatByName("DRX8_FILT_6"); return true; break;
+				case 10:  newFormat = DataFormat::getFormatByName("DRX8_FILT_7"); return true; break;
+				default:
+					if (Time::compareTimestamps(Time::addTime(lastErrorLogged, 5000), Time::now()) <=0){
+						lastErrorLogged = Time::now();
+						LOGC(L_FATAL, "[Receiver] Bad DRX8 Decimation factor: " + LXS(decFactor) + " {"+LXS(errCount)+" previous occurrences}", FATAL_COLORS );
+						errCount = 0;
+					} else {
+						errCount++;
+					}
+					break;
+			}
+			newFormat = DataFormat::getFormatByName("DEFAULT_DRX8");
+		} else {
+			switch(decFactor){
+				case 784: newFormat = DataFormat::getFormatByName("DRX_FILT_1"); return true; break;
+				case 392: newFormat = DataFormat::getFormatByName("DRX_FILT_2"); return true; break;
+				case 196: newFormat = DataFormat::getFormatByName("DRX_FILT_3"); return true; break;
+				case 98:  newFormat = DataFormat::getFormatByName("DRX_FILT_4"); return true; break;
+				case 40:  newFormat = DataFormat::getFormatByName("DRX_FILT_5"); return true; break;
+				case 20:  newFormat = DataFormat::getFormatByName("DRX_FILT_6"); return true; break;
+				case 10:  newFormat = DataFormat::getFormatByName("DRX_FILT_7"); return true; break;
+				default:
+					if (Time::compareTimestamps(Time::addTime(lastErrorLogged, 5000), Time::now()) <=0){
+						lastErrorLogged = Time::now();
+						LOGC(L_FATAL, "[Receiver] Bad DRX Decimation factor: " + LXS(decFactor) + " {"+LXS(errCount)+" previous occurrences}", FATAL_COLORS );
+						errCount = 0;
+					} else {
+						errCount++;
+					}
+					break;
+			}
+			newFormat = DataFormat::getFormatByName("DEFAULT_DRX");
+		}
+		return true;
+	}
+
+	bool setNewFmtTbs(int nChan){
+		static TimeStamp lastErrorLogged = Time::now();
+		static size_t errCount = 0;
+		switch(nChan){
+			case 12: newFormat = DataFormat::getFormatByName("TBS_FILT_9"); return true; break;
+			case 8:  newFormat = DataFormat::getFormatByName("TBS_FILT_8"); return true; break;
+			case 4:  newFormat = DataFormat::getFormatByName("TBS_FILT_7"); return true; break;
 			default:
 				if (Time::compareTimestamps(Time::addTime(lastErrorLogged, 5000), Time::now()) <=0){
 					lastErrorLogged = Time::now();
-					LOGC(L_FATAL, "[Receiver] Bad DRX Decimation factor: " + LXS(decFactor) + " {"+LXS(errCount)+" previous occurrences}", FATAL_COLORS );
-					errCount = 0;
+					LOGC(L_FATAL, "[Receiver] Bad TBS channel count: " + LXS(nChan) + " {"+LXS(errCount)+" previous occurrences}", FATAL_COLORS );
+						errCount = 0;
 				} else {
 					errCount++;
 				}
 				break;
 		}
-		newFormat = DataFormat::getFormatByName("DEFAULT_DRX");
+		newFormat = DataFormat::getFormatByName("DEFAULT_TBS");
 		return true;
 	}
 
@@ -229,8 +277,8 @@ public:
 	}
 	virtual void packetBurn(){
 		externallyClosed=true;
-		char buf[8192];
-		bzero((void*)buf, 8192);
+		char buf[8224];
+		bzero((void*)buf, 8224);
 		int burnsd = socket(AF_INET, SOCK_DGRAM, 0);
 		struct sockaddr_storage sa;
 		bzero((void*)&sa, sizeof(struct sockaddr_storage));
@@ -301,11 +349,14 @@ public:
 				}
 			} else {
 			// something received
-				size_t fsize         = currentFormat.getFrameSize();
-				bool   lookMore      = false;
-				bool   drxRateChange = false;
-				size_t cnt           = (size_t) res;
+				size_t fsize          = currentFormat.getFrameSize();
+				bool   lookMore       = false;
+				bool   drxRateChange  = false;
+				bool   tbsChanChange = false;
+				size_t cnt            = (size_t) res;
 				uint16_t newDrxDecFactor;
+				bool isDrx8 = false;
+				uint16_t newTbsNChan;
 				for (size_t c=0; c<(size_t)res; c++){
 					bytesReceived += t->mhdrs[c].msg_len;
 				}
@@ -314,18 +365,21 @@ public:
 				size_t tt = 0;
 				switch(fsize){
 					case DRX_FRAME_SIZE:
+					case DRX8_FRAME_SIZE:
+						// Headers are the same
 						tt = __builtin_bswap64(*((size_t*)(&((DrxFrame*)t->iovs[cnt-1].iov_base)->header.timeTag)));
 						break;
-					case TBN_FRAME_SIZE:
-						tt = __builtin_bswap64(*((size_t*)(&((TbnFrame*)t->iovs[cnt-1].iov_base)->header.timeTag)));
+					case TBS4_FRAME_SIZE:
+					case TBS8_FRAME_SIZE:
+					case TBS12_FRAME_SIZE:
+						// Headers are the same
+						tt = __builtin_bswap64(*((size_t*)(&((Tbs4Frame*)t->iovs[cnt-1].iov_base)->header.timeTag)));
 						break;
-					case TBW_FRAME_SIZE:
-						tt = __builtin_bswap64(*((size_t*)(&((TbwFrame*)t->iovs[cnt-1].iov_base)->header.timeTag)));
-						break;
-					case TBF_FRAME_SIZE:
-						tt = __builtin_bswap64(*((size_t*)(&((TbfFrame*)t->iovs[cnt-1].iov_base)->header.timeTag)));
+					case TBT_FRAME_SIZE:
+						tt = __builtin_bswap64(*((size_t*)(&((TbtFrame*)t->iovs[cnt-1].iov_base)->header.timeTag)));
 					case COR_FRAME_SIZE:
 						tt = __builtin_bswap64(*((size_t*)(&((CorFrame*)t->iovs[cnt-1].iov_base)->header.timeTag)));
+					  break;
 					default : break;
 				}
 				if (tt!=0){
@@ -341,10 +395,17 @@ public:
 
 				// quick check the common case, all packets right size, no change in decfactors
 				for (size_t j=0; j<cnt; j++){
-					if (fsize == DRX_FRAME_SIZE){
+					if (fsize == DRX_FRAME_SIZE || fsize == DRX8_FRAME_SIZE){
 						newDrxDecFactor = bswap16(((DrxFrame*) t->frames[j])->header.decFactor);
-						if (newDrxDecFactor != currentDrxDecFactor){
+						isDrx8 = ((DrxFrame*) t->frames[j])->header.drx_is_adp;
+						if (newDrxDecFactor != currentDrxDecFactor || isDrx8 != currentIsDrx8){
 							drxRateChange=true;
+						}
+					}
+					if (fsize == TBS4_FRAME_SIZE || fsize == TBS8_FRAME_SIZE || fsize == TBS12_FRAME_SIZE ) {
+						newTbsNChan = bswap16(((Tbs4Frame*) t->frames[j])->header.nChan);
+						if (newTbsNChan != currentTbsNChan){
+							tbsChanChange=true;
 						}
 					}
 					if ((size_t) t->mhdrs[j].msg_len != fsize){
@@ -354,8 +415,17 @@ public:
 				}
 				
 				// check in case drx rate changed
-				if ((fsize == DRX_FRAME_SIZE) && drxRateChange && !lookMore){
-					if (!setNewFmtDrx(newDrxDecFactor)){
+				if ((fsize == DRX_FRAME_SIZE || fsize == DRX8_FRAME_SIZE) && drxRateChange && !lookMore){
+					if (!setNewFmtDrx(newDrxDecFactor, isDrx8)){
+						CANCEL_TICKET();
+						RESUME_RECEPTION();
+						/* CONTINUE_WITH_TICKET(); */
+					}
+				}
+				
+				// check in case tbs channel count changed
+				if ((fsize == TBS4_FRAME_SIZE || fsize == TBS8_FRAME_SIZE || fsize == TBS12_FRAME_SIZE) && tbsChanChange && !lookMore) {
+					if (!setNewFmtTbs(newTbsNChan)){
 						CANCEL_TICKET();
 						RESUME_RECEPTION();
 						/* CONTINUE_WITH_TICKET(); */
@@ -370,47 +440,51 @@ public:
 				
 #define IDX_ERROR   0
 #define IDX_EMPTY   1
-#define IDX_TBN     2
-#define IDX_TBW     3
-#define IDX_TBF     4
-#define IDX_COR     5
-#define IDX_DRX     6
+#define IDX_TBS     2
+#define IDX_TBT     3
+#define IDX_COR     4
+#define IDX_DRX     5
+#define IDX_DRX8    6
 #define IDX_ODDBALL 7
 				
 				// some count variables for deeper inspection
-				size_t n[8]    = {0,0,0,0,0,0,0,0};         // in order : error, empty, tbn, tbw, tbf, cor, drx, odd
-				size_t last[8] = {0,0,0,0,0,0,0,0};         // in order : error, empty, tbn, tbw, tbf, cor, drx, odd
-				int    sz[8]   = {0,-1,TBN_FRAME_SIZE,TBW_FRAME_SIZE,TBF_FRAME_SIZE,COR_FRAME_SIZE,DRX_FRAME_SIZE,-2}; // in order : error, empty, tbn, tbw, tbf, cor, drx, odd
+				size_t n[8]    = {0,0,0,0,0,0,0,0};         // in order : error, empty, tbs, tbt, cor, drx, drx8, odd
+				size_t last[8] = {0,0,0,0,0,0,0,0};         // in order : error, empty, tbs, tbt, cor, drx, drx8, odd
+				int    sz[8]   = {0,-1,TBS8_FRAME_SIZE,TBT_FRAME_SIZE,COR_FRAME_SIZE,DRX_FRAME_SIZE,DRX8_FRAME_SIZE,-2}; // in order : error, empty, tbs, tbt, tbf, cor, drx, drx8, odd
 				size_t curIdx;
 				// count packet sizes
 				for (size_t j=0; j<(size_t) res; j++){
 					switch(t->mhdrs[j].msg_len){
-						case    0:           n[IDX_EMPTY]++;   last[IDX_EMPTY]=j; break;
-						case TBN_FRAME_SIZE: n[IDX_TBN]++;     last[IDX_TBN]=j; break;
-						case TBW_FRAME_SIZE: n[IDX_TBW]++;     last[IDX_TBW]=j; break;
-						case TBF_FRAME_SIZE: n[IDX_TBF]++;     last[IDX_TBF]=j; break;
-						case COR_FRAME_SIZE: n[IDX_COR]++;     last[IDX_COR]=j; break;
-						case DRX_FRAME_SIZE: n[IDX_DRX]++;     last[IDX_DRX]=j; break;
+						case    0:             n[IDX_EMPTY]++;   last[IDX_EMPTY]=j; break;
+						case TBS4_FRAME_SIZE:  // fall through
+						case TBS8_FRAME_SIZE:  // fall through
+						case TBS12_FRAME_SIZE: n[IDX_TBS]++;     last[IDX_TBS]=j; break;
+						case TBT_FRAME_SIZE:   n[IDX_TBT]++;     last[IDX_TBT]=j; break;
+						case COR_FRAME_SIZE:   n[IDX_COR]++;     last[IDX_COR]=j; break;
+						case DRX_FRAME_SIZE:   n[IDX_DRX]++;     last[IDX_DRX]=j; break;
+						case DRX8_FRAME_SIZE:  n[IDX_DRX8]++;    last[IDX_DRX8]=j;  break;
 						default:
 							LOGC(L_DEBUG, "Bad size: " + LXS(t->mhdrs[j].msg_len), TRACE_COLORS);
 							n[IDX_ODDBALL]++; last[IDX_ODDBALL]=j; break;
 					}
 				}
 				switch(t->fsize){
-					case    0:           curIdx = IDX_EMPTY;   break;
-					case TBN_FRAME_SIZE: curIdx = IDX_TBN;     break;
-					case TBW_FRAME_SIZE: curIdx = IDX_TBW;     break;
-					case TBF_FRAME_SIZE: curIdx = IDX_TBF;     break;
-					case COR_FRAME_SIZE: curIdx = IDX_COR;     break;
-					case DRX_FRAME_SIZE: curIdx = IDX_DRX;     break;
-					default:             curIdx = IDX_ODDBALL; break;
+					case    0:             curIdx = IDX_EMPTY;   break;
+					case TBS4_FRAME_SIZE:  // fall through
+					case TBS8_FRAME_SIZE:  // fall through
+					case TBS12_FRAME_SIZE: curIdx = IDX_TBS;     break;
+					case TBT_FRAME_SIZE:   curIdx = IDX_TBT;     break;
+					case COR_FRAME_SIZE:   curIdx = IDX_COR;     break;
+					case DRX_FRAME_SIZE:   curIdx = IDX_DRX;     break;
+					case DRX8_FRAME_SIZE:  curIdx = IDX_DRX8;    break;
+					default:               curIdx = IDX_ODDBALL; break;
 				}
 				
 				// find the maximum count of packets whose size is not our current size
 				size_t max_count      = 0;
 				int    new_frame_size = -3;
 				size_t last_seen      = 0;
-				for (size_t j=0; j<8; j++){
+				for (size_t j=0; j<7; j++){
 					if (j != curIdx){
 						if (n[j] > max_count){
 							max_count      = n[j];
@@ -446,7 +520,9 @@ public:
 				}
 				
 				// get the new format based on deeper packet inspection once we know the new size
-				DrxFrame* f; // only drx might require looking at the actual frame
+				DrxFrame* f; // only drx, drx8, and tbs might require looking at the actual frame
+				Drx8Frame* f8;
+				Tbs4Frame* ft;
 				switch(new_frame_size){
 					case    0:
 						// ignore, not a mode change
@@ -466,26 +542,31 @@ public:
 						CANCEL_TICKET();
 						RESUME_RECEPTION();
 						/* CONTINUE_WITH_TICKET(); */
-					case TBN_FRAME_SIZE:
-						// changed to TBN
-						newFormat = DataFormat::getFormatByName("DEFAULT_TBN");
+					case TBS4_FRAME_SIZE:
+					case TBS8_FRAME_SIZE:
+					case TBS12_FRAME_SIZE:
+						// changed to TBS
+						newFormat = DataFormat::getFormatByName("DEFAULT_TBS");
+						ft = (Tbs4Frame*) t->frames[last_seen];
+						if (!setNewFmtTbs(bswap16(ft->header.nChan))){
+							CANCEL_TICKET();
+							RESUME_RECEPTION();
+							/* CONTINUE_WITH_TICKET(); */
+						}
 						break;
-					case TBW_FRAME_SIZE:
-						// changed to TBW
-						newFormat = DataFormat::getFormatByName("DEFAULT_TBW");
-						break;
-					case TBF_FRAME_SIZE:
-						// changed to TBF
-						newFormat = DataFormat::getFormatByName("DEFAULT_TBF");
+					case TBT_FRAME_SIZE:
+						// changed to TBT
+						newFormat = DataFormat::getFormatByName("DEFAULT_TBT");
 						break;
 					case COR_FRAME_SIZE:
 						// changed to COR
 						newFormat = DataFormat::getFormatByName("DEFAULT_COR");
 						break;
 					case DRX_FRAME_SIZE:
-						// changed to DRX
+					case DRX8_FRAME_SIZE:
+						// changed to DRX or DRX8
 						f = (DrxFrame*) t->frames[last_seen];
-						if (!setNewFmtDrx(bswap16(f->header.decFactor))){
+						if (!setNewFmtDrx(bswap16(f->header.decFactor), f->header.drx_is_adp)){
 							CANCEL_TICKET();
 							RESUME_RECEPTION();
 							/* CONTINUE_WITH_TICKET(); */
@@ -501,7 +582,11 @@ public:
 				
 				// now we have a new format, so set the reset required flag and leave
 				// (next thread to lock both phase locks will actually do the reset
-				LOGC(L_INFO, "[Receiver] Detected a data mode change to '"+newFormat.getName()+"'", ACTOR_COLORS );
+				if (newFormat.isTBX()){
+					LOGC(L_INFO, "[Receiver] Detected a data mode change to '"+newFormat.getName()+"' with "+BOOST_PP_STRINGIZE(TBX_STAND_COUNT)+" stands", ACTOR_COLORS );
+				} else {
+					LOGC(L_INFO, "[Receiver] Detected a data mode change to '"+newFormat.getName()+"'", ACTOR_COLORS );
+				}
 				t->returnEmpty();
 				
 				if (!__doReset()){
@@ -566,6 +651,8 @@ private:
 	size_t                         bufsize;
 	size_t                         transferSize;
 	int                            currentDrxDecFactor; // to detect mode changes
+	bool                           currentIsDrx8; // to detect mode changes
+	int                            currentTbsNChan; // to detect mode changes
 
 	// buffer geometry change stuff
 	volatile bool                  resetRequired;
@@ -724,6 +811,7 @@ private:
 		this->currentFormat       = newFormat;
 		this->transferSize        = newTransferSize;
 		this->currentDrxDecFactor = newFormat.getDecFactor();
+		this->currentIsDrx8       = (newFormat.getBitDepth() == 8);
 		this->resetRequired       = false;
 		return true;
 

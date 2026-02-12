@@ -47,91 +47,61 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef PLUGIN_H_
-#define PLUGIN_H_
-
-#include "QueuedSubscriber.h"
-#include "TicketBuffer.h"
-#include "../Threading/ThreadPair.h"
-
-//enum PluginState{PS_PROCESSING, PS_FLUSHING, PS_DONE};
 
 
-
-class Plugin: public TicketBuffer, public QueuedSubscriber, public ThreadPair{
-public:
-	typedef struct __TicketTracker{
-		TicketBuffer::Ticket* t;
-		size_t                next;
-		size_t                done;
-	}TicketTracker;
+#ifndef TBTFRAME_H_
+#define TBTFRAME_H_
 
 
-	Plugin(const string& _name, TicketBuffer* _source, const TB_Geometry& _outputBufferGeometry);
-	virtual ~Plugin();
+#ifdef __cplusplus
+extern "C"{
+#endif
 
-	// derived class monitor thread funciton
-	virtual bool monitor(){return true;}
+#define TBT_SAMPLES_PER_STAND (16*2)
 
-	// used by the derived class to get data to work with
-	void* peekNextIn(size_t size);
-	void* getNextIn(size_t size);
-	void  doneIn(bool release = false);
-	void* getNextOut(size_t size);
-	void  doneOut(bool release = false);
+#define Fs_Day (196l* 1000000l * 60l *60l * 24l) /*16934400000000l*/
 
-	// derived class input handling thread method
-	virtual void run_master();  // base version just consumes inbound tickets
-
-	// derived class output handling thread method
-	virtual void run_slave();   // base version terminates immediately
-
-	// to approximate bandwidth in/out
-	size_t getReceiveRate();
-	size_t getSendRate();
+#include <fftw3.h>
+#include <stdint.h>
+#include "Complex.h"
 
 
-	// overrides of start and stop behavior to connect/disconnect on start/stop
-	virtual void start();
-	virtual void stop();
+typedef struct __TbtFrameHeader{
+	uint32_t syncCode;
+	union {
+		uint8_t  id;
+		uint32_t frameCount;
+	};
+	uint32_t secondsCount;
+	uint32_t freq_chan;
+	uint16_t nStand;
+    uint16_t nChan;
+	uint64_t timeTag;
+}__attribute__((packed)) TbtFrameHeader;
+
+// TBT frame as received
+typedef struct __TbfFrame{
+	TbtFrameHeader  header;
+	PackedSample4   samples[TBT_SAMPLES_PER_STAND*TBX_STAND_COUNT];
+} __attribute__((packed)) TbtFrame;
+// alias to the above
+typedef TbtFrame	PackedTbtFrame;
+
+typedef struct __UnpackedTbtFrame{
+	TbtFrameHeader  header;
+	UnpackedSample  samples[TBT_SAMPLES_PER_STAND*TBX_STAND_COUNT];
+} __attribute__((packed)) UnpackedTbtFrame;
 
 
+#define TBT_FRAME_SIZE (sizeof(TbtFrame))
+#define TBT_TUNINGS            	2l
+#define TBT_POLARIZATIONS     	2l
+#define TBT_STREAMS            	(TBT_TUNINGS*TBT_POLARIZATIONS)
 
 
-private:
-	Plugin();
-	DECLARE_ACCESS_MUTEX();
-	TicketBuffer* source;                // the upstream buffer
-	TB_Geometry outputBufferGeometry;
-
-	/*
-	volatile bool haveUpstreamTicket;
-	volatile bool upstreamTicketBusy;
-	TicketBuffer::Ticket* cur_in;          // the current input ticket
-	size_t                cur_in_next;     // frame number of the next available frame in the current input ticket
-	size_t                cur_in_done;     // frame number of the next-to-complete frame in the current input ticket
+#ifdef __cplusplus
+}
+#endif
 
 
-
-	volatile bool haveDownstreamTicket;
-	volatile bool downstreamTicketBusy;
-	TicketBuffer::Ticket* cur_out;         // the current output ticket
-	size_t                cur_out_next;    // frame number of the next available frame in the current input ticket
-	size_t                cur_out_done;    // frame number of the next-to-complete frame in the current input ticket
-	*/
-
-	size_t                bytesReceived;
-	size_t                bytesSent;
-
-
-
-	TicketTracker in;
-	TicketTracker out;
-
-	// clear the tick in preparation for use
-	void initializeDownstreamTicket(TicketBuffer::Ticket*& _t);
-
-
-};
-
-#endif /* PLUGIN_H_ */
+#endif /* TBTFRAME_H_ */

@@ -715,9 +715,10 @@ bool MessageProcessor::onDoReceive(Message& received){
 			RESPOND( false, "Unsupported integration count: '"+LXS(NInts)+"'");
 		}
 
-		if (((Nfreqs*NInts)%DRX_SAMPLES_PER_FRAME) != 0){
-			RESPOND( false, "Unsupported geometry: 'Nf x Ni  must be an integral multiple of DRX frame sizes'");
-		}
+		// DRX
+	  if (((Nfreqs*NInts)%DRX_SAMPLES_PER_FRAME) != 0){
+		  RESPOND( false, "Unsupported geometry: 'Nf x Ni  must be an integral multiple of DRX frame sizes'");
+	  }
 
 		TimeSlot ts(__TimeStamp(startMJD, startMPM),duration);
 
@@ -729,8 +730,6 @@ bool MessageProcessor::onDoReceive(Message& received){
 				RESPOND( false, "Operation not scheduled due to bad pointer");
 			}
 		}
-
-		DataFormat opFormat=DataFormat::getFormatByName("DEFAULT_DRX");
 
 		char optag[20];
 		sprintf(optag, "%.6lu_%.9lu", startMJD, received.getReference());
@@ -747,6 +746,7 @@ bool MessageProcessor::onDoReceive(Message& received){
 			RESPOND( false, "Cannot create output file, or file already exists");
 		}
 
+    DataFormat opFormat=DataFormat::getFormatByName("DEFAULT_DRX");
 		SpectrometerOperation* op_spc = new SpectrometerOperation(received.getReference(),ts,buf,opFormat,tagfile,0, outputType,Nfreqs, NInts);
 		checkAndSchedule(sch, op_spc, accept, comment);
 		if (!accept){
