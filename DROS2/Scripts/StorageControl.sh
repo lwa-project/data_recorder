@@ -106,10 +106,17 @@ function doDown()
                         done
                 fi
         fi
+	# catch any candidate still mounted at a stale point under our storage
+	# folder.  Anything mounted elsewhere belongs to another DROS instance or
+	# to the rest of the system and is not ours to unmount.  Match the device
+	# exactly so that, say, /dev/sda does not also match /dev/sda1.
 	for x in $CANDIDATES; do
-		for y in `mount | grep $x | nawk '{print $3}'`; do 
-			umount $LAZY $y;
-		 done
+		for y in `mount | nawk -v dev="$x" '$1 == dev {print $3}'`; do
+			case "$y" in
+				${STORAGE_DIR}/*) umount $LAZY $y;;
+				*) echo "Leaving '$x' mounted at '$y': outside ${STORAGE_DIR}";;
+			esac
+		done
 	done
 }
 
