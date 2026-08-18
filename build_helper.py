@@ -63,12 +63,11 @@ else:
                         line = f"INSTALL_LOCATION?=/LWA/{dr}\n"
                     elif line.startswith('STORAGE_LOCATION'):
                         line = f"STORAGE_LOCATION?=/LWA_STORAGE/{dr}\n"
-                    line = line.replace("StartDROS.sh", f"StartDROS_{dr}.sh")
                     om.write(line)
         os.unlink("Makefile")
         os.rename(f"Makefile.{dr}", "Makefile")
         
-        ### StartDROS.sh update
+        ### systemd service file update
         with open("dros.service", 'r') as im:
             with open(f"dros-{dr.lower()}.service", 'w') as om:
                 for line in im:

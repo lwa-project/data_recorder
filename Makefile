@@ -17,6 +17,13 @@ INSTALL_LOCATION?=/LWA
 STORAGE_LOCATION?=/LWA_STORAGE
 FILES=.
 
+# a multi-DR tree built by build_helper.py carries dros-dr<N>.service, a plain
+# single-DR build carries dros.service
+SERVICE_FILES := $(wildcard $(FILES)/dros-dr*.service)
+ifeq ($(strip $(SERVICE_FILES)),)
+SERVICE_FILES := $(wildcard $(FILES)/dros.service)
+endif
+
 RM := rm -rf
 
 all:
@@ -53,13 +60,15 @@ install: backup_config
 		$(FILES)/defaults_v2.cfg.example \
 		$(FILES)/netperformance.sysctl.conf
 	install -b -g root -o root -m 544 -t $(INSTALL_LOCATION)/scripts \
-		$(FILES)/installStartupScript.sh \
 		$(FILES)/uninstallStartupScript.sh \
 		$(FILES)/uploadLogfile.py \
 		$(FILES)/uploadLogfile.sh \
 		$(WORKSPACE)/DROS2/Scripts/StorageControl.sh
+	@if [ -z "$(strip $(SERVICE_FILES))" ]; then \
+		echo "Error: no systemd service file found in $(FILES)"; exit 1; \
+	fi
 	install -b -g root -o root -m 644 -t /etc/systemd/system \
-		$(FILES)/dros-dr*.service
+		$(SERVICE_FILES)
 	@if [ -f "./BACKUP.defaults_v2.cfg" ]; then echo "Restoring current configuration..."; cp ./BACKUP.defaults_v2.cfg $(INSTALL_LOCATION)/config/defaults_v2.cfg; rm -f ./BACKUP.defaults_v2.cfg; fi
 	@echo 
 	@echo "################################################################"
@@ -78,7 +87,7 @@ install: backup_config
 	@echo "# "
 	@echo "# To install the software to run on-boot, execute:"
 	@echo "#       systemctl daemon-reload"
-	@echo "#       systemctl enable dros-dr*.service"
+	@echo "#       systemctl enable $(notdir $(SERVICE_FILES))"
 	@echo "# "
 	@echo "################################################################"
 
