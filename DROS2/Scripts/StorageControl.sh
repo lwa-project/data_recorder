@@ -57,6 +57,17 @@ if [ $EUID -ne 0 ]; then
 	exit -1;
 fi
 
+# serialize against the other DROS instances: two runs interleaving can delete
+# one instance's mountpoints out from under the other.  Global rather than
+# per-DR because the devices and the mount table are.
+LOCK_FILE=/var/lock/dros-storage.lock
+exec 9>${LOCK_FILE}
+if ! flock -x -w 300 9; then
+	# stderr: popen() in Shell::run captures stdout only
+	echo "Error: timed out waiting for ${LOCK_FILE}; another DROS may be stuck." >&2
+	exit 1
+fi
+
 # assemble any unassembled raid arrays (always)
 mdadm -As
 
@@ -106,9 +117,8 @@ function doDown()
                         done
                 fi
         fi
-	# catch any candidate still mounted at a stale point under our storage
-	# folder.  Anything mounted elsewhere belongs to another DROS instance or
-	# to the rest of the system and is not ours to unmount.  Match the device
+	# catch any candidate left at a stale mountpoint under our storage folder.
+	# Anything mounted elsewhere is not ours to unmount, and match the device
 	# exactly so that, say, /dev/sda does not also match /dev/sda1.
 	for x in $CANDIDATES; do
 		for y in `mount | nawk -v dev="$x" '$1 == dev {print $3}'`; do
