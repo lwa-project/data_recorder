@@ -48,9 +48,11 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <iostream>
+#include <fstream>
 #include <exception>
 #include <cstdlib>
 #include <csignal>
+#include <boost/interprocess/sync/file_lock.hpp>
 #include "../Common/Messaging.h"
 #include "../Common/Threading.h"
 #include "../Common/Common.h"
@@ -69,9 +71,35 @@ void signalHandler(int sig){
 	}
 }
 
+// Only one DROS may run against a given configuration.  Two instances fight over
+// the data socket, and race each other inside StorageControl.sh where one can
+// unmount and rm -rf the mountpoints the other is bringing up.
+static bool acquireInstanceLock(){
+	try {
+		{ ofstream create(DEFAULT_LOCK_FILE, ios_base::app); } // must exist to be locked
+		// a POSIX record lock: the kernel drops it however we exit, so a crash
+		// strands nothing, and Shell::run()'s popen children do not inherit it
+		static boost::interprocess::file_lock lock(DEFAULT_LOCK_FILE);
+		if (!lock.try_lock()){
+			cout << "[System] Error: Another DROS is already running for '"
+			        DEFAULT_CONFIG_FILE "'; refusing to start a second instance\n";
+			return false;
+		}
+	} catch (const std::exception& e){
+		cout << "[System] Error: Can not lock '" DEFAULT_LOCK_FILE "': " << e.what() << "\n";
+		return false;
+	}
+	return true;
+}
+
 int main(int argc, char* argv[]) {
 	//DrosCoreApi_UT();
 	//exit(-1);
+	// before the log is opened, so that a rejected instance never writes into
+	// the logfile of the instance that is already running
+	if (!acquireInstanceLock()){
+		return 1;
+	}
 	Log::initializeLog();
 	Log::setLogLevel(L_DEBUG);
 	CpuInfo::getCpuCount();                                             // trigger module loading

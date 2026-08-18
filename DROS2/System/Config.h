@@ -82,6 +82,10 @@ using namespace boost::assign;
 #define DEFAULT_TUNING_FILE "/LWA/config/netperformance.sysctl.conf"
 #endif
 
+#ifndef DEFAULT_LOCK_FILE
+#define DEFAULT_LOCK_FILE "/LWA/runtime/dros.lock"
+#endif
+
 #ifndef DEFAULT_SCRIPT_DIR
 #define DEFAULT_SCRIPT_DIR "/LWA/scripts"
 #endif
