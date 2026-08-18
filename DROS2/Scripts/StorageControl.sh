@@ -156,19 +156,29 @@ function doUp()
         for x in $CANDIDATES; do
 		echo "Examining '$x'"
 		check $x
+		# a failed mount must not leave its mountpoint behind, or the mkdir's
+		# below build a phantom DROS tree on the root filesystem instead
                 if [[ $prohibited == yes ]]; then
                         #mount the drive as an external device
                         mountpoint=${STORAGE_DIR}/External/$N_EXTERNAL
-			echo "Non-DRSU volume: '$x' mounted at '$mountpoint'"
                         mkdir -p $mountpoint;
-                        mount -t ext4 $x $mountpoint;
+                        if ! mount -t ext4 $x $mountpoint; then
+                                echo "Error: can not mount '$x' at '$mountpoint'" >&2
+                                rmdir $mountpoint 2>/dev/null
+                                continue
+                        fi
+			echo "Non-DRSU volume: '$x' mounted at '$mountpoint'"
                         N_EXTERNAL=$((N_EXTERNAL+1));
                 else
                         #mount the drive as a DRSU
                         mountpoint=${STORAGE_DIR}/Internal/$N_INTERNAL
-			echo "DRSU volume: '$x' mounted at '$mountpoint'"
                         mkdir -p $mountpoint;
-                        mount -t ext4 -o defaults,noatime,barrier=0 $x $mountpoint
+                        if ! mount -t ext4 -o defaults,noatime,barrier=0 $x $mountpoint; then
+                                echo "Error: can not mount '$x' at '$mountpoint'" >&2
+                                rmdir $mountpoint 2>/dev/null
+                                continue
+                        fi
+			echo "DRSU volume: '$x' mounted at '$mountpoint'"
                         mkdir -p $mountpoint/DROS
                         mkdir -p $mountpoint/DROS/Rec
                         mkdir -p $mountpoint/DROS/Spec
