@@ -86,8 +86,13 @@ source ${CONFIG_PATH}
 ROOT_PARTITION=`df -a | nawk '/\/$/{print $1}'`
 
 # get a list of ext2/3/4 volumes, less our root partition and any partitions listed in ${STORAGE_DIR}/StorageExceptionList
+# an exception list that names nothing excludes nothing, exactly as if it were absent:
+# grep -v "" would otherwise match every line and leave us with no volumes at all
+EXCEPT=""
 if [ -f ${STORAGE_DIR}/StorageExceptionList ]; then
-	EXCEPT=`cat ${STORAGE_DIR}/StorageExceptionList`;
+	EXCEPT=`grep -v '^[[:space:]]*$' ${STORAGE_DIR}/StorageExceptionList`
+fi
+if [ -n "$EXCEPT" ]; then
 	CANDIDATES=`blkid | grep 'TYPE=\"ext' | grep -v "$EXCEPT" | grep -v "$ROOT_PARTITION" | sed 's/:.*$/ /' | tr -d '\n' | sed 's/\s*$//'`
 else
 	CANDIDATES=`blkid | grep 'TYPE=\"ext' | grep -v "$ROOT_PARTITION" | sed 's/:.*$/ /' | tr -d '\n' | sed 's/\s*$//'`
